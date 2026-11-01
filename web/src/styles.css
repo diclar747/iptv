@@ -358,7 +358,8 @@ button { font-family: inherit; cursor: pointer; color: inherit; }
 }
 .side-item:hover { background: var(--surface); color: var(--text); }
 .side-item.on { background: var(--live); color: #fff; font-weight: 600; box-shadow: 0 6px 18px -8px var(--live); }
-.si-icon { width: 20px; text-align: center; font-size: 15px; }
+.si-icon { width: 24px; display: inline-flex; align-items: center; justify-content: center; }
+.si-icon svg, .search2-i svg, .bn-icon svg { display: block; }
 .side-foot { margin-top: auto; border-top: 1px solid var(--line-soft); padding-top: 8px; }
 
 .hamb { display: none; background: none; border: none; color: var(--text); font-size: 22px; padding: 4px 8px; }
@@ -877,7 +878,7 @@ body{background:#050609;background-image:radial-gradient(ellipse at 0 100%,#1710
     background: none; border: none; color: var(--muted); font-size: 10px; padding: 4px 2px;
     cursor: pointer; font-family: var(--font-mono); letter-spacing: 0.02em;
   }
-  .bn-icon { font-size: 20px; line-height: 1; filter: grayscale(0.4); }
+  .bn-icon { line-height: 0; opacity: 0.85; }
   .bn-item.on { color: var(--live); }
-  .bn-item.on .bn-icon { filter: none; transform: translateY(-1px); }
+  .bn-item.on .bn-icon { opacity: 1; transform: translateY(-1px); }
 }

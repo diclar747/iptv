@@ -9,6 +9,7 @@ import Search from './views/Search.jsx';
 import Perfil from './views/Perfil.jsx';
 import Panel from './panel/Panel.jsx';
 import TitleModal from './ui/TitleModal.jsx';
+import Icon from './ui/Icon.jsx';
 
 const roleLabel = (r) => ({ admin: 'Admin', reseller: 'Reseller', client: 'Cliente' }[r] || r);
 // Tiempo restante legible: horas si falta poco (prueba 24h), si no días.
@@ -23,20 +24,20 @@ const timeLeft = (e) => {
 // Por ahora la app es SOLO canales (el VOD —Películas/Series/Infantil/Mi Lista—
 // está desactivado). Para reactivarlo, restaurar esas entradas y sus rutas.
 const NAV = [
-  { k: 'inicio', label: 'Inicio', icon: '🏠' },
-  { k: 'tv', label: 'TV en Vivo', icon: '🖥️' },
-  { k: 'deportes', label: 'Deportes', icon: '⚽' },
-  { k: 'documentales', label: 'Documentales', icon: '🎞️' },
-  { k: 'perfil', label: 'Perfil', icon: '👤' },
+  { k: 'inicio', label: 'Inicio', icon: 'home' },
+  { k: 'tv', label: 'TV en Vivo', icon: 'live' },
+  { k: 'deportes', label: 'Deportes', icon: 'sports' },
+  { k: 'documentales', label: 'Documentales', icon: 'film' },
+  { k: 'perfil', label: 'Perfil', icon: 'user' },
 ];
 
-// Barra de navegación inferior (móvil, estilo app). 'buscar' resalta con la lupa.
+// Barra de navegación inferior (móvil, estilo app).
 const BOTTOM = [
-  { k: 'inicio', label: 'Inicio', icon: '🏠' },
-  { k: 'tv', label: 'En Vivo', icon: '📺' },
-  { k: 'deportes', label: 'Deportes', icon: '⚽' },
-  { k: 'buscar', label: 'Buscar', icon: '🔍' },
-  { k: 'perfil', label: 'Perfil', icon: '👤' },
+  { k: 'inicio', label: 'Inicio', icon: 'home' },
+  { k: 'tv', label: 'En Vivo', icon: 'live' },
+  { k: 'deportes', label: 'Deportes', icon: 'sports' },
+  { k: 'buscar', label: 'Buscar', icon: 'search' },
+  { k: 'perfil', label: 'Perfil', icon: 'user' },
 ];
 
 export default function App() {
@@ -64,7 +65,7 @@ export default function App() {
   const sub = user.subscription;
   const subInactive = user.role === 'client' && sub && !sub.active;
 
-  const nav = [...NAV, ...(isStaff ? [{ k: 'panel', label: 'Panel', icon: '⚙️' }] : [])];
+  const nav = [...NAV, ...(isStaff ? [{ k: 'panel', label: 'Panel', icon: 'gear' }] : [])];
 
   // Al navegar, cerrar el reproductor abierto (si no, el canal sigue sonando por detrás).
   function go(v, p = {}) { setView(v); setParams(p); setModal(null); setDrawer(false); setAccount(false); if (v !== 'buscar') setQuery(''); }
@@ -95,15 +96,15 @@ export default function App() {
         <nav className="side-nav">
           {nav.map((n) => (
             <button key={n.k} className={`side-item ${view === n.k ? 'on' : ''}`} onClick={() => go(n.k)}>
-              <span className="si-icon">{n.icon}</span> {n.label}
+              <span className="si-icon"><Icon name={n.icon} size={22} /></span> {n.label}
             </button>
           ))}
         </nav>
         <div className="side-foot">
           {pwa.canInstall && !pwa.installed && (
-            <button className="side-item" onClick={promptInstall}><span className="si-icon">↓</span> Instalar app</button>
+            <button className="side-item" onClick={promptInstall}><span className="si-icon"><Icon name="download" size={22} /></span> Instalar app</button>
           )}
-          <button className="side-item" onClick={logout}><span className="si-icon">⏻</span> Salir</button>
+          <button className="side-item" onClick={logout}><span className="si-icon"><Icon name="power" size={22} /></span> Salir</button>
         </div>
       </aside>
 
@@ -111,7 +112,7 @@ export default function App() {
         <header className="topbar2">
           <button className="hamb" onClick={() => setDrawer(true)} aria-label="Abrir menú" aria-expanded={drawer}>☰</button>
           <div className="search2">
-            <span className="search2-i">🔍</span>
+            <span className="search2-i"><Icon name="search" size={18} /></span>
             <input value={query} onChange={(e) => onSearch(e.target.value)}
               aria-label="Buscar canales" placeholder="Buscar canales…" />
           </div>
@@ -147,7 +148,7 @@ export default function App() {
       <nav className="bottom-nav">
         {BOTTOM.map((n) => (
           <button key={n.k} className={`bn-item ${view === n.k ? 'on' : ''}`} onClick={() => go(n.k)}>
-            <span className="bn-icon">{n.icon}</span>
+            <span className="bn-icon"><Icon name={n.icon} size={24} /></span>
             <span className="bn-label">{n.label}</span>
           </button>
         ))}

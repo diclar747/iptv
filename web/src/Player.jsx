@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from './api.js';
 import { castSupported, castTo, airplaySupported, airplay } from './cast.js';
+import Icon from './ui/Icon.jsx';
 
 // Reproductor HLS/MP4. hls.js se carga BAJO DEMANDA (solo al reproducir HLS en
 // navegadores sin soporte nativo), para no engordar el bundle inicial.
@@ -119,11 +120,11 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
         {canCast && (
           <button className="pbtn" onClick={onCast} disabled={casting}
             title="Proyectar a Smart TV" aria-label="Proyectar a Smart TV">
-            {casting ? '…' : '📺'}
+            {casting ? '…' : <Icon name="cast" size={20} />}
           </button>
         )}
         <button className="pbtn" onClick={toggleFullscreen}
-          title="Pantalla completa" aria-label="Pantalla completa">⛶</button>
+          title="Pantalla completa" aria-label="Pantalla completa"><Icon name="fullscreen" size={20} /></button>
       </div>
       {loading && !error && <div className="player-overlay">Conectando…</div>}
       {error && <div className="player-overlay error">{error}</div>}
