@@ -636,6 +636,9 @@ body.modal-open { overflow: hidden; }
   padding: 12px; font-family: var(--font-display); font-weight: 600; font-size: 17px; letter-spacing: 0.04em;
 }
 .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.login-trial { background: rgba(229, 9, 20, 0.12); border: 1px solid var(--live); color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 13px; text-align: center; }
+.login-switch { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2px; }
+.login-switch button { background: none; border: none; color: var(--live); font-weight: 600; cursor: pointer; padding: 0 2px; font-size: 13px; }
 
 /* Nav + usuario en topbar */
 .nav-tabs { display: flex; gap: 4px; background: var(--bg-elev); border: 1px solid var(--line-soft); border-radius: 999px; padding: 3px; }

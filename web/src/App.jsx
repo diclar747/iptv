@@ -10,7 +10,14 @@ import Panel from './panel/Panel.jsx';
 import TitleModal from './ui/TitleModal.jsx';
 
 const roleLabel = (r) => ({ admin: 'Admin', reseller: 'Reseller', client: 'Cliente' }[r] || r);
-const daysLeft = (e) => (e ? Math.ceil((new Date(e).getTime() - Date.now()) / 86400000) : null);
+// Tiempo restante legible: horas si falta poco (prueba 24h), si no días.
+const timeLeft = (e) => {
+  if (!e) return null;
+  const ms = new Date(e).getTime() - Date.now();
+  if (ms <= 0) return 'vencido';
+  const h = Math.ceil(ms / 3600000);
+  return h <= 48 ? `${h} h` : `${Math.ceil(h / 24)} días`;
+};
 
 // Por ahora la app es SOLO canales (el VOD —Películas/Series/Infantil/Mi Lista—
 // está desactivado). Para reactivarlo, restaurar esas entradas y sus rutas.
@@ -105,7 +112,7 @@ export default function App() {
                   </div>
                   {user.role === 'reseller' && <div className="am-line">{user.credits} créditos</div>}
                   {user.role === 'client' && user.expiresAt && (
-                    <div className="am-line">Vence en {daysLeft(user.expiresAt)} días</div>
+                    <div className="am-line">Vence en {timeLeft(user.expiresAt)}</div>
                   )}
                   {isStaff && <button onClick={() => go('panel')}>Panel de gestión</button>}
                   <button onClick={logout}>Cerrar sesión</button>

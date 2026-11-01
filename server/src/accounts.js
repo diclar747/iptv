@@ -122,6 +122,37 @@ router.post(
   })
 );
 
+// Registro público con PRUEBA GRATIS: cualquiera crea su cuenta y queda activo
+// por TRIAL_HOURS horas, sin consumir créditos de ningún reseller. Al vencer,
+// ve la pantalla de "suscripción vencida" y un reseller puede renovarlo.
+const TRIAL_HOURS = parseInt(process.env.TRIAL_HOURS, 10) || 24;
+
+router.post(
+  '/auth/register',
+  h(async (req, res) => {
+    const username = (req.body?.username || '').trim();
+    const password = req.body?.password || '';
+    if (!username || !password) throw httpError(400, 'Usuario y contraseña requeridos');
+    if (username.length < 3) throw httpError(400, 'El usuario debe tener al menos 3 caracteres');
+    if (password.length < 4) throw httpError(400, 'La contraseña debe tener al menos 4 caracteres');
+    const { salt, hash } = hashPassword(password);
+    let row;
+    try {
+      row = await one(
+        `INSERT INTO users (username, pass_hash, pass_salt, role, expires_at, max_connections, package_name)
+         VALUES ($1,$2,$3,'client', now() + ($4 || ' hours')::interval, 1, $5) RETURNING *`,
+        [username, hash, salt, TRIAL_HOURS, `Prueba gratis ${TRIAL_HOURS}h`]
+      );
+    } catch (e) {
+      if (e.code === '23505') throw httpError(409, 'Ese usuario ya existe, probá con otro');
+      throw e;
+    }
+    const token = createSession(row.id);
+    setSessionCookie(res, token);
+    res.status(201).json({ user: publicUser(row) });
+  })
+);
+
 router.post('/auth/logout', (req, res) => {
   const t = tokenFromReq(req);
   if (t) destroySession(t);

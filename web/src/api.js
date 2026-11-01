@@ -36,6 +36,7 @@ export const api = {
   // Auth
   me: () => get('/auth/me'),
   login: (username, password) => post('/auth/login', { username, password }),
+  register: (username, password) => post('/auth/register', { username, password }),
   logout: () => post('/auth/logout', {}),
 
   // Control de conexiones

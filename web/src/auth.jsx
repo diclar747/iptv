@@ -28,13 +28,19 @@ export function AuthProvider({ children }) {
     return user;
   }, []);
 
+  const register = useCallback(async (username, password) => {
+    const { user } = await api.register(username, password);
+    setUser(user);
+    return user;
+  }, []);
+
   const logout = useCallback(async () => {
     try { await api.logout(); } catch { /* ignore */ }
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );
