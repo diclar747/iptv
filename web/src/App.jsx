@@ -50,7 +50,8 @@ export default function App() {
 
   const nav = [...NAV, ...(isStaff ? [{ k: 'panel', label: 'Panel', icon: '⚙️' }] : [])];
 
-  function go(v, p = {}) { setView(v); setParams(p); setDrawer(false); setAccount(false); if (v !== 'buscar') setQuery(''); }
+  // Al navegar, cerrar el reproductor abierto (si no, el canal sigue sonando por detrás).
+  function go(v, p = {}) { setView(v); setParams(p); setModal(null); setDrawer(false); setAccount(false); if (v !== 'buscar') setQuery(''); }
   function onOpen(item) { setModal(item); }
   function onSearch(q) { setQuery(q); setView(q ? 'buscar' : 'inicio'); }
 
