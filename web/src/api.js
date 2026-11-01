@@ -39,8 +39,14 @@ export const api = {
   // Auth
   me: () => get('/auth/me'),
   login: (username, password) => post('/auth/login', { username, password }),
-  register: (username, password) => post('/auth/register', { username, password }),
+  register: (username, password, ref) => post('/auth/register', { username, password, ref }),
   logout: () => post('/auth/logout', {}),
+
+  // Perfil (marca/contacto) y precios de reventa
+  profile: () => get('/profile'),
+  updateProfile: (b) => patch('/profile', b),
+  resellerPrices: () => get('/reseller/prices'),
+  setResellerPrice: (packageId, price) => patch('/reseller/prices', { packageId, price }),
 
   // Control de conexiones
   watchStart: (channelId) => post('/watch/start', { channelId }),

@@ -29,7 +29,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   const register = useCallback(async (username, password) => {
-    const { user } = await api.register(username, password);
+    // Afiliados: tomar ?ref= de la URL o el guardado en el dispositivo.
+    let ref = null;
+    try { ref = new URLSearchParams(window.location.search).get('ref') || localStorage.getItem('senal_ref'); } catch { /* noop */ }
+    const { user } = await api.register(username, password, ref || undefined);
     setUser(user);
     return user;
   }, []);

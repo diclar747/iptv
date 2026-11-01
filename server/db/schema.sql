@@ -71,3 +71,17 @@ CREATE TABLE IF NOT EXISTS episodes (
   stream_url TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_episodes_series ON episodes(series_id);
+
+-- ---------- Perfil extendido (marca/contacto, sobre todo del vendedor) ----------
+ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS logo_url     TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone        TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address      TEXT;
+
+-- Precio de reventa que fija cada vendedor por paquete (en guaraníes).
+CREATE TABLE IF NOT EXISTS reseller_prices (
+  reseller_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  package_id  BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+  price       NUMERIC(14,2) NOT NULL,
+  PRIMARY KEY (reseller_id, package_id)
+);

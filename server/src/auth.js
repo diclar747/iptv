@@ -84,6 +84,10 @@ export function publicUser(u) {
     createdBy: u.created_by,
     parentId: u.parent_id,
     note: u.note || null,
+    displayName: u.display_name || null,
+    logoUrl: u.logo_url || null,
+    phone: u.phone || null,
+    address: u.address || null,
   };
   if (u.role === 'reseller') base.credits = u.credits || 0;
   if (u.role === 'client') {

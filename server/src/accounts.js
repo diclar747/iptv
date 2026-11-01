@@ -147,13 +147,21 @@ router.post(
     if (!username || !password) throw httpError(400, 'Usuario y contraseña requeridos');
     if (username.length < 3) throw httpError(400, 'El usuario debe tener al menos 3 caracteres');
     if (password.length < 4) throw httpError(400, 'La contraseña debe tener al menos 4 caracteres');
+    // Afiliados: si viene ?ref=<usuario de un vendedor activo>, el nuevo cliente
+    // queda asignado a ese vendedor (lo ve en su panel y puede renovarlo).
+    let parentId = null;
+    const ref = (req.body?.ref || '').trim();
+    if (ref) {
+      const r = await one("SELECT id FROM users WHERE username=$1 AND role='reseller' AND status='active'", [ref]);
+      if (r) parentId = r.id;
+    }
     const { salt, hash } = hashPassword(password);
     let row;
     try {
       row = await one(
-        `INSERT INTO users (username, pass_hash, pass_salt, role, expires_at, max_connections, package_name)
-         VALUES ($1,$2,$3,'client', now() + ($4 || ' hours')::interval, 1, $5) RETURNING *`,
-        [username, hash, salt, TRIAL_HOURS, `Prueba gratis ${TRIAL_HOURS}h`]
+        `INSERT INTO users (username, pass_hash, pass_salt, role, parent_id, created_by, expires_at, max_connections, package_name)
+         VALUES ($1,$2,$3,'client',$4,$4, now() + ($5 || ' hours')::interval, 1, $6) RETURNING *`,
+        [username, hash, salt, parentId, TRIAL_HOURS, `Prueba gratis ${TRIAL_HOURS}h`]
       );
     } catch (e) {
       if (e.code === '23505') throw httpError(409, 'Ese usuario ya existe, probá con otro');
@@ -175,6 +183,75 @@ router.post('/auth/logout', (req, res) => {
 router.get('/auth/me', (req, res) => {
   res.json({ user: publicUser(req.user) });
 });
+
+// --- Perfil (datos de marca/contacto; el vendedor edita el suyo) ---
+function profileDTO(u) {
+  const out = publicUser(u);
+  if (u.role === 'reseller') out.affiliateCode = u.username;
+  return out;
+}
+
+router.get('/profile', requireAuth, h(async (req, res) => {
+  res.json(profileDTO(req.user));
+}));
+
+router.patch(
+  '/profile',
+  requireAuth,
+  h(async (req, res) => {
+    const { displayName, logoUrl, phone, address } = req.body || {};
+    if (logoUrl && String(logoUrl).length > 300000) throw httpError(400, 'La imagen es muy grande (máx ~200KB)');
+    const cut = (v, n) => (v == null || v === '' ? null : String(v).slice(0, n));
+    const row = await one(
+      `UPDATE users SET display_name=$1, logo_url=$2, phone=$3, address=$4 WHERE id=$5 RETURNING *`,
+      [cut(displayName, 80), logoUrl || null, cut(phone, 40), cut(address, 200), req.user.id]
+    );
+    res.json(profileDTO(row));
+  })
+);
+
+// --- Precios de reventa del vendedor (en guaraníes) ---
+router.get(
+  '/reseller/prices',
+  requireRole('reseller'),
+  h(async (req, res) => {
+    const rows = await many(
+      `SELECT p.id, p.name, p.duration_days, p.credits, p.max_connections, rp.price
+       FROM packages p
+       LEFT JOIN reseller_prices rp ON rp.package_id = p.id AND rp.reseller_id = $1
+       WHERE p.active ORDER BY p.credits`,
+      [req.user.id]
+    );
+    res.json(rows.map((p) => ({
+      id: p.id, name: p.name, durationDays: p.duration_days, credits: p.credits,
+      maxConnections: p.max_connections, price: p.price != null ? Number(p.price) : null,
+    })));
+  })
+);
+
+router.patch(
+  '/reseller/prices',
+  requireRole('reseller'),
+  h(async (req, res) => {
+    const packageId = parseInt(req.body?.packageId, 10);
+    if (!packageId) throw httpError(400, 'Paquete inválido');
+    const pkg = await one('SELECT id FROM packages WHERE id=$1', [packageId]);
+    if (!pkg) throw httpError(404, 'Paquete no encontrado');
+    const raw = req.body?.price;
+    if (raw == null || raw === '') {
+      await query('DELETE FROM reseller_prices WHERE reseller_id=$1 AND package_id=$2', [req.user.id, packageId]);
+    } else {
+      const price = Number(raw);
+      if (!Number.isFinite(price) || price < 0) throw httpError(400, 'Precio inválido');
+      await query(
+        `INSERT INTO reseller_prices (reseller_id, package_id, price) VALUES ($1,$2,$3)
+         ON CONFLICT (reseller_id, package_id) DO UPDATE SET price = EXCLUDED.price`,
+        [req.user.id, packageId, price]
+      );
+    }
+    res.json({ ok: true });
+  })
+);
 
 // --- Control de conexiones (visor) ---
 router.post(

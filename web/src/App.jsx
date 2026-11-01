@@ -6,6 +6,7 @@ import Home from './views/Home.jsx';
 import Catalog from './views/Catalog.jsx';
 import Channels from './views/Channels.jsx';
 import Search from './views/Search.jsx';
+import Perfil from './views/Perfil.jsx';
 import Panel from './panel/Panel.jsx';
 import TitleModal from './ui/TitleModal.jsx';
 
@@ -26,6 +27,16 @@ const NAV = [
   { k: 'tv', label: 'TV en Vivo', icon: '🖥️' },
   { k: 'deportes', label: 'Deportes', icon: '⚽' },
   { k: 'documentales', label: 'Documentales', icon: '🎞️' },
+  { k: 'perfil', label: 'Perfil', icon: '👤' },
+];
+
+// Barra de navegación inferior (móvil, estilo app). 'buscar' resalta con la lupa.
+const BOTTOM = [
+  { k: 'inicio', label: 'Inicio', icon: '🏠' },
+  { k: 'tv', label: 'En Vivo', icon: '📺' },
+  { k: 'deportes', label: 'Deportes', icon: '⚽' },
+  { k: 'buscar', label: 'Buscar', icon: '🔍' },
+  { k: 'perfil', label: 'Perfil', icon: '👤' },
 ];
 
 export default function App() {
@@ -41,7 +52,12 @@ export default function App() {
   useEffect(() => subscribePwa(setPwa), []);
   useEffect(() => { if (user) { setView('inicio'); } }, [user?.id]);
 
-  if (loading) return <div className="splash"><span className="tally" /><span className="wordmark">CineTV</span></div>;
+  if (loading) return (
+    <div className="splash">
+      <div className="splash-logo"><span className="tally" /><span className="wordmark">LIVE</span></div>
+      <div className="splash-tag">TV EN VIVO</div>
+    </div>
+  );
   if (!user) return <Login />;
 
   const isStaff = user.role === 'admin' || user.role === 'reseller';
@@ -65,6 +81,7 @@ export default function App() {
     : view === 'tv' ? <Channels title="TV en Vivo" defaultCountry="PY" onOpen={onOpen} onAuthError={refresh} />
     : view === 'deportes' ? <Channels title="Deportes" fixedCategory="sports" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />
     : view === 'documentales' ? <Channels title="Documentales" fixedCategory="documentary" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />
+    : view === 'perfil' ? <Perfil user={user} onLogout={logout} onNavigate={go} onAuthError={refresh} />
     : view === 'buscar' ? <Search query={query} onOpen={onOpen} onAuthError={refresh} />
     : view === 'panel' && isStaff ? <Panel user={user} />
     : <Home onOpen={onOpen} onNavigate={go} onAuthError={refresh} />;
@@ -125,6 +142,16 @@ export default function App() {
 
         <main className="content">{content}</main>
       </div>
+
+      {/* Barra inferior estilo app (solo móvil; en escritorio manda el sidebar). */}
+      <nav className="bottom-nav">
+        {BOTTOM.map((n) => (
+          <button key={n.k} className={`bn-item ${view === n.k ? 'on' : ''}`} onClick={() => go(n.k)}>
+            <span className="bn-icon">{n.icon}</span>
+            <span className="bn-label">{n.label}</span>
+          </button>
+        ))}
+      </nav>
 
       {modal && <TitleModal item={modal} user={user} onClose={() => setModal(null)} onAuthError={refresh} />}
     </div>
