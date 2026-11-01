@@ -760,3 +760,51 @@ body{background:#050609;background-image:radial-gradient(ellipse at 0 100%,#1710
 @media(max-width:900px){.topbar2{min-height:68px;padding:12px 16px}.hero{height:470px;max-height:none}.hero-content{padding:0 22px;bottom:12%;max-width:560px}.hero h1{font-size:46px}.row-head,.row-track,.view{padding-left:22px;padding-right:22px}.pcard{width:166px}.sidebar{padding:24px 16px;overflow-y:auto}.side-logo{margin-bottom:25px}.search2{max-width:none}.hero-fade{background:linear-gradient(90deg,#050609d9,#05060928),linear-gradient(0deg,#050609,transparent)}.rows{margin-top:-24px}}
 @media(max-width:480px){.topbar2{gap:6px;padding:10px}.search2{padding:10px 12px;gap:5px}.search2 input{font-size:12px;width:100%}.account-btn{padding:3px}.avatar{width:32px;height:32px}.hero{height:440px;min-height:0}.hero-content{padding:0 18px;bottom:11%}.hero h1{font-size:36px}.hero-desc{font-size:13px;-webkit-line-clamp:3}.hero-play,.hero-add{font-size:14px;padding:12px 17px}.hero-btns{gap:8px}.row-head,.row-track,.view{padding-left:18px;padding-right:18px}.row-head h3{font-size:19px}.pcard{width:155px}.vod-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.view-filters{width:100%}.view-filters .pill,.view-filters .search{min-width:0;flex:1;width:100%}.panel{padding:18px 12px}.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stat-grid.compact{grid-template-columns:repeat(3,minmax(0,1fr))}.stat{padding:14px}.stat-value{font-size:26px}.login-card{padding:30px 24px}.modal{padding:12px 8px}.modal-body{padding:16px}.row-track{gap:10px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Phone layout: readable content, safe areas and accessible playback. */
+@media (max-width: 900px) {
+  .app, .main-col, .content, .view, .catalog { min-width: 0; max-width: 100%; }
+  .topbar2 { padding-top: max(10px, env(safe-area-inset-top)); }
+  .search2 { min-width: 0; flex: 1; }
+  .hamb, .account-btn, .close, .modal-close { min-width: 44px; min-height: 44px; }
+  .sidebar { width: min(300px, 86vw); padding-top: max(24px, env(safe-area-inset-top)); padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+  input, select, textarea, .search2 input { font-size: 16px; }
+  .view-head { flex-wrap: wrap; gap: 16px; }
+  .view-filters { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+  .view-filters > * { min-width: 0; flex: 1 1 140px; max-width: 100%; }
+  .hero { height: auto; min-height: 420px; }
+  .hero-content { position: relative; bottom: auto; padding: 150px 20px 48px; width: 100%; }
+  .hero h1 { font-size: clamp(30px, 8vw, 46px); overflow-wrap: anywhere; }
+  .hero-btns { flex-wrap: wrap; }
+  .rows { margin-top: 0; }
+  .vod-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vod-grid .pcard { width: 100%; min-width: 0; }
+  .modal { padding: 0; overscroll-behavior: contain; }
+  .modal-card { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
+  .modal-body { padding: max(20px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+  .modal-head { padding-right: 48px; min-height: 44px; }
+  .modal-head h2 { font-size: 23px; line-height: 1.25; overflow-wrap: anywhere; }
+  .modal-close { top: max(12px, env(safe-area-inset-top)); right: 12px; }
+  .player { width: 100%; min-width: 0; border-radius: 10px; }
+  .player video { object-fit: contain; }
+  .viewer { max-height: 100dvh; padding-top: max(12px, env(safe-area-inset-top)); overscroll-behavior: contain; }
+  .viewer-head h2 { font-size: 22px; overflow-wrap: anywhere; }
+  .watch-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wbtn { min-height: 44px; justify-content: center; padding: 10px 8px; }
+  .quality { flex-wrap: wrap; gap: 10px; }
+  .quality-pills { flex-wrap: wrap; min-width: 0; }
+  .qpill, .verify-min, .mylist-btn, .ep, .pager button { min-height: 44px; }
+  .ep-title, .c-text { min-width: 0; overflow-wrap: anywhere; }
+  .comment-form { flex-wrap: wrap; }
+  .comment-form input { min-width: 0; flex: 1 1 180px; }
+  .table .tr > * { min-width: 0; overflow-wrap: anywhere; }
+  .row-form > input, .row-form > select { flex-basis: 100%; }
+  .panel-tabs button { min-height: 44px; }
+  .login { padding: 20px 16px; }
+  .login-card { width: 100%; }
+}
+@media (max-width: 900px) and (orientation: landscape) {
+  .modal-card .player { max-height: 72dvh; aspect-ratio: 16 / 9; margin-inline: auto; }
+  .hero-content { padding-top: 64px; }
+}
+.player-overlay { pointer-events: none; }

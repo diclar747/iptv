@@ -47,6 +47,12 @@ export async function ensureSeed() {
     );
     console.log(`[seed] usuario admin creado -> admin / ${pass}`);
   }
+  // Seguridad: si ADMIN_PASSWORD está definido, sincroniza la clave del admin en
+  // cada arranque. Permite cambiarla desde las variables de entorno del hosting.
+  if (process.env.ADMIN_PASSWORD) {
+    const { salt, hash } = hashPassword(process.env.ADMIN_PASSWORD);
+    await query("UPDATE users SET pass_hash=$1, pass_salt=$2 WHERE role='admin'", [hash, salt]);
+  }
   // Reseller de prueba con saldo (solo si no hay ninguno). Cambiá la clave luego.
   const anyReseller = await one("SELECT id FROM users WHERE role = 'reseller' LIMIT 1");
   if (!anyReseller) {
@@ -65,6 +71,12 @@ export async function ensureSeed() {
       [credits, r.id, adminRow?.id || null]
     );
     console.log(`[seed] reseller de prueba -> vendedor / ${pass} (${credits} créditos)`);
+  }
+  // Seguridad: si RESELLER_PASSWORD está definido, sincroniza la clave del
+  // vendedor de prueba en cada arranque.
+  if (process.env.RESELLER_PASSWORD) {
+    const { salt, hash } = hashPassword(process.env.RESELLER_PASSWORD);
+    await query("UPDATE users SET pass_hash=$1, pass_salt=$2 WHERE username='vendedor'", [hash, salt]);
   }
 
   const { n } = await one('SELECT count(*)::int AS n FROM packages');
