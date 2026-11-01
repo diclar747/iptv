@@ -1,3 +1,4 @@
+import './env.js'; // carga .env antes que nada (debe ir primero)
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
