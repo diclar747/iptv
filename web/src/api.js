@@ -1,0 +1,80 @@
+// Cliente de la API del backend. Incluye cookies de sesión en toda llamada.
+const base = '/api';
+
+async function req(method, path, { params, body } = {}) {
+  const qs = params
+    ? '?' + new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== '')))
+    : '';
+  const res = await fetch(base + path + qs, {
+    method,
+    credentials: 'include',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = null;
+  try { data = await res.json(); } catch { /* sin cuerpo */ }
+  if (!res.ok) {
+    const err = new Error(data?.error || `Error ${res.status}`);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+const get = (p, params) => req('GET', p, { params });
+const post = (p, body) => req('POST', p, { body });
+const patch = (p, body) => req('PATCH', p, { body });
+
+export const api = {
+  // Catálogo / visor
+  meta: () => get('/meta'),
+  channels: (params) => get('/channels', params),
+  streams: (id) => get(`/channels/${encodeURIComponent(id)}/streams`),
+  checkChannel: (id) => get(`/channels/${encodeURIComponent(id)}/check`),
+
+  // Auth
+  me: () => get('/auth/me'),
+  login: (username, password) => post('/auth/login', { username, password }),
+  logout: () => post('/auth/logout', {}),
+
+  // Control de conexiones
+  watchStart: (channelId) => post('/watch/start', { channelId }),
+  watchBeat: (sessionId) => post('/watch/heartbeat', { sessionId }),
+  watchStop: (sessionId) => post('/watch/stop', { sessionId }),
+
+  // VOD
+  movies: (params) => get('/vod/movies', params),
+  movie: (id) => get(`/vod/movies/${id}`),
+  series: () => get('/vod/series'),
+  serie: (id) => get(`/vod/series/${id}`),
+
+  // Paquetes (compartido)
+  packages: () => get('/packages'),
+
+  // Admin
+  adminStats: () => get('/admin/stats'),
+  resellers: () => get('/admin/resellers'),
+  createReseller: (b) => post('/admin/resellers', b),
+  setResellerStatus: (id, status) => patch(`/admin/resellers/${id}`, { status }),
+  addCredits: (id, amount, note) => post(`/admin/resellers/${id}/credits`, { amount, note }),
+  createPackage: (b) => post('/admin/packages', b),
+  setPackageActive: (id, active) => patch(`/admin/packages/${id}`, { active }),
+
+  // Reseller
+  resellerMe: () => get('/reseller/me'),
+  clients: () => get('/reseller/clients'),
+  createClient: (b) => post('/reseller/clients', b),
+  renewClient: (id, packageId) => post(`/reseller/clients/${id}/renew`, { packageId }),
+  setClientStatus: (id, status) => patch(`/reseller/clients/${id}`, { status }),
+  transactions: () => get('/reseller/transactions'),
+};
+
+// URL del proxy de reproducción para un stream (misma cookie de sesión aplica).
+export function proxyUrl(stream) {
+  if (!stream) return null;
+  const qs = new URLSearchParams({ url: stream.url });
+  if (stream.userAgent) qs.set('ua', stream.userAgent);
+  if (stream.referrer) qs.set('ref', stream.referrer);
+  return `/api/stream?${qs.toString()}`;
+}

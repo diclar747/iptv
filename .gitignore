@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+
+# Build del frontend (se genera con `npm run build` en el deploy)
+web/dist/
+
+# Variables de entorno / secretos
+.env
+.env.*
+!.env.example
+
+# Logs y temporales
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Datos locales / volcados de base
+*.sql.bak
+dump.sql
+backup.sql
+
+# Config local de Claude Code
+.claude/
