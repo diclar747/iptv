@@ -78,6 +78,11 @@ export const api = {
   renewClient: (id, packageId) => post(`/reseller/clients/${id}/renew`, { packageId }),
   setClientStatus: (id, status) => patch(`/reseller/clients/${id}`, { status }),
   transactions: () => get('/reseller/transactions'),
+
+  // Sub-vendedores (un vendedor crea y financia a otros vendedores)
+  subresellers: () => get('/reseller/subresellers'),
+  createSubreseller: (b) => post('/reseller/subresellers', b),
+  transferToSub: (id, amount) => post(`/reseller/subresellers/${id}/credits`, { amount }),
 };
 
 // URL del proxy de reproducción para un stream (misma cookie de sesión aplica).

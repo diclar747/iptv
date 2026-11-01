@@ -585,4 +585,85 @@ router.get(
   })
 );
 
+// ================= SUB-VENDEDORES =================
+// Un vendedor puede crear otros vendedores y venderles (transferirles) saldo.
+router.get(
+  '/reseller/subresellers',
+  requireRole('reseller'),
+  h(async (req, res) => {
+    const rows = await many(
+      `SELECT u.*, (SELECT count(*)::int FROM users c WHERE c.parent_id = u.id AND c.role='client') AS client_count
+       FROM users u WHERE u.role='reseller' AND u.parent_id=$1 ORDER BY u.created_at DESC`,
+      [req.user.id]
+    );
+    res.json(rows.map((r) => ({ ...publicUser(r), clientCount: r.client_count })));
+  })
+);
+
+router.post(
+  '/reseller/subresellers',
+  requireRole('reseller'),
+  h(async (req, res) => {
+    const { username, password } = req.body || {};
+    const credits = Math.max(0, parseInt(req.body?.credits, 10) || 0);
+    if (!username || !password) throw httpError(400, 'Usuario y contraseña requeridos');
+    const { salt, hash } = hashPassword(password);
+    const row = await tx(async (c) => {
+      const me = await c.query('SELECT credits FROM users WHERE id=$1 FOR UPDATE', [req.user.id]);
+      if (credits > 0 && me.rows[0].credits < credits) throw httpError(402, 'Créditos insuficientes');
+      let created;
+      try {
+        created = (
+          await c.query(
+            `INSERT INTO users (username, pass_hash, pass_salt, role, parent_id, created_by, credits)
+             VALUES ($1,$2,$3,'reseller',$4,$4,$5) RETURNING *`,
+            [username, hash, salt, req.user.id, credits]
+          )
+        ).rows[0];
+      } catch (e) {
+        if (e.code === '23505') throw httpError(409, 'Ese usuario ya existe');
+        throw e;
+      }
+      if (credits > 0) {
+        await c.query('UPDATE users SET credits = credits - $1 WHERE id=$2', [credits, req.user.id]);
+        await c.query(
+          `INSERT INTO transactions (type, amount, reseller_id, by_user_id, note)
+           VALUES ('allocate',$1,$2,$3,$4)`,
+          [credits, created.id, req.user.id, `Alta sub-vendedor ${username}`]
+        );
+      }
+      return created;
+    });
+    res.status(201).json(publicUser(row));
+  })
+);
+
+router.post(
+  '/reseller/subresellers/:id/credits',
+  requireRole('reseller'),
+  h(async (req, res) => {
+    const amount = parseInt(req.body?.amount, 10);
+    if (!amount) throw httpError(400, 'Monto inválido');
+    const updated = await tx(async (c) => {
+      const sub = await c.query(
+        "SELECT * FROM users WHERE id=$1 AND role='reseller' AND parent_id=$2 FOR UPDATE",
+        [req.params.id, req.user.id]
+      );
+      if (!sub.rows[0]) throw httpError(404, 'Sub-vendedor no encontrado');
+      const me = await c.query('SELECT credits FROM users WHERE id=$1 FOR UPDATE', [req.user.id]);
+      if (amount > 0 && me.rows[0].credits < amount) throw httpError(402, 'Créditos insuficientes');
+      if (amount < 0 && sub.rows[0].credits + amount < 0) throw httpError(400, 'El sub-vendedor no tiene tanto saldo para devolver');
+      await c.query('UPDATE users SET credits = credits - $1 WHERE id=$2', [amount, req.user.id]);
+      const upd = await c.query('UPDATE users SET credits = credits + $1 WHERE id=$2 RETURNING *', [amount, req.params.id]);
+      await c.query(
+        `INSERT INTO transactions (type, amount, reseller_id, by_user_id, note) VALUES ($1,$2,$3,$4,$5)`,
+        [amount >= 0 ? 'allocate' : 'refund', Math.abs(amount), req.params.id, req.user.id,
+         amount >= 0 ? 'Venta de saldo a sub-vendedor' : 'Saldo recuperado de sub-vendedor']
+      );
+      return upd.rows[0];
+    });
+    res.json(publicUser(updated));
+  })
+);
+
 export default router;

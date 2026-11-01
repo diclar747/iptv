@@ -29,6 +29,30 @@ export default function ResellerPanel({ user }) {
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { if (tab === 'movimientos') api.transactions().then(setTxs).catch(() => {}); }, [tab]);
 
+  const [subs, setSubs] = useState([]);
+  const [ns, setNs] = useState({ username: '', password: '', credits: '' });
+  useEffect(() => { if (tab === 'subvendedores') api.subresellers().then(setSubs).catch(() => {}); }, [tab]);
+
+  async function createSub(e) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await api.createSubreseller({ username: ns.username, password: ns.password, credits: Number(ns.credits) || 0 });
+      setNs({ username: '', password: '', credits: '' });
+      const [s, m] = await Promise.all([api.subresellers(), api.resellerMe()]);
+      setSubs(s); setMe(m); await refresh();
+    } catch (e) { setError(e.message); }
+  }
+  async function sellCredits(sub) {
+    const v = window.prompt(`Vender saldo a "${sub.username}" (créditos). Negativo para recuperar.`, '10');
+    if (v == null || v === '') return;
+    try {
+      await api.transferToSub(sub.id, Number(v));
+      const [s, m] = await Promise.all([api.subresellers(), api.resellerMe()]);
+      setSubs(s); setMe(m); await refresh();
+    } catch (e) { setError(e.message); }
+  }
+
   const [nc, setNc] = useState({ username: '', password: '', packageId: '' });
   useEffect(() => {
     if (packages.length && !nc.packageId) setNc((v) => ({ ...v, packageId: String(packages[0].id) }));
@@ -76,6 +100,7 @@ export default function ResellerPanel({ user }) {
 
       <div className="panel-tabs">
         <button className={tab === 'clientes' ? 'on' : ''} onClick={() => setTab('clientes')}>Clientes</button>
+        <button className={tab === 'subvendedores' ? 'on' : ''} onClick={() => setTab('subvendedores')}>Sub-vendedores</button>
         <button className={tab === 'movimientos' ? 'on' : ''} onClick={() => setTab('movimientos')}>Movimientos</button>
       </div>
 
@@ -118,6 +143,35 @@ export default function ResellerPanel({ user }) {
               );
             })}
             {clients.length === 0 && <div className="tr empty">Sin clientes todavía.</div>}
+          </div>
+        </>
+      )}
+
+      {tab === 'subvendedores' && (
+        <>
+          <form className="row-form" onSubmit={createSub}>
+            <input placeholder="usuario" value={ns.username}
+              onChange={(e) => setNs({ ...ns, username: e.target.value })} required />
+            <input placeholder="contraseña" value={ns.password}
+              onChange={(e) => setNs({ ...ns, password: e.target.value })} required />
+            <input type="number" min="0" placeholder="créditos" value={ns.credits}
+              onChange={(e) => setNs({ ...ns, credits: e.target.value })} />
+            <button className="verify" type="submit">+ Vendedor</button>
+          </form>
+          <div className="table">
+            <div className="tr th">
+              <span>Usuario</span><span>Créditos</span><span>Clientes</span><span>Estado</span><span>Acciones</span>
+            </div>
+            {subs.map((s) => (
+              <div className="tr" key={s.id}>
+                <span className="strong">{s.username}</span>
+                <span className="mono">{s.credits}</span>
+                <span className="mono">{s.clientCount}</span>
+                <span><span className={`badge ${s.status === 'active' ? 'ok' : 'off'}`}>{s.status === 'active' ? 'activo' : 'off'}</span></span>
+                <span className="actions"><button onClick={() => sellCredits(s)}>Vender saldo</button></span>
+              </div>
+            ))}
+            {subs.length === 0 && <div className="tr empty">Sin sub-vendedores todavía.</div>}
           </div>
         </>
       )}
