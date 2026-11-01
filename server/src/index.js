@@ -12,6 +12,7 @@ import {
 } from './iptvSource.js';
 import { checkStream, checkMany } from './checker.js';
 import { streamHandler } from './proxy.js';
+import { streamToken, validToken } from './streamToken.js';
 import { initSchema, ping } from './pg.js';
 import { attachUser, requireActiveViewer } from './auth.js';
 import accountsRouter, { ensureSeed } from './accounts.js';
@@ -26,6 +27,10 @@ process.on('unhandledRejection', (err) => console.error('[api] unhandled:', err?
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+// Detrás de Cloudflare / proxy del hosting: confiar en X-Forwarded-* para que
+// req.protocol sea https (necesario para armar URLs absolutas de cast).
+app.set('trust proxy', true);
 
 app.use(cors());
 app.use(express.json());
@@ -47,11 +52,41 @@ async function withData(req, res, next) {
   }
 }
 
+// Autorización del stream: cookie de sesión normal, o un token firmado
+// (?t=) para proyectar a Chromecast/Smart TV sin cookie.
+function streamAuth(req, res, next) {
+  if (validToken(req.query.url, req.query.t)) return next();
+  return requireActiveViewer(req, res, next);
+}
+
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 // Metadata para filtros (países y categorías con canales).
 app.get('/api/meta', requireActiveViewer, withData, (req, res) => {
+  res.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=600');
   res.json(getMeta());
+});
+
+// Inicio en UN solo pedido: todas las filas de canales juntas (antes eran 6).
+const HOME_ROWS = [
+  { key: 'py', title: 'TV en Vivo · Paraguay', country: 'PY' },
+  { key: 'sports', title: 'Deportes', category: 'sports' },
+  { key: 'news', title: 'Noticias', category: 'news' },
+  { key: 'ar', title: 'Argentina', country: 'AR' },
+  { key: 'br', title: 'Brasil', country: 'BR' },
+  { key: 'documentary', title: 'Documentales', category: 'documentary' },
+];
+app.get('/api/home', requireActiveViewer, withData, (req, res) => {
+  const rows = HOME_ROWS.map((r) => ({
+    key: r.key,
+    title: r.title,
+    nav: r.country === 'PY' ? 'tv' : r.category === 'sports' ? 'deportes' : r.category === 'documentary' ? 'documentales' : null,
+    items: queryChannels({
+      country: r.country, category: r.category, page: 1, pageSize: 20, onlyWithStreams: true,
+    }).items,
+  }));
+  res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
+  res.json({ rows });
 });
 
 // Listado de canales con filtros y paginación.
@@ -66,6 +101,7 @@ app.get('/api/channels', requireActiveViewer, withData, (req, res) => {
     includeNsfw = 'false',
     onlyWithStreams = 'true',
   } = req.query;
+  res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
   res.json(
     queryChannels({
       country: country || undefined,
@@ -87,8 +123,19 @@ app.get('/api/channels/:id/streams', requireActiveViewer, withData, (req, res) =
 });
 
 // Proxy de reproducción: reenvía el stream con cabeceras y resuelve CORS.
-//   /api/stream?url=...&ua=...&ref=...
-app.get('/api/stream', requireActiveViewer, streamHandler());
+//   /api/stream?url=...&ua=...&ref=...   (cookie de sesión o token de cast)
+app.get('/api/stream', streamAuth, streamHandler());
+
+// URL absoluta y firmada para proyectar el stream a Chromecast/Smart TV.
+app.get('/api/cast-url', requireActiveViewer, (req, res) => {
+  const { url, ua, ref } = req.query;
+  if (!url || !/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'url inválida' });
+  const qs = new URLSearchParams({ url });
+  if (ua) qs.set('ua', ua);
+  if (ref) qs.set('ref', ref);
+  qs.set('t', streamToken(url));
+  res.json({ url: `${req.protocol}://${req.get('host')}/api/stream?${qs.toString()}` });
+});
 
 // Verifica si un stream responde. ?url=...&userAgent=...&referrer=...
 app.get('/api/check', requireActiveViewer, async (req, res) => {

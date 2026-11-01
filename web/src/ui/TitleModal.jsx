@@ -117,7 +117,8 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
               Límite de conexiones alcanzado ({limit.max}).<br />Cerrá otra pantalla e intentá de nuevo.
             </div>
           ) : activeStream ? (
-            <Player url={proxyUrl(activeStream)} />
+            <Player url={proxyUrl(activeStream)} stream={activeStream} title={title}
+              poster={backdrop} autoFullscreen={isChannel} />
           ) : (
             <div className="player placeholder">{error || 'Cargando…'}</div>
           )}

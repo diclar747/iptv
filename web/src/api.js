@@ -28,10 +28,13 @@ const patch = (p, body) => req('PATCH', p, { body });
 
 export const api = {
   // Catálogo / visor
+  home: () => get('/home'),
   meta: () => get('/meta'),
   channels: (params) => get('/channels', params),
   streams: (id) => get(`/channels/${encodeURIComponent(id)}/streams`),
   checkChannel: (id) => get(`/channels/${encodeURIComponent(id)}/check`),
+  // URL absoluta y firmada para proyectar a Chromecast/Smart TV.
+  castUrl: (stream) => get('/cast-url', { url: stream.url, ua: stream.userAgent, ref: stream.referrer }),
 
   // Auth
   me: () => get('/auth/me'),

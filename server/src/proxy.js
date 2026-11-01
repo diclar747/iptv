@@ -9,6 +9,7 @@
 
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { streamToken } from './streamToken.js';
 
 // UA de navegador por defecto: algunos orígenes rechazan UA vacío o de Node.
 const DEFAULT_UA =
@@ -22,16 +23,19 @@ function isManifest(url, contentType) {
 }
 
 // Construye la URL de proxy para una URL absoluta, preservando ua/ref.
-function proxify(absoluteUrl, ua, ref) {
+// En modo token (cast), agrega ?t=<token> para que los segmentos/sub-playlists
+// también se puedan servir sin cookie al dispositivo que proyecta.
+function proxify(absoluteUrl, ua, ref, tokenMode) {
   const qs = new URLSearchParams({ url: absoluteUrl });
   if (ua) qs.set('ua', ua);
   if (ref) qs.set('ref', ref);
+  if (tokenMode) qs.set('t', streamToken(absoluteUrl));
   return `/api/stream?${qs.toString()}`;
 }
 
 // Reescribe un manifiesto HLS para enrutar todo por el proxy.
 // baseUrl = URL final del manifiesto (tras redirects) para resolver relativos.
-function rewriteManifest(text, baseUrl, ua, ref) {
+function rewriteManifest(text, baseUrl, ua, ref, tokenMode) {
   const lines = text.split(/\r?\n/);
   const out = lines.map((line) => {
     const trimmed = line.trim();
@@ -42,13 +46,13 @@ function rewriteManifest(text, baseUrl, ua, ref) {
       if (!trimmed.includes('URI="')) return line;
       return line.replace(/URI="([^"]+)"/g, (_m, uri) => {
         const abs = new URL(uri, baseUrl).href;
-        return `URI="${proxify(abs, ua, ref)}"`;
+        return `URI="${proxify(abs, ua, ref, tokenMode)}"`;
       });
     }
 
     // Línea de recurso (segmento .ts/.m4s o sub-playlist .m3u8)
     const abs = new URL(trimmed, baseUrl).href;
-    return proxify(abs, ua, ref);
+    return proxify(abs, ua, ref, tokenMode);
   });
   return out.join('\n');
 }
@@ -61,6 +65,9 @@ export function streamHandler() {
     }
     const ua = req.query.ua || DEFAULT_UA;
     const ref = req.query.ref || undefined;
+    // Si la petición llegó con token (cast), propagar el token a los recursos
+    // reescritos del manifiesto para que el dispositivo los pueda pedir.
+    const tokenMode = Boolean(req.query.t);
 
     const controller = new AbortController();
     req.on('close', () => controller.abort());
@@ -89,7 +96,7 @@ export function streamHandler() {
       if (isManifest(baseUrl, contentType)) {
         const body = await upstream.text();
         if (body.trimStart().startsWith('#EXTM3U')) {
-          const rewritten = rewriteManifest(body, baseUrl, req.query.ua, ref);
+          const rewritten = rewriteManifest(body, baseUrl, req.query.ua, ref, tokenMode);
           // Siempre 200: enviamos el manifiesto completo reescrito.
           res.status(200);
           res.set('Content-Type', 'application/vnd.apple.mpegurl');
