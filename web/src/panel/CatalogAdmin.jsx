@@ -90,7 +90,7 @@ export default function CatalogAdmin() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button disabled={busy} onClick={() => act(api.catTmdbTest, null)}>Probar</button>
           <button className="verify" disabled={busy || !st?.tmdb?.configured || st?.tmdb?.running}
-            onClick={() => act(() => api.catImportTmdb({ pages: 5 }), 'Importación de TMDB iniciada')}>
+            onClick={() => act(() => api.catImportTmdb({ pages: 40 }), 'Importación de TMDB iniciada')}>
             Importar TMDB
           </button>
         </div>

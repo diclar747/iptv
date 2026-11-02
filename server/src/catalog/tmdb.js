@@ -51,28 +51,45 @@ async function upsert(m, genres) {
   return true;
 }
 
-// Importa en segundo plano desde las listas populares de TMDB.
-export function importTmdb({ pages = 5 } = {}) {
+// Importa en segundo plano. Usa /discover (miles de películas por popularidad) +
+// /movie/now_playing (estrenos). pages = cuántas páginas de discover (20 c/u).
+export function importTmdb({ pages = 30 } = {}) {
   if (control.running) return { ok: false, error: 'Ya hay una importación de TMDB en curso' };
   if (!key()) return { ok: false, error: 'TMDB sin API Key' };
   control.running = true; control.count = 0; control.note = 'iniciando';
   (async () => {
+    let errors = 0, lastErr = null;
     try {
       const genres = await loadGenres();
-      for (const list of ['popular', 'top_rated', 'now_playing']) {
-        for (let page = 1; page <= pages; page++) {
-          control.note = `${list} · página ${page}`;
-          const url = `${API}/movie/${list}?api_key=${key()}&language=es-ES&page=${page}&region=PY`;
-          const r = await fetch(url).catch(() => null);
-          if (!r || !r.ok) break;
-          const j = await r.json().catch(() => ({}));
-          for (const m of (j.results || [])) {
-            try { if (await upsert(m, genres)) control.count++; } catch { /* saltar */ }
-          }
-          await sleep(120);
+
+      // 1) Catálogo amplio: discover ordenado por popularidad (20.000+ títulos).
+      for (let page = 1; page <= pages; page++) {
+        control.note = `populares · página ${page}/${pages}`;
+        const url = `${API}/discover/movie?api_key=${key()}&language=es-ES`
+          + `&sort_by=popularity.desc&vote_count.gte=50&include_adult=false&page=${page}`;
+        const r = await fetch(url).catch(() => null);
+        if (!r || !r.ok) { errors++; await sleep(500); continue; }
+        const j = await r.json().catch(() => ({}));
+        for (const m of (j.results || [])) {
+          try { if (await upsert(m, genres)) control.count++; }
+          catch (e) { errors++; lastErr = String(e.message).slice(0, 180); }
         }
+        await sleep(120);
       }
-      control.note = `completada: ${control.count} películas`;
+
+      // 2) Estrenos recientes.
+      for (let page = 1; page <= 3; page++) {
+        control.note = `estrenos · página ${page}`;
+        const r = await fetch(`${API}/movie/now_playing?api_key=${key()}&language=es-ES&page=${page}`).catch(() => null);
+        if (!r || !r.ok) continue;
+        const j = await r.json().catch(() => ({}));
+        for (const m of (j.results || [])) {
+          try { if (await upsert(m, genres)) control.count++; } catch (e) { errors++; lastErr = String(e.message).slice(0, 180); }
+        }
+        await sleep(120);
+      }
+
+      control.note = `completada: ${control.count} películas` + (errors ? ` (${errors} errores${lastErr ? ': ' + lastErr : ''})` : '');
     } catch (e) {
       control.note = 'error: ' + e.message;
     } finally {
