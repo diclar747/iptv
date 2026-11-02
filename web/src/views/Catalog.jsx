@@ -37,10 +37,13 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
   // Categorías (solo películas sin categoría fija).
   useEffect(() => {
     if (mode !== 'movies' || fixedCategory) return;
-    api.movies({}).then((all) => {
-      const c = {};
-      all.forEach((m) => { if (m.category) c[m.category] = (c[m.category] || 0) + 1; });
-      setCats(Object.entries(c).sort((a, b) => a[0].localeCompare(b[0])));
+    // Usa /catalog/meta: cuenta TODOS los géneros reproducibles (no solo la
+    // primera página de películas, que eran todas "Clásicos" por popularidad).
+    api.catalogMeta().then((meta) => {
+      const list = (meta.genres || [])
+        .map((g) => [g.value, g.count])
+        .sort((a, b) => a[0].localeCompare(b[0]));
+      setCats(list);
     }).catch(() => {});
   }, [mode, fixedCategory]);
 

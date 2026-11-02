@@ -186,8 +186,11 @@ router.get('/catalog/series/:id', async (req, res) => {
 // Metadatos del catálogo (géneros + atribución + si el proveedor está conectado).
 router.get('/catalog/meta', async (req, res) => {
   const p = getProvider();
+  // Solo categorías con películas REPRODUCIBLES (lo mismo que muestra la grilla),
+  // para que el filtro del catálogo no ofrezca géneros vacíos.
   const cats = await many(
-    `SELECT category AS slug, count(*)::int n FROM movies WHERE NOT hidden AND category IS NOT NULL
+    `SELECT category AS slug, count(*)::int n FROM movies m
+     WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND m.category IS NOT NULL
      GROUP BY category ORDER BY n DESC LIMIT 30`);
   res.json({
     attribution: p.attribution,
