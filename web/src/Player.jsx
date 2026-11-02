@@ -3,11 +3,13 @@ import { api } from './api.js';
 import { castSupported, castTo, airplaySupported, airplay, loadCast } from './cast.js';
 import Icon from './ui/Icon.jsx';
 
-// Intenta reproducir; si el navegador bloquea el autoplay con audio, reintenta
-// silenciado (eso sí está permitido). El usuario sube el volumen después.
+// Arranca SIEMPRE silenciado: así el navegador permite el autoplay y el canal
+// se ve al instante (nunca queda negro/pausado). El usuario activa el sonido
+// con un toque (botón "Activar sonido").
 function playVideo(video) {
+  try { video.muted = true; } catch { /* noop */ }
   const p = video.play();
-  if (p && p.catch) p.catch(() => { video.muted = true; const p2 = video.play(); if (p2 && p2.catch) p2.catch(() => {}); });
+  if (p && p.catch) p.catch(() => {});
 }
 
 // Reproductor HLS/MP4. hls.js se carga BAJO DEMANDA (solo al reproducir HLS en
@@ -20,6 +22,7 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
   const [loading, setLoading] = useState(true);
   const [casting, setCasting] = useState(false);
   const [canCast, setCanCast] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [ctrlsOn, setCtrlsOn] = useState(true);
   const hideTimer = useRef(null);
 
@@ -63,7 +66,9 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
       if (autoFullscreen && window.matchMedia('(max-width: 900px)').matches) tryFullscreen();
     };
     const onNativeError = () => { setError('No se pudo reproducir el archivo.'); setLoading(false); onFail && onFail(); };
+    const onVol = () => setIsMuted(video.muted);
     video.addEventListener('playing', onPlaying);
+    video.addEventListener('volumechange', onVol);
 
     // ¿El stream real (param ?url=) es HLS (.m3u8) o archivo directo (MP4)?
     let realUrl = url;
@@ -108,6 +113,7 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
     return () => {
       destroyed = true;
       video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('volumechange', onVol);
       video.removeEventListener('error', onNativeError);
       if (hls) hls.destroy();
       video.removeAttribute('src');
@@ -166,6 +172,11 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
         <button className="pbtn" onClick={toggleFullscreen}
           title="Pantalla completa" aria-label="Pantalla completa"><Icon name="fullscreen" size={20} /></button>
       </div>
+      {isMuted && !error && (
+        <button className="unmute-btn" onClick={() => { const v = videoRef.current; if (v) { v.muted = false; setIsMuted(false); } }}>
+          🔊 Tocá para activar el sonido
+        </button>
+      )}
       {loading && !error && <div className="player-overlay">Conectando…</div>}
       {error && <div className="player-overlay error">{error}</div>}
     </div>
