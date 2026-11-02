@@ -46,6 +46,12 @@ function yearNum(y) {
   const m = String(Array.isArray(y) ? y[0] : (y || '')).match(/(18|19|20)\d{2}/);
   return m ? Number(m[0]) : null;
 }
+// Descarta contenido episódico / no-película (series, radio, volúmenes).
+function looksEpisodic(title) {
+  const t = String(title || '');
+  return /\bS\s*\d{1,2}\s*[._\- ]?\s*E\s*\d{1,3}\b/i.test(t)
+    || /\bepisode\b|\bcap[ií]tulo\b|\bvol\.?\s*\d|\bparte\s*\d|\bdisc\s*\d/i.test(t);
+}
 
 // Elige un archivo MP4 reproducible en el navegador. Prefiere tamaños moderados.
 async function pickMp4(identifier) {
@@ -102,8 +108,9 @@ export function importArchive({ perGenre = 100 } = {}) {
         for (const d of docs) {
           const downloads = Number(d.downloads || 0);
           const year = yearNum(d.year);
-          // CALIDAD: solo clásicos conocidos (populares, con año) — nada de basura.
-          if (downloads < MIN_DOWNLOADS || !year) continue;
+          const title = cleanTitle(d.title);
+          // CALIDAD: solo películas conocidas (populares, con año, no episódicas).
+          if (downloads < MIN_DOWNLOADS || !year || looksEpisodic(title)) continue;
           try {
             const mp4 = await pickMp4(d.identifier);
             if (!mp4) continue;

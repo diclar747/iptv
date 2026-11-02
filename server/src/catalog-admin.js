@@ -34,7 +34,13 @@ router.post('/admin/catalog/tmdb-test', async (req, res) => res.json(await tmdbT
 // (las que entraron antes del filtro de calidad). No toca TMDB ni el seed.
 router.post('/admin/catalog/clean-archive', async (req, res) => {
   const min = Number(req.body?.min) || 5000;
-  const ids = (await many(`SELECT id FROM movies WHERE provider='archive' AND COALESCE(popularity,0) < $1`, [min])).map((r) => r.id);
+  // Basura = poco populares, O contenido episódico (series/radio) sin importar descargas.
+  const ids = (await many(
+    `SELECT id FROM movies WHERE provider='archive' AND (
+       COALESCE(popularity,0) < $1
+       OR title ~* 'S *[0-9]+ *E *[0-9]+'
+       OR title ~* '(episode|cap[ií]tulo|parte +[0-9]|vol\.? *[0-9]|disc +[0-9])'
+     )`, [min])).map((r) => r.id);
   if (ids.length) {
     await query(`DELETE FROM external_ids   WHERE content_type='movie' AND internal_id = ANY($1)`, [ids]);
     await query(`DELETE FROM content_genres WHERE content_type='movie' AND content_id  = ANY($1)`, [ids]);

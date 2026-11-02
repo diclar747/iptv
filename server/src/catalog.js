@@ -65,6 +65,7 @@ router.get('/catalog/home', async (req, res) => {
   const feat = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
      WHERE NOT m.hidden AND (m.backdrop IS NOT NULL OR m.poster IS NOT NULL)
+       AND m.title !~* 'S *[0-9]+ *E *[0-9]+'
      ORDER BY (m.backdrop IS NOT NULL) DESC, m.featured DESC, m.popularity DESC, m.created_at DESC LIMIT 6`
   );
   res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
