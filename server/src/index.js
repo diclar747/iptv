@@ -164,7 +164,13 @@ app.get('/api/cast-url', requireActiveViewer, (req, res) => {
   if (ua) qs.set('ua', ua);
   if (ref) qs.set('ref', ref);
   qs.set('t', streamToken(url));
-  res.json({ url: `${req.protocol}://${req.get('host')}/api/stream?${qs.toString()}` });
+  // El sitio se sirve por HTTPS (detrás de Cloudflare). req.protocol a veces
+  // queda en 'http' aunque el borde sea https; si la URL de cast sale en http,
+  // el Chromecast recibe un redirect 308 que NO sigue y no reproduce nada.
+  // Forzamos https salvo en localhost (desarrollo).
+  const host = req.get('host') || '';
+  const proto = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(host) ? req.protocol : 'https';
+  res.json({ url: `${proto}://${host}/api/stream?${qs.toString()}` });
 });
 
 // Verifica si un stream responde. ?url=...&userAgent=...&referrer=...
