@@ -22,6 +22,9 @@ const label = (c) => GENRE_ES[String(c || '').toLowerCase().replace(/\s+/g, '-')
 // ¿Es reproducible? (tiene fuente autorizada o stream de dominio público)
 const MOVIE_AVAIL = `(m.stream_url IS NOT NULL OR EXISTS(
   SELECT 1 FROM media_sources ms WHERE ms.content_type='movie' AND ms.content_id=m.id AND ms.enabled))`;
+// Serie reproducible: tiene al menos un episodio con fuente.
+const SERIES_AVAIL = `EXISTS(SELECT 1 FROM episodes e WHERE e.series_id=s.id AND (
+  e.stream_url IS NOT NULL OR EXISTS(SELECT 1 FROM media_sources ms WHERE ms.content_type='episode' AND ms.content_id=e.id AND ms.enabled)))`;
 
 const movieCard = (m) => ({
   id: m.id, type: 'movie', title: m.title, year: m.year, poster: m.poster,
@@ -34,10 +37,11 @@ const seriesCard = (s) => ({
   category: s.category, available: true,
 });
 
+// Solo películas REPRODUCIBLES (se ocultan las que están sin fuente / "Próximamente").
 async function movieRow(where = '', params = [], limit = 24) {
   const rows = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-     WHERE NOT m.hidden ${where ? 'AND ' + where : ''} ORDER BY m.created_at DESC LIMIT ${limit}`,
+     WHERE NOT m.hidden AND ${MOVIE_AVAIL} ${where ? 'AND ' + where : ''} ORDER BY m.created_at DESC LIMIT ${limit}`,
     params
   );
   return rows.map(movieCard);
@@ -52,8 +56,8 @@ router.get('/catalog/home', async (req, res) => {
   const hideCond = `(m.category IS NULL OR NOT (m.category = ANY($1)))`;
   const [latestMovies, series, topCats] = await Promise.all([
     movieRow(hideCond, [HOME_HIDE], 24),
-    many(`SELECT s.* FROM series s WHERE NOT s.hidden ORDER BY s.popularity DESC, s.created_at DESC LIMIT 24`),
-    many(`SELECT category, count(*)::int n FROM movies m WHERE NOT m.hidden AND m.category IS NOT NULL
+    many(`SELECT s.* FROM series s WHERE NOT s.hidden AND ${SERIES_AVAIL} ORDER BY s.popularity DESC, s.created_at DESC LIMIT 24`),
+    many(`SELECT category, count(*)::int n FROM movies m WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND m.category IS NOT NULL
           AND NOT (m.category = ANY($1)) GROUP BY category ORDER BY n DESC LIMIT 6`, [HOME_HIDE]),
   ]);
 
@@ -69,7 +73,7 @@ router.get('/catalog/home', async (req, res) => {
   // si no hay, cae al póster para que el banner no quede vacío.
   const feat = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-     WHERE NOT m.hidden AND (m.backdrop IS NOT NULL OR m.poster IS NOT NULL)
+     WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND (m.backdrop IS NOT NULL OR m.poster IS NOT NULL)
        AND m.title !~* 'S *[0-9]+ *E *[0-9]+'
        AND (m.category IS NULL OR NOT (m.category = ANY($1)))
      ORDER BY (m.backdrop IS NOT NULL) DESC, m.featured DESC, m.popularity DESC, m.created_at DESC LIMIT 6`,
@@ -82,7 +86,7 @@ router.get('/catalog/home', async (req, res) => {
 // Listado de películas con filtros + paginación.
 router.get('/catalog/movies', async (req, res) => {
   const { search, category, page = '1', pageSize = '48' } = req.query;
-  const where = ['NOT m.hidden'];
+  const where = ['NOT m.hidden', MOVIE_AVAIL];
   const params = [];
   if (search) { params.push(`%${search}%`); where.push(`m.title ILIKE $${params.length}`); }
   if (category) { params.push(category); where.push(`m.category=$${params.length}`); }
@@ -99,7 +103,7 @@ router.get('/catalog/movies', async (req, res) => {
 
 router.get('/catalog/series', async (req, res) => {
   const { search } = req.query;
-  const where = ['NOT s.hidden'];
+  const where = ['NOT s.hidden', SERIES_AVAIL];
   const params = [];
   if (search) { params.push(`%${search}%`); where.push(`s.title ILIKE $${params.length}`); }
   const rows = await many(
@@ -117,9 +121,9 @@ router.get('/catalog/search', async (req, res) => {
   const like = `%${q}%`;
   const [mv, sr] = await Promise.all([
     many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-          WHERE NOT m.hidden AND (m.title ILIKE $1 OR m.original_title ILIKE $1)
+          WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND (m.title ILIKE $1 OR m.original_title ILIKE $1)
           ORDER BY m.popularity DESC LIMIT 40`, [like]),
-    many(`SELECT s.* FROM series s WHERE NOT s.hidden AND (s.title ILIKE $1 OR s.original_title ILIKE $1)
+    many(`SELECT s.* FROM series s WHERE NOT s.hidden AND ${SERIES_AVAIL} AND (s.title ILIKE $1 OR s.original_title ILIKE $1)
           ORDER BY s.popularity DESC LIMIT 40`, [like]),
   ]);
   res.json({ movies: mv.map(movieCard), series: sr.map(seriesCard) });
