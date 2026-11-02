@@ -18,7 +18,10 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
 
   // Carga según modo.
   useEffect(() => {
-    if (mode === 'mylist') { setItems(getMyList()); return; }
+    if (mode === 'mylist') {
+      api.favorites().then(setItems).catch(() => setItems(getMyList()));
+      return;
+    }
     if (mode === 'series') {
       api.series().then((s) => setItems(s.map((x) => ({ type: 'serie', ...x })))).catch(handleErr);
       return;

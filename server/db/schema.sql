@@ -85,3 +85,168 @@ CREATE TABLE IF NOT EXISTS reseller_prices (
   price       NUMERIC(14,2) NOT NULL,
   PRIMARY KEY (reseller_id, package_id)
 );
+
+-- ========== CATÁLOGO de películas y series (metadatos multi-proveedor) ==========
+-- Separa METADATOS (TheTVDB/TMDB) de la REPRODUCCIÓN (media_sources). El catálogo
+-- puede ser enorme; "Ver ahora" solo si hay una fuente autorizada vinculada.
+
+CREATE TABLE IF NOT EXISTS catalog_providers (
+  id          TEXT PRIMARY KEY,        -- 'thetvdb' | 'tmdb' | 'local'
+  name        TEXT NOT NULL,
+  enabled     BOOLEAN NOT NULL DEFAULT false,
+  attribution TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Extensiones de catálogo sobre las tablas VOD existentes. stream_url pasa a opcional
+-- (la reproducción vive ahora en media_sources; el seed de dominio público sigue válido).
+ALTER TABLE movies ALTER COLUMN stream_url DROP NOT NULL;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS provider       TEXT;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS original_title TEXT;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS overview_es    TEXT;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS backdrop       TEXT;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS rating         NUMERIC(4,2);
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS runtime        INTEGER;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS country        TEXT;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS trailer        TEXT;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS hidden         BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS featured       BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS popularity     NUMERIC(10,2) DEFAULT 0;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ NOT NULL DEFAULT now();
+
+ALTER TABLE series ADD COLUMN IF NOT EXISTS provider       TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS original_title TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS overview_es    TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS backdrop       TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS rating         NUMERIC(4,2);
+ALTER TABLE series ADD COLUMN IF NOT EXISTS year           INTEGER;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS country        TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS trailer        TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS status         TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS hidden         BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS featured       BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS popularity     NUMERIC(10,2) DEFAULT 0;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ NOT NULL DEFAULT now();
+
+ALTER TABLE episodes ALTER COLUMN stream_url DROP NOT NULL;
+ALTER TABLE episodes ADD COLUMN IF NOT EXISTS overview  TEXT;
+ALTER TABLE episodes ADD COLUMN IF NOT EXISTS still     TEXT;
+ALTER TABLE episodes ADD COLUMN IF NOT EXISTS air_date  DATE;
+ALTER TABLE episodes ADD COLUMN IF NOT EXISTS runtime   INTEGER;
+
+-- Temporadas (ficha por temporada).
+CREATE TABLE IF NOT EXISTS seasons (
+  id        BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  series_id BIGINT NOT NULL REFERENCES series(id) ON DELETE CASCADE,
+  number    INTEGER NOT NULL,
+  title     TEXT,
+  overview  TEXT,
+  poster    TEXT,
+  UNIQUE (series_id, number)
+);
+
+-- IDs externos por proveedor: la clave para deduplicar al sumar varias APIs.
+CREATE TABLE IF NOT EXISTS external_ids (
+  provider     TEXT NOT NULL,
+  content_type TEXT NOT NULL,          -- 'movie'|'series'|'episode'|'person'
+  external_id  TEXT NOT NULL,
+  internal_id  BIGINT NOT NULL,
+  PRIMARY KEY (provider, content_type, external_id)
+);
+CREATE INDEX IF NOT EXISTS idx_external_internal ON external_ids(content_type, internal_id);
+
+-- Géneros y su relación con el contenido.
+CREATE TABLE IF NOT EXISTS genres (
+  id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS content_genres (
+  content_type TEXT NOT NULL,          -- 'movie'|'series'
+  content_id   BIGINT NOT NULL,
+  genre_id     BIGINT NOT NULL REFERENCES genres(id) ON DELETE CASCADE,
+  PRIMARY KEY (content_type, content_id, genre_id)
+);
+CREATE INDEX IF NOT EXISTS idx_cgenres_genre ON content_genres(genre_id);
+
+-- Imágenes (portadas, fondos, stills de episodios).
+CREATE TABLE IF NOT EXISTS artworks (
+  id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  content_type TEXT NOT NULL,
+  content_id   BIGINT NOT NULL,
+  kind         TEXT NOT NULL,          -- 'poster'|'backdrop'|'still'|'logo'
+  url          TEXT NOT NULL,
+  lang         TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_artworks_content ON artworks(content_type, content_id);
+
+-- Personas y reparto.
+CREATE TABLE IF NOT EXISTS people (
+  id    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name  TEXT NOT NULL,
+  photo TEXT
+);
+CREATE TABLE IF NOT EXISTS content_credits (
+  content_type TEXT NOT NULL,
+  content_id   BIGINT NOT NULL,
+  person_id    BIGINT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  role         TEXT,                   -- 'director'|'actor'
+  char_name    TEXT,
+  sort         INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_credits_content ON content_credits(content_type, content_id);
+
+-- Fuentes de reproducción AUTORIZADAS (separadas del catálogo de metadatos).
+CREATE TABLE IF NOT EXISTS media_sources (
+  id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  content_type TEXT NOT NULL,          -- 'movie'|'episode'
+  content_id   BIGINT NOT NULL,
+  url          TEXT NOT NULL,
+  kind         TEXT DEFAULT 'hls',
+  user_agent   TEXT,
+  referrer     TEXT,
+  quality      TEXT,
+  enabled      BOOLEAN NOT NULL DEFAULT true,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_media_content ON media_sources(content_type, content_id);
+
+-- Favoritos y progreso por usuario (persisten entre sincronizaciones).
+CREATE TABLE IF NOT EXISTS user_favorites (
+  user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content_type TEXT NOT NULL,          -- 'movie'|'series'
+  content_id   BIGINT NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, content_type, content_id)
+);
+CREATE TABLE IF NOT EXISTS watch_progress (
+  user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content_type TEXT NOT NULL,          -- 'movie'|'episode'
+  content_id   BIGINT NOT NULL,
+  position     INTEGER NOT NULL DEFAULT 0,
+  duration     INTEGER,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, content_type, content_id)
+);
+
+-- Importación / sincronización.
+CREATE TABLE IF NOT EXISTS sync_jobs (
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  provider    TEXT NOT NULL,
+  kind        TEXT NOT NULL,           -- 'movies'|'series'|'updates'
+  status      TEXT NOT NULL,           -- 'running'|'paused'|'done'|'error'
+  created     INTEGER NOT NULL DEFAULT 0,
+  updated     INTEGER NOT NULL DEFAULT 0,
+  errors      INTEGER NOT NULL DEFAULT 0,
+  last_error  TEXT,
+  started_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  finished_at TIMESTAMPTZ
+);
+CREATE TABLE IF NOT EXISTS sync_cursors (
+  provider TEXT NOT NULL,
+  kind     TEXT NOT NULL,              -- 'movies'|'series'|'updates'
+  page     INTEGER NOT NULL DEFAULT 0,
+  since    BIGINT,
+  done     BOOLEAN NOT NULL DEFAULT false,
+  PRIMARY KEY (provider, kind)
+);

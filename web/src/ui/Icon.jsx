@@ -50,6 +50,19 @@ const PATHS = {
       <path d="M3.3 9.6h17.4M3.3 14.4h17.4M7.6 5.3v13.4M16.4 5.3v13.4" />
     </>
   ),
+  series: (
+    <>
+      <rect x="3" y="7" width="18" height="12.5" rx="2" />
+      <path d="M8.5 4 12 7l3.5-3" />
+      <path d="M10.4 11.2v4.1l3.5-2z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  list: (
+    <>
+      <path d="M6 4h12v16l-6-3.6L6 20z" />
+      <path d="M12 8v5M9.5 10.5h5" />
+    </>
+  ),
   gear: (
     <>
       <circle cx="12" cy="12" r="3" />

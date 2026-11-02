@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api, proxyUrl } from '../api.js';
 import Player from '../Player.jsx';
 import WatchActions from '../WatchActions.jsx';
@@ -6,16 +6,20 @@ import { inMyList, toggleMyList, pushContinue, keyOf } from '../library.js';
 import { curatedEmbed, curatedDirect, transcodeUrl } from '../curated.js';
 
 // Overlay de detalle + reproducción para una película, serie o canal.
+// Catálogo (pelis/series): ficha con sinopsis, géneros, reparto y temporadas.
+// "Ver ahora" SOLO si hay fuente autorizada (available); si no, ficha informativa.
 export default function TitleModal({ item, user, onClose, onAuthError }) {
   const isMovie = item.type === 'movie';
   const isSerie = item.type === 'serie';
   const isChannel = item.type === 'channel';
-  const embed = curatedEmbed(item.type, item.id); // reproductor oficial embebido
+  const embed = curatedEmbed(item.type, item.id);
 
-  const [streams, setStreams] = useState(isMovie ? [{ url: item.streamUrl }] : []);
+  const [detail, setDetail] = useState(null); // ficha enriquecida (cine)
+  const [streams, setStreams] = useState([]);
   const [episodes, setEpisodes] = useState([]);
   const [ep, setEp] = useState(null);
-  const [activeStream, setActiveStream] = useState(isMovie ? { url: item.streamUrl } : null);
+  const [activeStream, setActiveStream] = useState(null);
+  const [season, setSeason] = useState(1);
   const [checking, setChecking] = useState(false);
   const [limit, setLimit] = useState(null);
   const [inList, setInList] = useState(inMyList(item.type, item.id));
@@ -26,11 +30,9 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
     setError(e.message);
   }
 
-  // Registrar en "Seguir viendo" al abrir.
   useEffect(() => {
     pushContinue({
-      type: item.type, id: item.id,
-      title: item.title || item.name,
+      type: item.type, id: item.id, title: item.title || item.name,
       poster: item.poster || item.logo,
       meta: item.meta || item.category || item.country || '',
     });
@@ -38,27 +40,26 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
 
   // Cargar contenido según tipo.
   useEffect(() => {
-    if (isSerie) {
+    if (isMovie) {
+      api.movie(item.id).then((m) => {
+        setDetail(m);
+        if (m.available && m.streams?.length) { setStreams(m.streams); setActiveStream(m.streams[0]); }
+      }).catch(handleErr);
+    } else if (isSerie) {
       api.serie(item.id).then((s) => {
-        setEpisodes(s.episodes);
-        if (s.episodes[0]) { setEp(s.episodes[0]); setActiveStream({ url: s.episodes[0].streamUrl }); }
+        setDetail(s);
+        setEpisodes(s.episodes || []);
+        const firstPlayable = (s.episodes || []).find((e) => e.available);
+        if (firstPlayable) { setEp(firstPlayable); setSeason(firstPlayable.season); setActiveStream({ url: firstPlayable.streamUrl }); }
+        else if (s.episodes?.[0]) setSeason(s.episodes[0].season);
       }).catch(handleErr);
     } else if (isChannel) {
-      // Canales curados: 1) stream oficial directo, 2) transcodificador, si no
-      // 3) los streams de iptv-org.
       const direct = curatedDirect(item.type, item.id);
       const tc = transcodeUrl(item.type, item.id);
-      if (direct) {
-        setStreams([direct]);
-        setActiveStream(direct);
-      } else if (tc) {
-        setStreams([{ url: tc }]);
-        setActiveStream({ url: tc });
-      } else {
-        api.streams(item.id).then((r) => {
-          setStreams(r.streams);
-          if (r.streams[0]) setActiveStream(r.streams[0]);
-        }).catch(handleErr);
+      if (direct) { setStreams([direct]); setActiveStream(direct); }
+      else if (tc) { setStreams([{ url: tc }]); setActiveStream({ url: tc }); }
+      else {
+        api.streams(item.id).then((r) => { setStreams(r.streams); if (r.streams[0]) setActiveStream(r.streams[0]); }).catch(handleErr);
       }
     }
   }, [item.id]);
@@ -82,7 +83,6 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
     return () => { cancelled = true; if (beat) clearInterval(beat); if (sid) api.watchStop(sid).catch(() => {}); };
   }, [item.id]);
 
-  // Cerrar con Escape.
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -100,23 +100,41 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
     } catch (e) { handleErr(e); } finally { setChecking(false); }
   }
 
-  const activeCount = useMemo(
-    () => (streams.some((s) => 'ok' in s) ? streams.filter((s) => s.ok).length : null),
-    [streams]
-  );
-
-  // Si el stream actual falla, pasa automáticamente al siguiente del canal.
   function tryNextStream() {
     const i = streams.indexOf(activeStream);
     const next = streams[i + 1];
     if (next) setActiveStream(next);
   }
 
+  function playEpisode(e) {
+    if (!e.available) return;
+    setEp(e); setActiveStream({ url: e.streamUrl });
+  }
+
+  // Mi Lista: canales → localStorage; pelis/series → favoritos del servidor.
+  function toggleList() {
+    const next = toggleMyList({ type: item.type, id: item.id, title, poster: backdrop, meta });
+    setInList(next);
+    if (isMovie || isSerie) {
+      if (next) api.addFavorite(item.type, item.id).catch(() => {});
+      else api.removeFavorite(item.type, item.id).catch(() => {});
+    }
+  }
+
+  const d = detail || {};
   const title = item.title || item.name;
-  const meta = isMovie ? `${item.year || ''} · ${item.category || ''}`
-    : isSerie ? `${episodes.length} episodios · ${item.category || 'Serie'}`
+  const genres = (d.genres || []).join(' · ');
+  const meta = isMovie ? [d.year || item.year, d.runtime ? `${d.runtime} min` : null, d.rating ? `★ ${d.rating}` : null].filter(Boolean).join('  ·  ')
+    : isSerie ? [`${episodes.length} episodios`, d.year || item.year, d.status].filter(Boolean).join('  ·  ')
     : `${item.country || ''}${(item.categories || []).length ? ' · ' + item.categories.join(' · ') : ''}`;
-  const backdrop = item.poster || item.logo;
+  const overview = d.overview || item.description || '';
+  const backdrop = d.backdrop || item.poster || item.logo;
+  const canPlay = isChannel || (activeStream && (isChannel || d.available || item.available));
+  const notAvailable = (isMovie || isSerie) && detail && !activeStream;
+
+  // Agrupar episodios por temporada.
+  const seasonsList = [...new Set(episodes.map((e) => e.season))].sort((a, b) => a - b);
+  const seasonEps = episodes.filter((e) => e.season === season);
 
   return (
     <div className="modal" onClick={onClose}>
@@ -131,6 +149,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
               {isChannel && <span className="live-tag">● EN VIVO</span>}
               {meta}
             </div>
+            {genres && <div className="modal-genres">{genres}</div>}
           </div>
 
           {embed ? (
@@ -142,6 +161,11 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
             <div className="player placeholder limit">
               Límite de conexiones alcanzado ({limit.max}).<br />Cerrá otra pantalla e intentá de nuevo.
             </div>
+          ) : notAvailable ? (
+            <div className="player placeholder soon">
+              <strong>Próximamente</strong>
+              <span>Este título está en el catálogo pero todavía no tiene una fuente disponible para reproducir.</span>
+            </div>
           ) : activeStream ? (
             <Player url={proxyUrl(activeStream)} stream={activeStream} title={title}
               poster={backdrop} onFail={isChannel ? tryNextStream : undefined} />
@@ -150,39 +174,49 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
           )}
 
           <div className="modal-actions-top">
-            <button className={`mylist-btn ${inList ? 'on' : ''}`}
-              onClick={() => setInList(toggleMyList({
-                type: item.type, id: item.id, title, poster: backdrop, meta,
-              }))}>
+            <button className={`mylist-btn ${inList ? 'on' : ''}`} onClick={toggleList}>
               {inList ? '✓ En Mi Lista' : '+ Mi Lista'}
             </button>
           </div>
 
-          {item.description && !/^https?:\/\//i.test(item.description.trim()) && (
-            <p className="vod-desc">{item.description}</p>
-          )}
+          {overview && !/^https?:\/\//i.test(overview.trim()) && <p className="vod-desc">{overview}</p>}
 
-          <WatchActions
-            contentId={keyOf(item.type, item.id)} title={title}
-            streams={streams} activeStream={activeStream}
-            onSelectStream={(s) => { setLimit(null); setActiveStream(s); }}
-            onVerify={isChannel ? verify : undefined}
-            checking={checking} activeCount={activeCount}
-            user={user} kind={item.type}
-          />
+          {d.director?.length > 0 && <p className="vod-credit"><b>Dirección:</b> {d.director.join(', ')}</p>}
+          {d.cast?.length > 0 && <p className="vod-credit"><b>Reparto:</b> {d.cast.map((c) => c.name).join(', ')}</p>}
+
+          {isChannel && (
+            <WatchActions
+              contentId={keyOf(item.type, item.id)} title={title}
+              streams={streams} activeStream={activeStream}
+              onSelectStream={(s) => { setLimit(null); setActiveStream(s); }}
+              onVerify={verify} checking={checking} user={user} kind={item.type}
+            />
+          )}
 
           {isSerie && episodes.length > 0 && (
             <div className="ep-list">
+              {seasonsList.length > 1 && (
+                <div className="season-tabs">
+                  {seasonsList.map((n) => (
+                    <button key={n} className={n === season ? 'on' : ''} onClick={() => setSeason(n)}>Temporada {n}</button>
+                  ))}
+                </div>
+              )}
               <div className="label-mono">EPISODIOS</div>
-              {episodes.map((e) => (
-                <button key={e.id} className={`ep ${ep?.id === e.id ? 'on' : ''}`}
-                  onClick={() => { setEp(e); setActiveStream({ url: e.streamUrl }); }}>
+              {seasonEps.map((e) => (
+                <button key={e.id} className={`ep ${ep?.id === e.id ? 'on' : ''} ${e.available ? '' : 'locked'}`}
+                  onClick={() => playEpisode(e)} disabled={!e.available}>
                   <span className="ep-num">T{e.season}·E{e.episode}</span>
-                  <span className="ep-title">{e.title}</span>
-                  {ep?.id === e.id && <span className="ep-playing">▶</span>}
+                  <span className="ep-title">{e.title || `Episodio ${e.episode}`}</span>
+                  {ep?.id === e.id ? <span className="ep-playing">▶</span>
+                    : !e.available ? <span className="ep-soon">próx.</span> : null}
                 </button>
               ))}
             </div>
+          )}
+
+          {(isMovie || isSerie) && (
+            <p className="vod-attrib">Metadatos por TheTVDB</p>
           )}
         </div>
       </div>

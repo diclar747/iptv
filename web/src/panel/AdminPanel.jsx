@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import CatalogAdmin from './CatalogAdmin.jsx';
 
 export default function AdminPanel() {
   const [tab, setTab] = useState('resumen');
@@ -65,7 +66,10 @@ export default function AdminPanel() {
         <button className={tab === 'resumen' ? 'on' : ''} onClick={() => setTab('resumen')}>Resumen</button>
         <button className={tab === 'resellers' ? 'on' : ''} onClick={() => setTab('resellers')}>Resellers</button>
         <button className={tab === 'paquetes' ? 'on' : ''} onClick={() => setTab('paquetes')}>Paquetes</button>
+        <button className={tab === 'catalogo' ? 'on' : ''} onClick={() => setTab('catalogo')}>Películas y Series</button>
       </div>
+
+      {tab === 'catalogo' && <CatalogAdmin />}
 
       {error && <div className="banner error">{error}</div>}
 

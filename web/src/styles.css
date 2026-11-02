@@ -887,3 +887,70 @@ body{background:#050609;background-image:radial-gradient(ellipse at 0 100%,#1710
   .bn-item.on { color: var(--live); }
   .bn-item.on .bn-icon { opacity: 1; transform: translateY(-1px); }
 }
+
+/* ===================== CATÁLOGO: cine (portada, fichas, admin) ===================== */
+/* Banner principal de la portada (estilo Netflix). */
+.cine-banner { position: relative; height: 54vh; min-height: 340px; max-height: 560px; margin-bottom: 8px; overflow: hidden; border-radius: 0 0 18px 18px; }
+.cine-banner-bg { position: absolute; inset: 0; background-size: cover; background-position: center 20%; animation: cine-kenburns 18s ease-out both; }
+@keyframes cine-kenburns { from { transform: scale(1.06); } to { transform: scale(1.14); } }
+.cine-banner-fade { position: absolute; inset: 0; background:
+  linear-gradient(90deg, #050609 0%, #05060999 38%, #05060900 75%),
+  linear-gradient(0deg, var(--bg) 2%, transparent 55%); }
+.cine-banner-in { position: absolute; left: 0; bottom: 8%; z-index: 2; max-width: 620px; padding: 0 clamp(18px, 4vw, 48px); }
+.cine-banner-tag { font-family: var(--font-mono, monospace); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--live); }
+.cine-banner-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 5.4vw, 60px); line-height: 1.02; letter-spacing: -.02em; margin: 8px 0 0; }
+.cine-banner-meta { color: #d6dae2; font-size: 14px; margin-top: 10px; }
+.cine-banner-btns { margin-top: 18px; display: flex; gap: 10px; }
+.cine-btn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--edge, #ffffff1c); background: #ffffff14; color: #fff; border-radius: 9px; padding: 12px 22px; font-family: var(--font-display); font-weight: 700; font-size: 16px; cursor: pointer; }
+.cine-btn-main { background: var(--live); border-color: transparent; box-shadow: 0 10px 28px -12px var(--live); }
+.cine-btn-main:hover { background: #ff163b; }
+.cine-banner-dots { position: absolute; right: 20px; bottom: 16px; z-index: 2; display: flex; gap: 7px; }
+.cine-banner-dots button { width: 8px; height: 8px; border-radius: 50%; border: none; background: #ffffff44; cursor: pointer; padding: 0; }
+.cine-banner-dots button.on { background: var(--live); width: 20px; border-radius: 4px; }
+
+/* Separador "TV en Vivo" dentro de la portada. */
+.home-sep { display: flex; align-items: center; gap: 12px; margin: 26px clamp(18px,4vw,36px) 4px; color: var(--muted); font-family: var(--font-display); font-weight: 600; font-size: 15px; letter-spacing: .02em; }
+.home-sep::after { content: ''; flex: 1; height: 1px; background: var(--line, #30313b); }
+
+/* Ficha (modal) de cine. */
+.modal-genres { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.vod-credit { color: #c7cbd4; font-size: 13.5px; margin: 6px 0 0; line-height: 1.5; }
+.vod-credit b { color: #eef0f5; }
+.vod-attrib { color: var(--faint, #5c6879); font-size: 11px; margin-top: 18px; font-family: var(--font-mono, monospace); }
+.player.placeholder.soon { flex-direction: column; gap: 8px; text-align: center; padding: 24px; }
+.player.placeholder.soon strong { font-family: var(--font-display); font-size: 22px; color: #eef0f5; }
+.player.placeholder.soon span { color: var(--muted); font-size: 14px; max-width: 420px; }
+
+/* Temporadas y episodios. */
+.season-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.season-tabs button { background: #ffffff0d; border: 1px solid var(--line, #30313b); color: var(--muted); border-radius: 8px; padding: 7px 14px; font-family: var(--font-display); font-weight: 600; font-size: 14px; cursor: pointer; }
+.season-tabs button.on { background: var(--live); color: #fff; border-color: transparent; }
+.ep.locked { opacity: .55; cursor: not-allowed; }
+.ep-soon { margin-left: auto; font-size: 10px; color: var(--muted); font-family: var(--font-mono, monospace); text-transform: uppercase; }
+
+/* Panel admin — Películas y Series. */
+.cat-admin { display: flex; flex-direction: column; gap: 16px; }
+.cat-conn { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: linear-gradient(145deg,#1c1c24,#111218); border: 1px solid var(--line,#30313b); border-radius: 14px; padding: 16px 18px; }
+.cat-conn.off { border-color: #7a1f23; }
+.cat-conn .ok { color: var(--ok, #2fd27a); font-weight: 600; }
+.cat-conn .bad { color: var(--bad, #ff5a5a); font-weight: 600; }
+.cat-conn button { background: #ffffff10; border: 1px solid var(--line,#30313b); color: var(--text); border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+.cat-err { color: var(--bad,#ff5a5a); font-size: 12px; margin-top: 6px; }
+.cat-hint { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+.cat-hint code { background: #ffffff10; padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+.cat-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.cat-controls button { background: #ffffff0d; border: 1px solid var(--line,#30313b); color: var(--text); border-radius: 8px; padding: 10px 14px; font-family: var(--font-display); font-weight: 600; cursor: pointer; }
+.cat-controls button.verify { background: var(--live); border-color: transparent; color: #fff; }
+.cat-controls button:disabled { opacity: .45; cursor: not-allowed; }
+.cat-running { background: #ed002514; border: 1px solid #ed002540; border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+.cat-bar { height: 5px; background: #ffffff14; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.cat-bar span { display: block; height: 100%; width: 40%; background: var(--live); border-radius: 3px; animation: cat-slide 1.3s ease-in-out infinite; }
+@keyframes cat-slide { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
+.stat-label { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.stat-value.accent { color: var(--live); }
+
+@media (max-width: 480px) {
+  .cine-banner { height: 46vh; min-height: 300px; border-radius: 0 0 14px 14px; }
+  .cine-banner-title { font-size: 30px; }
+  .cat-conn { flex-direction: column; align-items: flex-start; }
+}

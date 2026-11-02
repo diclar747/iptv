@@ -25,6 +25,8 @@ async function req(method, path, { params, body } = {}) {
 const get = (p, params) => req('GET', p, { params });
 const post = (p, body) => req('POST', p, { body });
 const patch = (p, body) => req('PATCH', p, { body });
+const put = (p, body) => req('PUT', p, { body });
+const del = (p, params) => req('DELETE', p, { params });
 
 export const api = {
   // Catálogo / visor
@@ -54,11 +56,30 @@ export const api = {
   watchBeat: (sessionId) => post('/watch/heartbeat', { sessionId }),
   watchStop: (sessionId) => post('/watch/stop', { sessionId }),
 
-  // VOD
-  movies: (params) => get('/vod/movies', params),
-  movie: (id) => get(`/vod/movies/${id}`),
-  series: () => get('/vod/series'),
-  serie: (id) => get(`/vod/series/${id}`),
+  // Catálogo de películas y series (metadatos TheTVDB + dominio público)
+  catalogHome: () => get('/catalog/home'),
+  catalogMeta: () => get('/catalog/meta'),
+  catalogSearch: (q) => get('/catalog/search', { q }),
+  movies: (params) => get('/catalog/movies', params),
+  movie: (id) => get(`/catalog/movies/${id}`),
+  series: (params) => get('/catalog/series', params),
+  serie: (id) => get(`/catalog/series/${id}`),
+  favorites: () => get('/catalog/favorites'),
+  addFavorite: (type, id) => post('/catalog/favorites', { type, id }),
+  removeFavorite: (type, id) => del('/catalog/favorites', { type, id }),
+  getProgress: () => get('/catalog/progress'),
+  setProgress: (b) => put('/catalog/progress', b),
+
+  // Admin: gestión de catálogo (películas y series)
+  catStatus: () => get('/admin/catalog/status'),
+  catTest: () => post('/admin/catalog/test', {}),
+  catImport: (b) => post('/admin/catalog/import', b),
+  catStop: () => post('/admin/catalog/stop', {}),
+  catReset: () => post('/admin/catalog/reset', {}),
+  catSync: () => post('/admin/catalog/sync', {}),
+  catJobs: () => get('/admin/catalog/jobs'),
+  catHide: (type, id) => post(`/admin/catalog/${type}/${id}/hide`, {}),
+  catSource: (type, id, b) => post(`/admin/catalog/${type}/${id}/source`, b),
 
   // Paquetes (compartido)
   packages: () => get('/packages'),

@@ -17,9 +17,10 @@ import { streamToken, validToken } from './streamToken.js';
 import { initSchema, ping } from './pg.js';
 import { attachUser, requireAuth, requireActiveViewer } from './auth.js';
 import accountsRouter, { ensureSeed } from './accounts.js';
-// VOD (películas/series) desactivado por ahora — la app es solo canales.
-// Para reactivar: descomentar este import, el app.use y el ensureVodSeed de abajo.
-// import vodRouter, { ensureVodSeed } from './vod.js';
+import catalogRouter from './catalog.js';
+import catalogAdminRouter from './catalog-admin.js';
+import { ensureVodSeed } from './vod.js';
+import { startSyncScheduler } from './catalog/sync.js';
 
 // Red de seguridad: el proxy maneja flujos de red inestables. Un error suelto
 // (p. ej. un socket que corta) no debe tumbar todo el servidor.
@@ -40,8 +41,9 @@ app.use(attachUser);
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
 app.use('/api', accountsRouter);
-// Rutas de VOD (películas y series) — desactivadas por ahora (solo canales).
-// app.use('/api', vodRouter);
+// Catálogo de películas y series (metadatos TheTVDB) + panel admin.
+app.use('/api', catalogRouter);
+app.use('/api', catalogAdminRouter);
 
 // Carga/refresca el cache de iptv-org antes de responder consultas de datos.
 async function withData(req, res, next) {
@@ -215,7 +217,7 @@ async function start() {
     await ping();
     await initSchema();
     await ensureSeed();
-    // await ensureVodSeed(); // VOD desactivado por ahora (solo canales)
+    await ensureVodSeed(); // contenido de dominio público (catálogo base reproducible)
     console.log('[api] PostgreSQL conectado y listo');
   } catch (e) {
     console.error('[api] ERROR conectando a PostgreSQL:', e.message);
@@ -229,6 +231,8 @@ async function start() {
     ensureLoaded()
       .then(() => console.log('[api] datos de iptv-org cargados'))
       .catch((e) => console.error('[api] error precargando:', e.message));
+    // Sincronización incremental del catálogo (solo si hay API Key de TheTVDB).
+    startSyncScheduler();
   });
 }
 

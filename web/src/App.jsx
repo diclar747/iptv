@@ -26,19 +26,21 @@ const timeLeft = (e) => {
 // está desactivado). Para reactivarlo, restaurar esas entradas y sus rutas.
 const NAV = [
   { k: 'inicio', label: 'Inicio', icon: 'home' },
+  { k: 'peliculas', label: 'Películas', icon: 'film' },
+  { k: 'series', label: 'Series', icon: 'series' },
   { k: 'tv', label: 'TV en Vivo', icon: 'live' },
   { k: 'deportes', label: 'Deportes', icon: 'sports' },
-  { k: 'documentales', label: 'Documentales', icon: 'film' },
+  { k: 'milista', label: 'Mi Lista', icon: 'list' },
   { k: 'perfil', label: 'Perfil', icon: 'user' },
 ];
 
 // Barra de navegación inferior (móvil, estilo app).
 const BOTTOM = [
   { k: 'inicio', label: 'Inicio', icon: 'home' },
+  { k: 'peliculas', label: 'Pelis', icon: 'film' },
+  { k: 'series', label: 'Series', icon: 'series' },
   { k: 'tv', label: 'En Vivo', icon: 'live' },
-  { k: 'deportes', label: 'Deportes', icon: 'sports' },
   { k: 'buscar', label: 'Buscar', icon: 'search' },
-  { k: 'perfil', label: 'Perfil', icon: 'user' },
 ];
 
 export default function App() {
@@ -86,6 +88,9 @@ export default function App() {
       <button className="hero-play" onClick={logout}>Salir</button>
     </div>
   ) : view === 'inicio' ? <Home onOpen={onOpen} onNavigate={go} onAuthError={refresh} />
+    : view === 'peliculas' ? <Catalog mode="movies" title="Películas" onOpen={onOpen} onAuthError={refresh} />
+    : view === 'series' ? <Catalog mode="series" title="Series" onOpen={onOpen} onAuthError={refresh} />
+    : view === 'milista' ? <Catalog mode="mylist" title="Mi Lista" onOpen={onOpen} onAuthError={refresh} />
     : view === 'tv' ? <Channels title="TV en Vivo" defaultCountry={geo} onOpen={onOpen} onAuthError={refresh} />
     : view === 'deportes' ? <Channels title="Deportes" fixedCategory="sports" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />
     : view === 'documentales' ? <Channels title="Documentales" fixedCategory="documentary" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />

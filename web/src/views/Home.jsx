@@ -2,34 +2,47 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Row from '../ui/Row.jsx';
 import LiveRow from '../ui/LiveRow.jsx';
-import { getContinue, getMyList, getMostWatched } from '../library.js';
+import Banner from '../ui/Banner.jsx';
+import { getContinue, getMostWatched } from '../library.js';
 
-// Adapta un ítem guardado (Seguir viendo / Mi Lista) al formato de LiveRow,
-// para que se vea con el MISMO estilo unificado que el resto de los canales.
+// Adapta un ítem de canal guardado al formato de LiveRow.
 const toChannel = (it) => ({ ...it, name: it.title, logo: it.poster });
 
-// Inicio centrado en CANALES. Todas las filas vienen en UN solo pedido
-// (/api/home) y el service worker las sirve al instante en visitas repetidas.
-// "Seguir viendo" y "Mi Lista" salen del dispositivo (localStorage).
+// Portada estilo Netflix: banner destacado + filas de cine (películas/series) y,
+// debajo, la TV en vivo. El cine viene de /catalog/home; los canales de /api/home.
 export default function Home({ onOpen, onNavigate, onAuthError }) {
-  const [rows, setRows] = useState([]);
+  const [cine, setCine] = useState({ featured: [], rows: [] });
+  const [live, setLive] = useState([]);
+  const [fav, setFav] = useState([]);
   const [most] = useState(getMostWatched());
   const [cont] = useState(getContinue());
-  const [mylist] = useState(getMyList());
+
+  const onErr = (e) => { if (e.status === 401 || (e.status === 403 && e.data?.reason)) onAuthError?.(e); };
 
   useEffect(() => {
-    api.home()
-      .then((r) => setRows(r.rows || []))
-      .catch((e) => { if (e.status === 401 || (e.status === 403 && e.data?.reason)) onAuthError?.(e); });
+    api.catalogHome().then(setCine).catch(onErr);
+    api.home().then((r) => setLive(r.rows || [])).catch(onErr);
+    api.favorites().then(setFav).catch(() => {});
   }, []);
 
   return (
-    <div className="home">
+    <div className="home cine-home">
+      <Banner items={cine.featured} onOpen={onOpen} />
+
       <div className="rows">
+        {cont.length > 0 && <Row title="Seguir viendo" items={cont.map(toChannel)} onOpen={onOpen} />}
+        {fav.length > 0 && <Row title="Mi Lista" items={fav} onOpen={onOpen} onSeeAll={() => onNavigate('milista')} />}
+
+        {cine.rows.map((r) => (
+          <Row key={r.key} title={r.title} items={r.items} onOpen={onOpen}
+            onSeeAll={r.nav ? () => onNavigate(r.nav) : undefined} />
+        ))}
+
+        {(most.length > 0 || live.length > 0) && (
+          <div className="home-sep"><span>📡 TV en Vivo</span></div>
+        )}
         {most.length > 0 && <LiveRow title="Los que más ves" live={false} channels={most.map(toChannel)} onOpen={onOpen} />}
-        {cont.length > 0 && <LiveRow title="Seguir viendo" live={false} channels={cont.map(toChannel)} onOpen={onOpen} />}
-        {mylist.length > 0 && <LiveRow title="Mi Lista" live={false} channels={mylist.map(toChannel)} onOpen={onOpen} />}
-        {rows.map((r) => (
+        {live.map((r) => (
           <LiveRow key={r.key} title={r.title} channels={r.items} onOpen={onOpen}
             onSeeAll={r.nav ? () => onNavigate(r.nav) : undefined} />
         ))}
