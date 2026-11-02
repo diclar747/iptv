@@ -24,5 +24,5 @@ backup.sql
 .claude/
 
 # APK generado localmente
-CineTV.apk
-*.apk
+/CineTV.apk
+

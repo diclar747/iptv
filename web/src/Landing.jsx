@@ -9,8 +9,8 @@ import './landing.css';
 const WA_NUMBER = '595994860527'; // +595 994 860 527
 const WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('¡Hola! Quiero suscribirme a CineTV 📺')}`;
 const PRICE = '25.000';
-// APK publicado por GitHub Actions (release fijo "app-latest").
-const APK_URL = 'https://github.com/diclar747/iptv/releases/latest/download/cinetv.apk';
+// APK servido desde nuestro propio servidor (web/public/cinetv.apk).
+const APK_URL = '/cinetv.apk';
 
 // Muro de canales: nombres reales de aire de varios países + algunos "en vivo".
 // Es la firma visual (videowall). Sin imágenes externas: tiles de marca.
