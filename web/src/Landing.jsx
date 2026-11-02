@@ -9,6 +9,8 @@ import './landing.css';
 const WA_NUMBER = '595994860527'; // +595 994 860 527
 const WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('¡Hola! Quiero suscribirme a CineTV 📺')}`;
 const PRICE = '25.000';
+// APK publicado por GitHub Actions (release fijo "app-latest").
+const APK_URL = 'https://github.com/diclar747/iptv/releases/latest/download/cinetv.apk';
 
 // Muro de canales: nombres reales de aire de varios países + algunos "en vivo".
 // Es la firma visual (videowall). Sin imágenes externas: tiles de marca.
@@ -287,6 +289,12 @@ export default function Landing() {
           <div className="lp-hero-price">
             Desde <strong>{PRICE} Gs</strong> por mes · <button className="lp-link" onClick={() => openAuth('login')}>probá gratis</button>
           </div>
+          <a className="lp-apk" href={APK_URL} rel="noopener noreferrer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 3.5v9m0 0 3.5-3.5M12 12.5 8.5 9M5 16.5v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Descargar app para Android
+          </a>
         </div>
       </section>
 
@@ -372,6 +380,7 @@ export default function Landing() {
             <button className="lp-link" onClick={() => openAuth('register')}>Crear cuenta</button>
             <a className="lp-link" href={WA_LINK} target="_blank" rel="noopener noreferrer">WhatsApp</a>
             <a className="lp-link" href="#planes">Planes</a>
+            <a className="lp-link" href={APK_URL}>Descargar app</a>
           </div>
           <p className="lp-foot-copy">© {new Date().getFullYear()} CineTV · Hecho en Paraguay 🇵🇾</p>
         </div>
