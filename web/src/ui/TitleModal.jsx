@@ -3,12 +3,14 @@ import { api, proxyUrl } from '../api.js';
 import Player from '../Player.jsx';
 import WatchActions from '../WatchActions.jsx';
 import { inMyList, toggleMyList, pushContinue, keyOf } from '../library.js';
+import { curatedEmbed } from '../curated.js';
 
 // Overlay de detalle + reproducción para una película, serie o canal.
 export default function TitleModal({ item, user, onClose, onAuthError }) {
   const isMovie = item.type === 'movie';
   const isSerie = item.type === 'serie';
   const isChannel = item.type === 'channel';
+  const embed = curatedEmbed(item.type, item.id); // reproductor oficial embebido
 
   const [streams, setStreams] = useState(isMovie ? [{ url: item.streamUrl }] : []);
   const [episodes, setEpisodes] = useState([]);
@@ -119,7 +121,12 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
             </div>
           </div>
 
-          {limit ? (
+          {embed ? (
+            <div className="player">
+              <iframe className="embed-frame" src={embed} title={title}
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowFullScreen />
+            </div>
+          ) : limit ? (
             <div className="player placeholder limit">
               Límite de conexiones alcanzado ({limit.max}).<br />Cerrá otra pantalla e intentá de nuevo.
             </div>
