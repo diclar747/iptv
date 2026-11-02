@@ -3,6 +3,13 @@ import { api } from './api.js';
 import { castSupported, castTo, airplaySupported, airplay, loadCast } from './cast.js';
 import Icon from './ui/Icon.jsx';
 
+// Intenta reproducir; si el navegador bloquea el autoplay con audio, reintenta
+// silenciado (eso sí está permitido). El usuario sube el volumen después.
+function playVideo(video) {
+  const p = video.play();
+  if (p && p.catch) p.catch(() => { video.muted = true; const p2 = video.play(); if (p2 && p2.catch) p2.catch(() => {}); });
+}
+
 // Reproductor HLS/MP4. hls.js se carga BAJO DEMANDA (solo al reproducir HLS en
 // navegadores sin soporte nativo), para no engordar el bundle inicial.
 // Incluye botón de pantalla completa y de proyectar a Smart TV (Chromecast/AirPlay).
@@ -65,11 +72,11 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
 
     if (!isHls) {
       video.src = url;
-      video.play().catch(() => {});
+      playVideo(video);
       video.addEventListener('error', onNativeError);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = url; // Safari / soporte nativo
-      video.play().catch(() => {});
+      playVideo(video);
     } else {
       import('hls.js')
         .then(({ default: Hls }) => {
@@ -82,7 +89,7 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
           hls = new Hls({ enableWorker: true, lowLatencyMode: true });
           hls.loadSource(url);
           hls.attachMedia(video);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+          hls.on(Hls.Events.MANIFEST_PARSED, () => playVideo(video));
           hls.on(Hls.Events.ERROR, (_e, data) => {
             if (data.fatal) {
               setError(

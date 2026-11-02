@@ -141,6 +141,7 @@ export function queryChannels({
   country,
   category,
   search,
+  prefer, // país a priorizar (sale primero) cuando no se filtra por país
   onlyWithStreams = true,
   includeNsfw = false,
   page = 1,
@@ -161,7 +162,16 @@ export function queryChannels({
   }
 
   list = list.filter((c) => !c.closed); // ocultar canales cerrados
-  list.sort((a, b) => a.name.localeCompare(b.name));
+  // Prioriza el país del usuario (evita, p.ej., abrir "Telefuturo" de otro país).
+  const pref = (prefer || '').toUpperCase();
+  list = list.slice().sort((a, b) => {
+    if (pref) {
+      const ap = a.country === pref ? 0 : 1;
+      const bp = b.country === pref ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+    }
+    return a.name.localeCompare(b.name);
+  });
 
   const total = list.length;
   const start = (page - 1) * pageSize;

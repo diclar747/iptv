@@ -93,8 +93,8 @@ app.get('/api/home', requireActiveViewer, withData, (req, res) => {
 
   const rows = [
     { key: 'pais', title: `TV en Vivo · ${names.get(country) || country}`, nav: 'tv', items: chRow({ country }) },
-    { key: 'sports', title: 'Deportes', nav: 'deportes', items: chRow({ category: 'sports' }) },
-    { key: 'news', title: 'Noticias', items: chRow({ category: 'news' }) },
+    { key: 'sports', title: 'Deportes', nav: 'deportes', items: chRow({ category: 'sports', prefer: country }) },
+    { key: 'news', title: 'Noticias', items: chRow({ category: 'news', prefer: country }) },
   ];
   let extras = 0;
   for (const cc of EXTRA_COUNTRIES) {
@@ -102,7 +102,7 @@ app.get('/api/home', requireActiveViewer, withData, (req, res) => {
     const items = chRow({ country: cc });
     if (items.length) { rows.push({ key: 'c-' + cc, title: names.get(cc) || cc, items }); extras++; }
   }
-  rows.push({ key: 'documentary', title: 'Documentales', nav: 'documentales', items: chRow({ category: 'documentary' }) });
+  rows.push({ key: 'documentary', title: 'Documentales', nav: 'documentales', items: chRow({ category: 'documentary', prefer: country }) });
 
   res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
   res.json({ country, rows: rows.filter((r) => r.items.length) });
@@ -126,6 +126,7 @@ app.get('/api/channels', requireActiveViewer, withData, (req, res) => {
       country: country || undefined,
       category: category || undefined,
       search: search || undefined,
+      prefer: req.query.prefer || geoCountry(req),
       page: Math.max(1, parseInt(page, 10) || 1),
       pageSize: Math.min(100, Math.max(1, parseInt(pageSize, 10) || 40)),
       includeNsfw: includeNsfw === 'true',
