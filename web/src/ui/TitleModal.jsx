@@ -125,8 +125,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
             </div>
           ) : activeStream ? (
             <Player url={proxyUrl(activeStream)} stream={activeStream} title={title}
-              poster={backdrop} autoFullscreen={isChannel}
-              onFail={isChannel ? tryNextStream : undefined} />
+              poster={backdrop} onFail={isChannel ? tryNextStream : undefined} />
           ) : (
             <div className="player placeholder">{error || 'Cargando…'}</div>
           )}
