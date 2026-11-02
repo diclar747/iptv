@@ -1,0 +1,109 @@
+// Importador de películas de DOMINIO PÚBLICO desde Internet Archive. A diferencia
+// de TheTVDB (solo metadatos), acá cada película trae un MP4 reproducible real y
+// legal. Busca por género para que el catálogo quede filtrable, elige un MP4
+// (h.264/MPEG4) por título y lo guarda con póster.
+import { query, one } from '../pg.js';
+
+const IA = 'https://archive.org';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Búsquedas por género (colección de largometrajes de dominio público).
+const GENRES = [
+  ['Clásicos', 'collection:(feature_films)'],
+  ['Terror', 'subject:(horror)'],
+  ['Comedia', 'subject:(comedy)'],
+  ['Ciencia Ficción', 'subject:(science fiction)'],
+  ['Western', 'subject:(western)'],
+  ['Drama', 'subject:(drama)'],
+  ['Acción', 'subject:(action)'],
+  ['Aventura', 'subject:(adventure)'],
+  ['Animación', 'subject:(animation)'],
+  ['Suspenso', 'subject:(film noir)'],
+];
+
+const control = { running: false, note: null, count: 0 };
+export function archiveStatus() { return { ...control }; }
+
+function cleanTitle(t) {
+  let s = Array.isArray(t) ? t[0] : (t || '');
+  s = String(s).replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  return s.slice(0, 200) || 'Sin título';
+}
+function yearNum(y) {
+  const m = String(Array.isArray(y) ? y[0] : (y || '')).match(/(18|19|20)\d{2}/);
+  return m ? Number(m[0]) : null;
+}
+
+// Elige un archivo MP4 reproducible en el navegador. Prefiere tamaños moderados.
+async function pickMp4(identifier) {
+  const r = await fetch(`${IA}/metadata/${identifier}`).catch(() => null);
+  if (!r || !r.ok) return null;
+  const j = await r.json().catch(() => null);
+  if (!j) return null;
+  const files = (j.files || []).filter(
+    (f) => /\.mp4$/i.test(f.name || '') && /h\.?264|mpeg4/i.test(f.format || '')
+  );
+  if (!files.length) return null;
+  files.sort((a, b) => Number(a.size || 0) - Number(b.size || 0));
+  // Evitar muestras/clips muy chicos (< 20 MB) cuando hay opciones mayores.
+  const f = files.find((x) => Number(x.size || 0) > 20e6) || files[files.length - 1];
+  return `${IA}/download/${identifier}/${encodeURIComponent(f.name)}`;
+}
+
+async function have(identifier) {
+  return Boolean(await one(
+    `SELECT 1 FROM external_ids WHERE provider='archive' AND content_type='movie' AND external_id=$1`,
+    [identifier]));
+}
+
+async function insertMovie({ identifier, title, year, description, category, url }) {
+  if (await have(identifier)) return false;
+  const poster = `${IA}/services/img/${identifier}`;
+  const desc = Array.isArray(description) ? description[0] : description;
+  const m = await one(
+    `INSERT INTO movies (title, year, poster, description, overview_es, category, stream_url, provider, popularity)
+     VALUES ($1,$2,$3,$4,$4,$5,$6,'archive',0) RETURNING id`,
+    [title, year, poster, (desc || '').toString().replace(/<[^>]+>/g, '').slice(0, 1200) || null, category, url]);
+  await query(
+    `INSERT INTO external_ids (provider, content_type, external_id, internal_id)
+     VALUES ('archive','movie',$1,$2) ON CONFLICT DO NOTHING`, [identifier, m.id]);
+  return true;
+}
+
+// Importa en segundo plano. perGenre = cuántos títulos buscar por género.
+export function importArchive({ perGenre = 40 } = {}) {
+  if (control.running) return { ok: false, error: 'Ya hay una importación de Internet Archive en curso' };
+  control.running = true; control.count = 0; control.note = 'iniciando';
+  (async () => {
+    try {
+      for (const [cat, q] of GENRES) {
+        control.note = `buscando ${cat}`;
+        const full = `collection:(feature_films) AND mediatype:(movies) AND ${q}`;
+        const url = `${IA}/advancedsearch.php?q=${encodeURIComponent(full)}`
+          + `&fl[]=identifier&fl[]=title&fl[]=year&fl[]=description`
+          + `&sort[]=${encodeURIComponent('downloads desc')}&rows=${perGenre}&page=1&output=json`;
+        const r = await fetch(url).catch(() => null);
+        if (!r || !r.ok) continue;
+        const docs = (await r.json().catch(() => ({})))?.response?.docs || [];
+        for (const d of docs) {
+          try {
+            const mp4 = await pickMp4(d.identifier);
+            if (!mp4) continue;
+            const ok = await insertMovie({
+              identifier: d.identifier, title: cleanTitle(d.title), year: yearNum(d.year),
+              description: d.description, category: cat, url: mp4,
+            });
+            if (ok) control.count++;
+          } catch { /* saltar título problemático */ }
+          await sleep(60);
+        }
+      }
+      control.note = `completada: ${control.count} películas`;
+    } catch (e) {
+      control.note = 'error: ' + e.message;
+    } finally {
+      control.running = false;
+    }
+  })();
+  return { ok: true, started: true };
+}

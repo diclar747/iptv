@@ -57,6 +57,23 @@ export default function CatalogAdmin() {
           <div className="cat-bar"><span /></div>
         </div>
       )}
+      {st?.archive?.running && (
+        <div className="cat-running">
+          🎬 Internet Archive… {st.archive.note} · {st.archive.count} películas cargadas
+          <div className="cat-bar"><span /></div>
+        </div>
+      )}
+
+      <div className="cat-free">
+        <div>
+          <strong>Películas de dominio público</strong>
+          <div className="cat-hint">Carga películas legales y reproducibles desde Internet Archive, por género. No requiere API Key.</div>
+        </div>
+        <button className="verify" disabled={busy || st?.archive?.running}
+          onClick={() => act(() => api.catImportArchive({ perGenre: 40 }), 'Importación de Internet Archive iniciada')}>
+          Importar dominio público
+        </button>
+      </div>
 
       <div className="cat-controls">
         <button className="verify" disabled={busy || !connected || st?.running}

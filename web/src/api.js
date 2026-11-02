@@ -74,6 +74,7 @@ export const api = {
   catStatus: () => get('/admin/catalog/status'),
   catTest: () => post('/admin/catalog/test', {}),
   catImport: (b) => post('/admin/catalog/import', b),
+  catImportArchive: (b) => post('/admin/catalog/import-archive', b || {}),
   catStop: () => post('/admin/catalog/stop', {}),
   catReset: () => post('/admin/catalog/reset', {}),
   catSync: () => post('/admin/catalog/sync', {}),

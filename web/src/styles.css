@@ -954,3 +954,9 @@ body{background:#050609;background-image:radial-gradient(ellipse at 0 100%,#1710
   .cine-banner-title { font-size: 30px; }
   .cat-conn { flex-direction: column; align-items: flex-start; }
 }
+
+/* Bloque de importación de dominio público en el panel. */
+.cat-free { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: #0e1726; border: 1px solid #1d3a5f; border-radius: 12px; padding: 14px 16px; }
+.cat-free .verify { background: var(--live); border: none; color: #fff; border-radius: 8px; padding: 10px 14px; font-family: var(--font-display); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.cat-free .verify:disabled { opacity: .45; cursor: not-allowed; }
+@media (max-width:480px){ .cat-free{ flex-direction: column; align-items: flex-start; } }

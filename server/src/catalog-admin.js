@@ -8,13 +8,19 @@ import {
   getProvider, importStatus, startImport, stopImport, resetCursors, syncUpdates,
 } from './catalog/index.js';
 import { catalogStats, recentJobs } from './catalog/repo.js';
+import { importArchive, archiveStatus } from './catalog/archive.js';
 
 const router = express.Router();
 router.use('/admin/catalog', requireAuth, requireRole('admin'));
 
 // Estado general + conteos.
 router.get('/admin/catalog/status', async (req, res) => {
-  res.json({ ...importStatus(), stats: await catalogStats() });
+  res.json({ ...importStatus(), archive: archiveStatus(), stats: await catalogStats() });
+});
+
+// Importar películas de DOMINIO PÚBLICO desde Internet Archive (reproducibles).
+router.post('/admin/catalog/import-archive', (req, res) => {
+  res.json(importArchive({ perGenre: Number(req.body?.perGenre) || 40 }));
 });
 
 // Probar la conexión con TheTVDB (login).
