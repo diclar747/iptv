@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from './auth.jsx';
 import { api } from './api.js';
 import { subscribePwa, promptInstall } from './pwa.js';
-import Login from './Login.jsx';
+import Landing from './Landing.jsx';
 import Home from './views/Home.jsx';
 import Catalog from './views/Catalog.jsx';
 import Channels from './views/Channels.jsx';
@@ -66,7 +66,7 @@ export default function App() {
       <div className="splash-tag">TV EN VIVO</div>
     </div>
   );
-  if (!user) return <Login />;
+  if (!user) return <Landing />;
 
   const isStaff = user.role === 'admin' || user.role === 'reseller';
   const sub = user.subscription;
