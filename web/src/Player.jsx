@@ -74,7 +74,21 @@ export default function Player({ url, stream, title, poster, onFail }) {
         .then(({ default: Hls }) => {
           if (destroyed) return;
           if (!Hls.isSupported()) { setError('Tu navegador no soporta la reproducción de este formato.'); setLoading(false); return; }
-          hls = new Hls({ enableWorker: true, backBufferLength: 30 });
+          hls = new Hls({
+            enableWorker: true,
+            backBufferLength: 30,
+            // Colchón de buffer: mantenerse unos segmentos atrás del vivo para que
+            // un bajón momentáneo de red no corte la reproducción ("se tranca").
+            liveSyncDurationCount: 4,
+            liveMaxLatencyDurationCount: 12,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            // Si queda atrás, acelera suave para alcanzar el vivo sin cortar.
+            maxLiveSyncPlaybackRate: 1.5,
+            // Reintentos ante segmentos/manifiestos lentos en vez de rendirse.
+            fragLoadingMaxRetry: 6,
+            manifestLoadingMaxRetry: 4,
+          });
           hls.loadSource(url);
           hls.attachMedia(video);
           hls.on(Hls.Events.MANIFEST_PARSED, () => playVideo(video));

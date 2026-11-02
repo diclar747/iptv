@@ -23,7 +23,7 @@ import path from 'node:path';
 import os from 'node:os';
 
 const PORT = Number(process.env.PORT || 8787);
-const IDLE_MS = Number(process.env.IDLE_MS || 60000); // apaga ffmpeg tras 60s sin pedidos
+const IDLE_MS = Number(process.env.IDLE_MS || 120000); // apaga ffmpeg tras 2 min sin pedidos
 const ROOT = path.join(os.tmpdir(), 'senal-hls');
 // Solo se transcodifican orígenes de estos dominios (evita abuso del endpoint).
 const ALLOW = /(^|\.)(desdeparaguay\.net|desdepylabs\.com|cloudfront\.net)$/i;
@@ -56,10 +56,16 @@ function startJob(src, ua, ref) {
     ...(headerLines.length ? ['-headers', headerLines.join('\r\n') + '\r\n'] : []),
     '-i', src,
     '-map', '0:v:0', '-map', '0:a:0?',
-    '-c:v', 'libx264', '-preset', 'veryfast', '-profile:v', 'main', '-level', '4.0', '-pix_fmt', 'yuv420p',
+    // Reescala a 540p: suficiente en celular y ~3x más liviano que el original.
+    '-vf', 'scale=-2:540',
+    '-c:v', 'libx264', '-preset', 'veryfast', '-profile:v', 'main', '-level', '3.1', '-pix_fmt', 'yuv420p',
+    // Cap de bitrate: así cada segmento se baja ANTES de reproducirse (sin trabas).
+    '-b:v', '1400k', '-maxrate', '1600k', '-bufsize', '2400k',
     '-g', '50', '-keyint_min', '50', '-sc_threshold', '0',
-    '-c:a', 'aac', '-b:a', '128k', '-ac', '2',
-    '-f', 'hls', '-hls_time', '2', '-hls_list_size', '6',
+    // Keyframe exacto cada 2s -> segmentos de 2s limpios y alineados.
+    '-force_key_frames', 'expr:gte(t,n_forced*2)',
+    '-c:a', 'aac', '-b:a', '96k', '-ac', '2',
+    '-f', 'hls', '-hls_time', '2', '-hls_list_size', '10',
     '-hls_flags', 'delete_segments+omit_endlist+independent_segments',
     '-hls_segment_filename', path.join(dir, 'seg_%d.ts'),
     path.join(dir, 'index.m3u8'),
