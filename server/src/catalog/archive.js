@@ -6,8 +6,8 @@ import { query, one } from '../pg.js';
 
 const IA = 'https://archive.org';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-// Umbral de descargas: solo traemos clásicos CONOCIDOS (populares), no basura.
-const MIN_DOWNLOADS = 5000;
+// Umbral de descargas: traemos clásicos conocidos (con cierta popularidad), no basura.
+const MIN_DOWNLOADS = 2000;
 
 // Búsquedas por género (colección de largometrajes de dominio público).
 // Más géneros = más variedad y más películas filtrables.
@@ -32,6 +32,10 @@ const GENRES = [
   ['Suspenso', 'subject:(thriller)'],
   ['Documental', 'subject:(documentary)'],
   ['Policial', 'subject:(detective)'],
+  ['Infantil', 'subject:(children)'],
+  ['Clásicos', 'subject:(classic)'],
+  ['Aventura', 'subject:(adventure film)'],
+  ['Comedia', 'subject:(silent comedy)'],
 ];
 
 const control = { running: false, note: null, count: 0 };
@@ -91,7 +95,7 @@ async function insertMovie({ identifier, title, year, description, category, url
 }
 
 // Importa en segundo plano. perGenre = cuántos títulos buscar por género.
-export function importArchive({ perGenre = 100 } = {}) {
+export function importArchive({ perGenre = 150 } = {}) {
   if (control.running) return { ok: false, error: 'Ya hay una importación de Internet Archive en curso' };
   control.running = true; control.count = 0; control.note = 'iniciando';
   (async () => {

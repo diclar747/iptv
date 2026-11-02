@@ -76,7 +76,7 @@ export default function CatalogAdmin() {
           <div className="cat-hint">Clásicos legales y reproducibles desde Internet Archive (solo populares, con póster). No requiere API Key.</div>
         </div>
         <button className="verify" disabled={busy || st?.archive?.running}
-          onClick={() => act(() => api.catImportArchive({ perGenre: 60 }), 'Importación de Internet Archive iniciada')}>
+          onClick={() => act(() => api.catImportArchive({ perGenre: 150 }), 'Importación de Internet Archive iniciada')}>
           Importar dominio público
         </button>
       </div>
