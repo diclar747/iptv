@@ -136,6 +136,25 @@ function toDTO(ch) {
   };
 }
 
+// Relevancia de un canal frente al texto buscado (menor = mejor):
+//   0 nombre exacto · 1 alt exacto · 2 nombre empieza con · 3 alt empieza con ·
+//   4 palabra completa en el nombre · 5 substring en el nombre · 6 resto (alt).
+// Así "TN" ordena a "TN" antes que "ARTN", "CGTN", etc.
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function matchScore(c, q) {
+  const name = (c.name || '').toLowerCase();
+  const alts = (c.alt_names || []).map((n) => n.toLowerCase());
+  if (name === q) return 0;
+  if (alts.includes(q)) return 1;
+  if (name.startsWith(q)) return 2;
+  if (alts.some((n) => n.startsWith(q))) return 3;
+  if (new RegExp(`\\b${escapeRe(q)}\\b`).test(name)) return 4;
+  if (name.includes(q)) return 5;
+  return 6;
+}
+
 // Consulta/filtrado paginado de canales.
 export function queryChannels({
   country,
@@ -165,6 +184,14 @@ export function queryChannels({
   // Prioriza el país del usuario (evita, p.ej., abrir "Telefuturo" de otro país).
   const pref = (prefer || '').toUpperCase();
   list = list.slice().sort((a, b) => {
+    // En búsquedas, la relevancia manda: exacto/prefijo antes que substring.
+    if (q) {
+      const sa = matchScore(a, q);
+      const sb = matchScore(b, q);
+      if (sa !== sb) return sa - sb;
+      // Mismo nivel: nombre más corto primero (más específico, p. ej. "TN").
+      if (a.name.length !== b.name.length) return a.name.length - b.name.length;
+    }
     if (pref) {
       const ap = a.country === pref ? 0 : 1;
       const bp = b.country === pref ? 0 : 1;
