@@ -17,6 +17,12 @@ interface Api {
     @GET("api/meta")
     suspend fun meta(): Meta
 
+    @GET("api/app/version")
+    suspend fun appVersion(): AppVersion
+
+    @GET("api/catalog/favorites")
+    suspend fun favorites(): List<Card>
+
     @GET("api/catalog/search")
     suspend fun search(@Query("q") q: String): SearchResp
 
@@ -45,6 +51,7 @@ interface Api {
     @GET("api/channels")
     suspend fun channels(
         @Query("country") country: String? = null,
+        @Query("category") category: String? = null,
         @Query("search") search: String? = null,
         @Query("pageSize") pageSize: Int = 80,
     ): ChannelList

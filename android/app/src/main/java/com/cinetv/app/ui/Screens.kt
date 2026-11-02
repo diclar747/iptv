@@ -232,28 +232,38 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
 private fun LiveTab(vm: AppViewModel) {
     val countries = vm.meta?.countries.orEmpty()
     var country by remember { mutableStateOf("PY") }
+    var cat by remember { mutableStateOf<String?>(null) } // null | "sports" | "news"
     var expanded by remember { mutableStateOf(false) }
     val current = countries.firstOrNull { it.code == country }
     Column(Modifier.fillMaxSize()) {
-        Box(Modifier.padding(start = 12.dp, top = 8.dp, bottom = 4.dp)) {
-            Row(
-                Modifier.clip(RoundedCornerShape(10.dp)).background(Color(0xFF16171D)).clickable { expanded = true }
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text((current?.flag ?: "🌎") + "  " + (current?.name ?: "Paraguay"), color = Color.White, fontSize = 15.sp)
-                Icon(Icons.Filled.KeyboardArrowDown, null, tint = Muted)
-            }
-            DropdownMenu(expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color(0xFF16171D))) {
-                countries.forEach { c ->
-                    DropdownMenuItem(
-                        text = { Text("${c.flag ?: ""}  ${c.name ?: c.code}", color = Color.White) },
-                        onClick = { country = c.code; expanded = false }
-                    )
+        Row(Modifier.fillMaxWidth().padding(start = 12.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box {
+                Row(
+                    Modifier.clip(RoundedCornerShape(10.dp)).background(Color(0xFF16171D)).clickable { expanded = true }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text((current?.flag ?: "🌎") + "  " + (current?.name ?: "Paraguay"), color = Color.White, fontSize = 14.sp)
+                    Icon(Icons.Filled.KeyboardArrowDown, null, tint = Muted)
+                }
+                DropdownMenu(expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color(0xFF16171D))) {
+                    countries.forEach { c ->
+                        DropdownMenuItem(
+                            text = { Text("${c.flag ?: ""}  ${c.name ?: c.code}", color = Color.White) },
+                            onClick = { country = c.code; expanded = false }
+                        )
+                    }
                 }
             }
         }
-        GridTab(vm, key = country) { Net.api.channels(country = country).items ?: emptyList() }
+        LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            item { Chip("Todos", cat == null) { cat = null } }
+            item { Chip("Deportes", cat == "sports") { cat = "sports" } }
+            item { Chip("Noticias", cat == "news") { cat = "news" } }
+        }
+        GridTab(vm, key = country + (cat ?: "")) {
+            Net.api.channels(country = country, category = cat).items ?: emptyList()
+        }
     }
 }
 
@@ -315,6 +325,11 @@ private fun SearchOverlay(vm: AppViewModel, onClose: () -> Unit) {
 @Composable
 private fun ProfileScreen(vm: AppViewModel) {
     val u = vm.user ?: return
+    val ctx = LocalContext.current
+    val staff = u.role == "admin" || u.role == "reseller"
+    var favs by remember { mutableStateOf<List<Card>>(emptyList()) }
+    LaunchedEffect(Unit) { favs = try { Net.api.favorites() } catch (_: Exception) { emptyList() } }
+
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -341,11 +356,28 @@ private fun ProfileScreen(vm: AppViewModel) {
                     InfoRow("Pantallas", (u.maxConnections ?: 1).toString())
                 }
                 if (u.role == "admin") InfoRow("Rol", "Administrador")
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(18.dp))
+                if (staff) {
+                    Button(
+                        onClick = { runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://live.cd.com.py"))) } },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Red)
+                    ) { Text("Panel de gestión", fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.height(10.dp))
+                }
                 Button(
                     onClick = { vm.logout() }, modifier = Modifier.fillMaxWidth().height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16171D))
                 ) { Icon(Icons.Filled.Logout, null); Text("  Cerrar sesión", color = Color.White) }
+            }
+        }
+        if (favs.isNotEmpty()) {
+            item {
+                Text("Mi Lista", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp))
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(favs) { PosterCard(it) { vm.openCard(it) } }
+                }
             }
         }
     }

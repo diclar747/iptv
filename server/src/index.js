@@ -64,6 +64,13 @@ function streamAuth(req, res, next) {
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+// Versión disponible del APK (para el auto-update de la app nativa).
+// Subir versionCode/versionName en cada release nueva del APK.
+app.get('/api/app/version', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({ versionCode: 4, versionName: '1.3', url: 'https://live.cd.com.py/cinetv.apk' });
+});
+
 // Metadata para filtros (países y categorías con canales).
 app.get('/api/meta', requireActiveViewer, withData, (req, res) => {
   res.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=600');
