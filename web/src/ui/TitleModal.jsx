@@ -3,7 +3,7 @@ import { api, proxyUrl } from '../api.js';
 import Player from '../Player.jsx';
 import WatchActions from '../WatchActions.jsx';
 import { inMyList, toggleMyList, pushContinue, keyOf } from '../library.js';
-import { curatedEmbed, transcodeUrl } from '../curated.js';
+import { curatedEmbed, curatedDirect, transcodeUrl } from '../curated.js';
 
 // Overlay de detalle + reproducción para una película, serie o canal.
 export default function TitleModal({ item, user, onClose, onAuthError }) {
@@ -44,9 +44,14 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
         if (s.episodes[0]) { setEp(s.episodes[0]); setActiveStream({ url: s.episodes[0].streamUrl }); }
       }).catch(handleErr);
     } else if (isChannel) {
-      // Canales curados para transcodificar: usan el stream del transcodificador.
+      // Canales curados: 1) stream oficial directo, 2) transcodificador, si no
+      // 3) los streams de iptv-org.
+      const direct = curatedDirect(item.type, item.id);
       const tc = transcodeUrl(item.type, item.id);
-      if (tc) {
+      if (direct) {
+        setStreams([direct]);
+        setActiveStream(direct);
+      } else if (tc) {
         setStreams([{ url: tc }]);
         setActiveStream({ url: tc });
       } else {
