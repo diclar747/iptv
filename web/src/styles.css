@@ -650,6 +650,9 @@ body.modal-open { overflow: hidden; }
   padding: 12px; font-family: var(--font-display); font-weight: 600; font-size: 17px; letter-spacing: 0.04em;
 }
 .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.login-demo { margin-top: 2px; background: transparent; color: var(--text); border: 1px solid var(--live); border-radius: 999px; padding: 12px; font-family: var(--font-display); font-weight: 600; font-size: 15px; cursor: pointer; }
+.login-demo:hover { background: rgba(229, 9, 20, 0.12); }
+.login-demo:disabled { opacity: 0.5; cursor: not-allowed; }
 .login-trial { background: rgba(229, 9, 20, 0.12); border: 1px solid var(--live); color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 13px; text-align: center; }
 .login-switch { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2px; }
 .login-switch button { background: none; border: none; color: var(--live); font-weight: 600; cursor: pointer; padding: 0 2px; font-size: 13px; }

@@ -79,6 +79,18 @@ export async function ensureSeed() {
     await query("UPDATE users SET pass_hash=$1, pass_salt=$2 WHERE username='vendedor'", [hash, salt]);
   }
 
+  // Cuenta DEMO de acceso libre para probar el sistema: es un "vendedor" (así
+  // tiene acceso total y no vence). Cualquiera entra con demo / demo.
+  const demo = await one("SELECT id FROM users WHERE username='demo'");
+  if (!demo) {
+    const { salt, hash } = hashPassword(process.env.DEMO_PASSWORD || 'demo');
+    await query(
+      "INSERT INTO users (username, pass_hash, pass_salt, role, credits) VALUES ('demo',$1,$2,'reseller',50)",
+      [hash, salt]
+    );
+    console.log('[seed] cuenta demo creada -> demo / demo (acceso libre)');
+  }
+
   const { n } = await one('SELECT count(*)::int AS n FROM packages');
   if (n === 0) {
     const defaults = [

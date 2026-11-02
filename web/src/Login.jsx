@@ -71,6 +71,18 @@ export default function Login() {
             : (isRegister ? 'Crear cuenta y probar gratis' : 'Entrar')}
         </button>
 
+        {!isRegister && (
+          <button type="button" className="login-demo" disabled={busy}
+            onClick={async () => {
+              setBusy(true); setError(null);
+              try { await login('demo', 'demo'); }
+              catch (err) { setError(err.message); }
+              finally { setBusy(false); }
+            }}>
+            ▶ Entrar como demo — acceso libre
+          </button>
+        )}
+
         <div className="login-switch">
           {isRegister ? (
             <>¿Ya tenés cuenta?{' '}
