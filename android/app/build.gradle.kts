@@ -15,8 +15,8 @@ android {
         applicationId = "com.cinetv.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
     }
 
     buildTypes {
@@ -63,6 +63,12 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
+
+    // Proyección a Smart TV (Chromecast) — ExoPlayer + Cast nativo.
+    implementation("androidx.media3:media3-cast:1.4.1")
+    implementation("com.google.android.gms:play-services-cast-framework:21.5.0")
+    implementation("androidx.mediarouter:mediarouter:1.7.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
 
     // Red + imágenes.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
