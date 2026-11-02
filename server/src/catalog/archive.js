@@ -8,6 +8,7 @@ const IA = 'https://archive.org';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Búsquedas por género (colección de largometrajes de dominio público).
+// Más géneros = más variedad y más películas filtrables.
 const GENRES = [
   ['Clásicos', 'collection:(feature_films)'],
   ['Terror', 'subject:(horror)'],
@@ -19,6 +20,16 @@ const GENRES = [
   ['Aventura', 'subject:(adventure)'],
   ['Animación', 'subject:(animation)'],
   ['Suspenso', 'subject:(film noir)'],
+  ['Romance', 'subject:(romance)'],
+  ['Misterio', 'subject:(mystery)'],
+  ['Crimen', 'subject:(crime)'],
+  ['Bélico', 'subject:(war)'],
+  ['Familia', 'subject:(family)'],
+  ['Musical', 'subject:(musical)'],
+  ['Fantasía', 'subject:(fantasy)'],
+  ['Suspenso', 'subject:(thriller)'],
+  ['Documental', 'subject:(documentary)'],
+  ['Policial', 'subject:(detective)'],
 ];
 
 const control = { running: false, note: null, count: 0 };
@@ -71,7 +82,7 @@ async function insertMovie({ identifier, title, year, description, category, url
 }
 
 // Importa en segundo plano. perGenre = cuántos títulos buscar por género.
-export function importArchive({ perGenre = 40 } = {}) {
+export function importArchive({ perGenre = 100 } = {}) {
   if (control.running) return { ok: false, error: 'Ya hay una importación de Internet Archive en curso' };
   control.running = true; control.count = 0; control.note = 'iniciando';
   (async () => {
