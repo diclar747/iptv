@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './auth.jsx';
+import { api } from './api.js';
 import { subscribePwa, promptInstall } from './pwa.js';
 import Login from './Login.jsx';
 import Home from './views/Home.jsx';
@@ -49,9 +50,15 @@ export default function App() {
   const [drawer, setDrawer] = useState(false);
   const [account, setAccount] = useState(false);
   const [pwa, setPwa] = useState({ canInstall: false, installed: false });
+  const [geo, setGeo] = useState('PY'); // país detectado por IP (para TV en Vivo)
 
   useEffect(() => subscribePwa(setPwa), []);
-  useEffect(() => { if (user) { setView('inicio'); } }, [user?.id]);
+  useEffect(() => {
+    if (user) {
+      setView('inicio');
+      api.geo().then((r) => r?.country && setGeo(r.country)).catch(() => {});
+    }
+  }, [user?.id]);
 
   if (loading) return (
     <div className="splash">
@@ -79,7 +86,7 @@ export default function App() {
       <button className="hero-play" onClick={logout}>Salir</button>
     </div>
   ) : view === 'inicio' ? <Home onOpen={onOpen} onNavigate={go} onAuthError={refresh} />
-    : view === 'tv' ? <Channels title="TV en Vivo" defaultCountry="PY" onOpen={onOpen} onAuthError={refresh} />
+    : view === 'tv' ? <Channels title="TV en Vivo" defaultCountry={geo} onOpen={onOpen} onAuthError={refresh} />
     : view === 'deportes' ? <Channels title="Deportes" fixedCategory="sports" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />
     : view === 'documentales' ? <Channels title="Documentales" fixedCategory="documentary" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />
     : view === 'perfil' ? <Perfil user={user} onLogout={logout} onNavigate={go} onAuthError={refresh} />

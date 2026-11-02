@@ -67,26 +67,45 @@ app.get('/api/meta', requireActiveViewer, withData, (req, res) => {
   res.json(getMeta());
 });
 
-// Inicio en UN solo pedido: todas las filas de canales juntas (antes eran 6).
-const HOME_ROWS = [
-  { key: 'py', title: 'TV en Vivo · Paraguay', country: 'PY' },
-  { key: 'sports', title: 'Deportes', category: 'sports' },
-  { key: 'news', title: 'Noticias', category: 'news' },
-  { key: 'ar', title: 'Argentina', country: 'AR' },
-  { key: 'br', title: 'Brasil', country: 'BR' },
-  { key: 'documentary', title: 'Documentales', category: 'documentary' },
-];
+// País del visitante según su IP (Cloudflare agrega el header cf-ipcountry).
+// Sin Cloudflare (local) o país inválido -> Paraguay por defecto.
+function geoCountry(req) {
+  const cc = String(req.headers['cf-ipcountry'] || '').toUpperCase();
+  return /^[A-Z]{2}$/.test(cc) && cc !== 'XX' && cc !== 'T1' ? cc : 'PY';
+}
+
+// Otros países a mostrar en el inicio además del propio.
+const EXTRA_COUNTRIES = ['PY', 'AR', 'BR', 'UY', 'CL', 'MX', 'ES', 'US'];
+const chRow = (opts) => queryChannels({ page: 1, pageSize: 20, onlyWithStreams: true, ...opts }).items;
+
+// Devuelve el país detectado por IP (para que el frontend ajuste la vista TV).
+app.get('/api/geo', requireActiveViewer, (req, res) => {
+  res.set('Cache-Control', 'private, max-age=600');
+  res.json({ country: geoCountry(req) });
+});
+
+// Inicio en UN solo pedido: según el país del visitante (por IP), sus canales
+// van primero; luego deportes, noticias, un par de países más y documentales.
 app.get('/api/home', requireActiveViewer, withData, (req, res) => {
-  const rows = HOME_ROWS.map((r) => ({
-    key: r.key,
-    title: r.title,
-    nav: r.country === 'PY' ? 'tv' : r.category === 'sports' ? 'deportes' : r.category === 'documentary' ? 'documentales' : null,
-    items: queryChannels({
-      country: r.country, category: r.category, page: 1, pageSize: 20, onlyWithStreams: true,
-    }).items,
-  }));
+  const names = new Map(getMeta().countries.map((c) => [c.code, c.name]));
+  let country = geoCountry(req);
+  if (chRow({ country }).length === 0) country = 'PY'; // sin canales -> PY
+
+  const rows = [
+    { key: 'pais', title: `TV en Vivo · ${names.get(country) || country}`, nav: 'tv', items: chRow({ country }) },
+    { key: 'sports', title: 'Deportes', nav: 'deportes', items: chRow({ category: 'sports' }) },
+    { key: 'news', title: 'Noticias', items: chRow({ category: 'news' }) },
+  ];
+  let extras = 0;
+  for (const cc of EXTRA_COUNTRIES) {
+    if (cc === country || extras >= 2) continue;
+    const items = chRow({ country: cc });
+    if (items.length) { rows.push({ key: 'c-' + cc, title: names.get(cc) || cc, items }); extras++; }
+  }
+  rows.push({ key: 'documentary', title: 'Documentales', nav: 'documentales', items: chRow({ category: 'documentary' }) });
+
   res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
-  res.json({ rows });
+  res.json({ country, rows: rows.filter((r) => r.items.length) });
 });
 
 // Listado de canales con filtros y paginación.

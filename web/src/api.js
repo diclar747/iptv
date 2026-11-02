@@ -29,6 +29,7 @@ const patch = (p, body) => req('PATCH', p, { body });
 export const api = {
   // Catálogo / visor
   home: () => get('/home'),
+  geo: () => get('/geo'),
   meta: () => get('/meta'),
   channels: (params) => get('/channels', params),
   streams: (id) => get(`/channels/${encodeURIComponent(id)}/streams`),

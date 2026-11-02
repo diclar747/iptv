@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from './api.js';
-import { castSupported, castTo, airplaySupported, airplay } from './cast.js';
+import { castSupported, castTo, airplaySupported, airplay, loadCast } from './cast.js';
 import Icon from './ui/Icon.jsx';
 
 // Reproductor HLS/MP4. hls.js se carga BAJO DEMANDA (solo al reproducir HLS en
@@ -25,6 +25,8 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
 
   useEffect(() => {
     setCanCast(castSupported() || airplaySupported(videoRef.current) || Boolean(window.WebKitPlaybackTargetAvailabilityEvent));
+    // Precargar el SDK de Chromecast para que el descubrimiento esté listo al tocar.
+    if (castSupported()) loadCast();
   }, []);
 
   // Oculta los controles al inicio tras unos segundos, y al salir de pantalla

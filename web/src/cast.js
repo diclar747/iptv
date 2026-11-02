@@ -10,7 +10,10 @@ function initContext() {
     const g = window;
     const context = g.cast.framework.CastContext.getInstance();
     context.setOptions({
-      receiverApplicationId: g.chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+      // ID del receptor multimedia por defecto de Google (soportado por TODOS
+      // los Chromecast). Si quedara indefinido, el selector no lista ningún
+      // dispositivo; por eso lo fijamos explícitamente.
+      receiverApplicationId: (g.chrome.cast.media && g.chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID) || 'CC1AD845',
       autoJoinPolicy: g.chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
     });
     castReady = true;
@@ -48,6 +51,14 @@ export async function castTo(url, title, poster) {
   if (!ok || !window.cast) throw new Error('Chromecast no disponible en este navegador');
   const g = window;
   const context = g.cast.framework.CastContext.getInstance();
+  // Re-asegurar las opciones (receptor por defecto) antes de abrir el selector,
+  // por si la inicialización quedó a medias.
+  try {
+    context.setOptions({
+      receiverApplicationId: 'CC1AD845',
+      autoJoinPolicy: g.chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+    });
+  } catch { /* ya configurado */ }
   await context.requestSession();
   const session = context.getCurrentSession();
   if (!session) throw new Error('No se pudo conectar al dispositivo');
