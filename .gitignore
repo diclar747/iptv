@@ -22,3 +22,7 @@ backup.sql
 
 # Config local de Claude Code
 .claude/
+
+# APK generado localmente
+CineTV.apk
+*.apk
