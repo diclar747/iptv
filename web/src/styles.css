@@ -988,3 +988,18 @@ body{background:#050609;background-image:radial-gradient(ellipse at 0 100%,#1710
   .app.nav-collapsed { grid-template-columns: 1fr; }
   .fs-btn { display: none; } /* pantalla completa poco útil en móvil con navegador */
 }
+
+/* ----- Prolijidad del menú (scrollbar oculto + colapsado parejo) ----- */
+.side-nav { scrollbar-width: none; -ms-overflow-style: none; }
+.side-nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* Colapsado: iconos como cuadrados centrados y uniformes, sin desprolijidad. */
+.app.nav-collapsed .side-nav { align-items: center; gap: 6px !important; padding: 0; overflow: visible; }
+.app.nav-collapsed .side-item {
+  width: 46px; height: 46px; min-height: 46px; margin: 0 auto;
+  border-radius: 13px !important; padding: 0; gap: 0;
+}
+.app.nav-collapsed .side-foot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.app.nav-collapsed .side-foot .side-item { width: 46px; height: 46px; }
+.app.nav-collapsed .side-collapse { width: 40px; height: 40px; }
+.app.nav-collapsed .side-head { padding: 4px 0 10px; }
