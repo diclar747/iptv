@@ -23,6 +23,10 @@ export const CURATED_TRANSCODE = {
     src: 'https://copacotf.desdeparaguay.net/telefuturo/telefuturo_py_alta/playlist.m3u8',
     ref: 'https://www.telefuturo.com.py',
   },
+  'SNT.py': {
+    src: 'https://ddycmnicl95kp.cloudfront.net/live/25646ipbno2g/master.m3u8',
+    ref: 'https://www.snt.com.py',
+  },
 };
 
 export function transcodeUrl(type, id) {
