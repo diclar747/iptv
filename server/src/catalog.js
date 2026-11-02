@@ -43,13 +43,18 @@ async function movieRow(where = '', params = [], limit = 24) {
   return rows.map(movieCard);
 }
 
+// Categorías que NO se muestran en la portada (para que abra "linda"). El terror
+// sigue disponible en la sección Películas, solo no aparece de entrada en Inicio.
+const HOME_HIDE = ['Terror'];
+
 // Portada estilo Netflix en un pedido: banner + filas temáticas.
 router.get('/catalog/home', async (req, res) => {
+  const hideCond = `(m.category IS NULL OR NOT (m.category = ANY($1)))`;
   const [latestMovies, series, topCats] = await Promise.all([
-    movieRow('', [], 24),
+    movieRow(hideCond, [HOME_HIDE], 24),
     many(`SELECT s.* FROM series s WHERE NOT s.hidden ORDER BY s.popularity DESC, s.created_at DESC LIMIT 24`),
-    many(`SELECT category, count(*)::int n FROM movies WHERE NOT hidden AND category IS NOT NULL
-          GROUP BY category ORDER BY n DESC LIMIT 6`),
+    many(`SELECT category, count(*)::int n FROM movies m WHERE NOT m.hidden AND m.category IS NOT NULL
+          AND NOT (m.category = ANY($1)) GROUP BY category ORDER BY n DESC LIMIT 6`, [HOME_HIDE]),
   ]);
 
   const rows = [];
@@ -66,7 +71,9 @@ router.get('/catalog/home', async (req, res) => {
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
      WHERE NOT m.hidden AND (m.backdrop IS NOT NULL OR m.poster IS NOT NULL)
        AND m.title !~* 'S *[0-9]+ *E *[0-9]+'
-     ORDER BY (m.backdrop IS NOT NULL) DESC, m.featured DESC, m.popularity DESC, m.created_at DESC LIMIT 6`
+       AND (m.category IS NULL OR NOT (m.category = ANY($1)))
+     ORDER BY (m.backdrop IS NOT NULL) DESC, m.featured DESC, m.popularity DESC, m.created_at DESC LIMIT 6`,
+    [HOME_HIDE]
   );
   res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
   res.json({ featured: feat.map(movieCard), rows: rows.filter((r) => r.items.length) });
