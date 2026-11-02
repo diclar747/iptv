@@ -6,12 +6,19 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
+
 interface Api {
     @POST("api/auth/login")
     suspend fun login(@Body body: LoginReq): UserResp
 
     @GET("api/auth/me")
     suspend fun me(): UserResp
+
+    @GET("api/meta")
+    suspend fun meta(): Meta
+
+    @GET("api/catalog/search")
+    suspend fun search(@Query("q") q: String): SearchResp
 
     @GET("api/catalog/home")
     suspend fun catalogHome(): HomeResp
@@ -44,6 +51,12 @@ interface Api {
 
     @GET("api/channels/{id}/streams")
     suspend fun channelStreams(@Path("id") id: String): ChannelStreamsResp
+
+    @POST("api/catalog/favorites")
+    suspend fun addFavorite(@Body body: FavReq)
 }
 
+data class FavReq(val type: String, val id: Long)
+
 data class ChannelStreamsResp(val streams: List<Stream>? = null)
+data class SearchResp(val movies: List<Card>? = null, val series: List<Card>? = null)

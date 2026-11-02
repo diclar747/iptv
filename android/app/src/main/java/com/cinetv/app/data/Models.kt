@@ -4,7 +4,26 @@ package com.cinetv.app.data
 
 data class LoginReq(val username: String, val password: String)
 data class UserResp(val user: User?)
-data class User(val id: Long, val username: String, val role: String?)
+data class Subscription(val active: Boolean? = null, val reason: String? = null)
+data class User(
+    val id: Long = 0,
+    val username: String = "",
+    val role: String? = null,
+    val status: String? = null,
+    val displayName: String? = null,
+    val logoUrl: String? = null,
+    val phone: String? = null,
+    val address: String? = null,
+    val credits: Int? = null,
+    val expiresAt: String? = null,
+    val packageName: String? = null,
+    val maxConnections: Int? = null,
+    val subscription: Subscription? = null,
+)
+
+data class Country(val code: String = "", val name: String? = null, val flag: String? = null)
+data class CategoryMeta(val id: String? = null, val name: String? = null, val count: Int? = null)
+data class Meta(val countries: List<Country>? = null, val categories: List<CategoryMeta>? = null)
 
 // Tarjeta común para película, serie o canal (los campos sobrantes quedan null).
 data class Card(

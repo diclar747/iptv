@@ -35,6 +35,8 @@ class AppViewModel : ViewModel() {
         private set
     var rows by mutableStateOf<List<Row>>(emptyList())
         private set
+    var meta by mutableStateOf<com.cinetv.app.data.Meta?>(null)
+        private set
 
     var detail by mutableStateOf<Detail?>(null)
     var play by mutableStateOf<PlayTarget?>(null)
@@ -82,6 +84,7 @@ class AppViewModel : ViewModel() {
             live.rows?.let { r -> out.addAll(r.map { it.copy(title = "📡 " + (it.title ?: "")) }) }
         } catch (_: Exception) {}
         rows = out
+        try { meta = api.meta() } catch (_: Exception) { /* opcional */ }
     }
 
     fun refreshHome() { viewModelScope.launch { loadHome() } }
@@ -114,6 +117,12 @@ class AppViewModel : ViewModel() {
     }
 
     fun playEpisodeUrl(url: String, title: String) = startPlay(url, title, null, null)
+
+    fun addFavorite(kind: String, id: Long) {
+        viewModelScope.launch {
+            try { api.addFavorite(com.cinetv.app.data.FavReq(if (kind == "serie") "serie" else "movie", id)) } catch (_: Exception) { /* ignore */ }
+        }
+    }
 
     private fun startPlay(rawUrl: String, title: String, ua: String?, ref: String?) {
         val proxied = Net.proxied(rawUrl, ua, ref)
