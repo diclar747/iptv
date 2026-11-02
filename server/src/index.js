@@ -1,4 +1,5 @@
 import './env.js'; // carga .env antes que nada (debe ir primero)
+import { exec } from 'node:child_process';
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
@@ -14,7 +15,7 @@ import { checkStream, checkMany } from './checker.js';
 import { streamHandler } from './proxy.js';
 import { streamToken, validToken } from './streamToken.js';
 import { initSchema, ping } from './pg.js';
-import { attachUser, requireActiveViewer } from './auth.js';
+import { attachUser, requireAuth, requireActiveViewer } from './auth.js';
 import accountsRouter, { ensureSeed } from './accounts.js';
 // VOD (películas/series) desactivado por ahora — la app es solo canales.
 // Para reactivar: descomentar este import, el app.use y el ensureVodSeed de abajo.
@@ -77,6 +78,15 @@ function geoCountry(req) {
 // Otros países a mostrar en el inicio además del propio.
 const EXTRA_COUNTRIES = ['PY', 'AR', 'BR', 'UY', 'CL', 'MX', 'ES', 'US'];
 const chRow = (opts) => queryChannels({ page: 1, pageSize: 20, onlyWithStreams: true, ...opts }).items;
+
+// Chequeo: ¿el servidor tiene ffmpeg? (para decidir si se puede transcodificar
+// los canales que no decodifican en el navegador).
+app.get('/api/ffmpeg-check', requireAuth, (req, res) => {
+  exec('ffmpeg -version', { timeout: 6000 }, (err, stdout) => {
+    if (err) return res.json({ available: false, error: (err.message || '').slice(0, 200) });
+    res.json({ available: true, version: (String(stdout).split('\n')[0] || '').slice(0, 140) });
+  });
+});
 
 // Devuelve el país detectado por IP (para que el frontend ajuste la vista TV).
 app.get('/api/geo', requireActiveViewer, (req, res) => {
