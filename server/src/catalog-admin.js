@@ -2,25 +2,48 @@
 // (start/stop/resume), sincronización manual, estadísticas, errores, vincular
 // fuentes de reproducción autorizadas y ocultar títulos. Solo rol admin.
 import express from 'express';
-import { query, one } from './pg.js';
+import { query, one, many } from './pg.js';
 import { requireAuth, requireRole } from './auth.js';
 import {
   getProvider, importStatus, startImport, stopImport, resetCursors, syncUpdates,
 } from './catalog/index.js';
 import { catalogStats, recentJobs } from './catalog/repo.js';
 import { importArchive, archiveStatus } from './catalog/archive.js';
+import { importTmdb, tmdbStatus, tmdbTest } from './catalog/tmdb.js';
 
 const router = express.Router();
 router.use('/admin/catalog', requireAuth, requireRole('admin'));
 
 // Estado general + conteos.
 router.get('/admin/catalog/status', async (req, res) => {
-  res.json({ ...importStatus(), archive: archiveStatus(), stats: await catalogStats() });
+  res.json({ ...importStatus(), archive: archiveStatus(), tmdb: tmdbStatus(), stats: await catalogStats() });
 });
 
 // Importar películas de DOMINIO PÚBLICO desde Internet Archive (reproducibles).
 router.post('/admin/catalog/import-archive', (req, res) => {
-  res.json(importArchive({ perGenre: Number(req.body?.perGenre) || 40 }));
+  res.json(importArchive({ perGenre: Number(req.body?.perGenre) || 60 }));
+});
+
+// Importar METADATOS de películas actuales/populares desde TMDB (para mostrar).
+router.post('/admin/catalog/import-tmdb', (req, res) => {
+  res.json(importTmdb({ pages: Number(req.body?.pages) || 5 }));
+});
+router.post('/admin/catalog/tmdb-test', async (req, res) => res.json(await tmdbTest()));
+
+// Limpia la "basura" de Internet Archive ya cargada: películas poco populares
+// (las que entraron antes del filtro de calidad). No toca TMDB ni el seed.
+router.post('/admin/catalog/clean-archive', async (req, res) => {
+  const min = Number(req.body?.min) || 5000;
+  const ids = (await many(`SELECT id FROM movies WHERE provider='archive' AND COALESCE(popularity,0) < $1`, [min])).map((r) => r.id);
+  if (ids.length) {
+    await query(`DELETE FROM external_ids   WHERE content_type='movie' AND internal_id = ANY($1)`, [ids]);
+    await query(`DELETE FROM content_genres WHERE content_type='movie' AND content_id  = ANY($1)`, [ids]);
+    await query(`DELETE FROM artworks       WHERE content_type='movie' AND content_id  = ANY($1)`, [ids]);
+    await query(`DELETE FROM media_sources  WHERE content_type='movie' AND content_id  = ANY($1)`, [ids]);
+    await query(`DELETE FROM user_favorites WHERE content_type='movie' AND content_id  = ANY($1)`, [ids]);
+    await query(`DELETE FROM movies         WHERE id = ANY($1)`, [ids]);
+  }
+  res.json({ ok: true, removed: ids.length });
 });
 
 // Probar la conexión con TheTVDB (login).

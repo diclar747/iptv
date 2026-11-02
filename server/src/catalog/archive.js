@@ -6,6 +6,8 @@ import { query, one } from '../pg.js';
 
 const IA = 'https://archive.org';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Umbral de descargas: solo traemos clásicos CONOCIDOS (populares), no basura.
+const MIN_DOWNLOADS = 5000;
 
 // Búsquedas por género (colección de largometrajes de dominio público).
 // Más géneros = más variedad y más películas filtrables.
@@ -67,14 +69,15 @@ async function have(identifier) {
     [identifier]));
 }
 
-async function insertMovie({ identifier, title, year, description, category, url }) {
+async function insertMovie({ identifier, title, year, description, category, url, popularity = 0 }) {
   if (await have(identifier)) return false;
   const poster = `${IA}/services/img/${identifier}`;
   const desc = Array.isArray(description) ? description[0] : description;
+  const pop = Math.min(99999999, Number(popularity) || 0);
   const m = await one(
     `INSERT INTO movies (title, year, poster, description, overview_es, category, stream_url, provider, popularity)
-     VALUES ($1,$2,$3,$4,$4,$5,$6,'archive',0) RETURNING id`,
-    [title, year, poster, (desc || '').toString().replace(/<[^>]+>/g, '').slice(0, 1200) || null, category, url]);
+     VALUES ($1,$2,$3,$4,$4,$5,$6,'archive',$7) RETURNING id`,
+    [title, year, poster, (desc || '').toString().replace(/<[^>]+>/g, '').slice(0, 1200) || null, category, url, pop]);
   await query(
     `INSERT INTO external_ids (provider, content_type, external_id, internal_id)
      VALUES ('archive','movie',$1,$2) ON CONFLICT DO NOTHING`, [identifier, m.id]);
@@ -91,18 +94,22 @@ export function importArchive({ perGenre = 100 } = {}) {
         control.note = `buscando ${cat}`;
         const full = `collection:(feature_films) AND mediatype:(movies) AND ${q}`;
         const url = `${IA}/advancedsearch.php?q=${encodeURIComponent(full)}`
-          + `&fl[]=identifier&fl[]=title&fl[]=year&fl[]=description`
+          + `&fl[]=identifier&fl[]=title&fl[]=year&fl[]=description&fl[]=downloads`
           + `&sort[]=${encodeURIComponent('downloads desc')}&rows=${perGenre}&page=1&output=json`;
         const r = await fetch(url).catch(() => null);
         if (!r || !r.ok) continue;
         const docs = (await r.json().catch(() => ({})))?.response?.docs || [];
         for (const d of docs) {
+          const downloads = Number(d.downloads || 0);
+          const year = yearNum(d.year);
+          // CALIDAD: solo clásicos conocidos (populares, con año) — nada de basura.
+          if (downloads < MIN_DOWNLOADS || !year) continue;
           try {
             const mp4 = await pickMp4(d.identifier);
             if (!mp4) continue;
             const ok = await insertMovie({
-              identifier: d.identifier, title: cleanTitle(d.title), year: yearNum(d.year),
-              description: d.description, category: cat, url: mp4,
+              identifier: d.identifier, title: cleanTitle(d.title), year,
+              description: d.description, category: cat, url: mp4, popularity: downloads,
             });
             if (ok) control.count++;
           } catch { /* saltar título problemático */ }

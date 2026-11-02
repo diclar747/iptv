@@ -63,16 +63,37 @@ export default function CatalogAdmin() {
           <div className="cat-bar"><span /></div>
         </div>
       )}
+      {st?.tmdb?.running && (
+        <div className="cat-running">
+          🎞️ TMDB… {st.tmdb.note} · {st.tmdb.count} películas cargadas
+          <div className="cat-bar"><span /></div>
+        </div>
+      )}
 
       <div className="cat-free">
         <div>
           <strong>Películas de dominio público</strong>
-          <div className="cat-hint">Carga películas legales y reproducibles desde Internet Archive, por género. No requiere API Key.</div>
+          <div className="cat-hint">Clásicos legales y reproducibles desde Internet Archive (solo populares, con póster). No requiere API Key.</div>
         </div>
         <button className="verify" disabled={busy || st?.archive?.running}
-          onClick={() => act(() => api.catImportArchive({ perGenre: 100 }), 'Importación de Internet Archive iniciada')}>
+          onClick={() => act(() => api.catImportArchive({ perGenre: 60 }), 'Importación de Internet Archive iniciada')}>
           Importar dominio público
         </button>
+      </div>
+
+      <div className="cat-free">
+        <div>
+          <strong>Títulos actuales (TMDB)</strong>{' '}
+          {st?.tmdb?.configured ? <span className="ok">conectado</span> : <span className="bad">sin API Key</span>}
+          <div className="cat-hint">Metadatos de películas actuales y populares (póster, sinopsis, año) para que la portada se vea representable. El "Ver ahora" solo aparece con fuente licenciada. Cargá <code>TMDB_API_KEY</code> en el <code>.env</code>.</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button disabled={busy} onClick={() => act(api.catTmdbTest, null)}>Probar</button>
+          <button className="verify" disabled={busy || !st?.tmdb?.configured || st?.tmdb?.running}
+            onClick={() => act(() => api.catImportTmdb({ pages: 5 }), 'Importación de TMDB iniciada')}>
+            Importar TMDB
+          </button>
+        </div>
       </div>
 
       <div className="cat-controls">
@@ -87,6 +108,10 @@ export default function CatalogAdmin() {
         <button disabled={busy || !st?.running} onClick={() => act(api.catStop, 'Deteniendo…')}>Detener</button>
         <button disabled={busy || st?.running} onClick={() => act(api.catReset, 'Cursores reiniciados')}>Reiniciar cursores</button>
         <button disabled={busy || !connected || st?.running} onClick={() => act(api.catSync, 'Sincronizando…')}>Sincronizar ahora</button>
+        <button disabled={busy}
+          onClick={() => { if (window.confirm('¿Borrar las películas poco populares de Internet Archive (la basura vieja)? El contenido bueno y TMDB no se tocan.')) act(api.catCleanArchive, null); }}>
+          Limpiar basura
+        </button>
       </div>
 
       {msg && <div className="banner">{msg}</div>}
