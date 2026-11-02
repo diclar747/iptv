@@ -69,7 +69,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -178,7 +180,7 @@ private fun HomeTab(vm: AppViewModel) {
                 Text(row.title ?: "", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 14.dp, top = 16.dp, bottom = 8.dp))
                 LazyRow(contentPadding = PaddingValues(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(row.items) { PosterCard(it) { vm.openCard(it) } }
+                    items(row.items) { CardView(it) { vm.openCard(it) } }
                 }
             }
         }
@@ -261,14 +263,15 @@ private fun LiveTab(vm: AppViewModel) {
             item { Chip("Deportes", cat == "sports") { cat = "sports" } }
             item { Chip("Noticias", cat == "news") { cat = "news" } }
         }
-        GridTab(vm, key = country + (cat ?: "")) {
+        // Canales -> celdas más anchas (16:10) para que el logo entre bien.
+        GridTab(vm, key = country + (cat ?: ""), minCell = 156.dp) {
             Net.api.channels(country = country, category = cat).items ?: emptyList()
         }
     }
 }
 
 @Composable
-private fun GridTab(vm: AppViewModel, key: Any? = Unit, loader: suspend () -> List<Card>) {
+private fun GridTab(vm: AppViewModel, key: Any? = Unit, minCell: Dp = 112.dp, loader: suspend () -> List<Card>) {
     var items by remember(key) { mutableStateOf<List<Card>?>(null) }
     LaunchedEffect(key) { items = try { loader() } catch (_: Exception) { emptyList() } }
     val list = items
@@ -277,14 +280,27 @@ private fun GridTab(vm: AppViewModel, key: Any? = Unit, loader: suspend () -> Li
         return
     }
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(110.dp), contentPadding = PaddingValues(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) { items(list) { PosterCard(it) { vm.openCard(it) } } }
+        columns = GridCells.Adaptive(minCell), contentPadding = PaddingValues(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        items(list) { card ->
+            // En grilla la tarjeta ocupa toda la celda (uniforme y responsive).
+            if (card.kind == "channel") ChannelCard(card, Modifier.fillMaxWidth()) { vm.openCard(card) }
+            else PosterCard(card, Modifier.fillMaxWidth()) { vm.openCard(card) }
+        }
+    }
+}
+
+// Elige la tarjeta según el tipo: canal -> tile de logo; peli/serie -> póster.
+@Composable
+private fun CardView(card: Card, onClick: () -> Unit) {
+    if (card.kind == "channel") ChannelCard(card, Modifier.width(150.dp), onClick)
+    else PosterCard(card, Modifier.width(118.dp), onClick)
 }
 
 @Composable
-private fun PosterCard(card: Card, onClick: () -> Unit) {
-    Column(Modifier.width(118.dp).clickable { onClick() }) {
+private fun PosterCard(card: Card, modifier: Modifier = Modifier.width(118.dp), onClick: () -> Unit) {
+    Column(modifier.clickable { onClick() }) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(10.dp)).background(Surface)) {
             if (card.image != null) {
                 AsyncImage(card.image, card.displayTitle, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
@@ -293,6 +309,47 @@ private fun PosterCard(card: Card, onClick: () -> Unit) {
             }
         }
         Text(card.displayTitle, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 5.dp))
+    }
+}
+
+// Tarjeta de canal: tile 16:10 uniforme, logo centrado SIN recortar (Fit) sobre
+// fondo oscuro, con badge "EN VIVO". Resuelve los logos disparejos/cortados.
+@Composable
+private fun ChannelCard(card: Card, modifier: Modifier = Modifier.width(150.dp), onClick: () -> Unit) {
+    Column(modifier.clickable { onClick() }) {
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(16f / 10f)
+                .clip(RoundedCornerShape(12.dp)).background(Color(0xFF14161C)),
+            contentAlignment = Alignment.Center
+        ) {
+            val logo = card.logo ?: card.image
+            if (logo != null) {
+                AsyncImage(
+                    logo, card.displayTitle, contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().padding(16.dp)
+                )
+            } else {
+                Text(
+                    card.displayTitle, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
+            Row(
+                Modifier.align(Alignment.TopStart).padding(8.dp)
+                    .clip(RoundedCornerShape(5.dp)).background(Color(0xE6E50914))
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(Modifier.size(5.dp).clip(CircleShape).background(Color.White))
+                Spacer(Modifier.width(4.dp))
+                Text("EN VIVO", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Text(
+            card.displayTitle, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp)
+        )
     }
 }
 
@@ -471,10 +528,68 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
                         }
                     }
                 }
+                is Detail.Channel -> {
+                    val c = detail.c
+                    item {
+                        ChannelHeader(c)
+                        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            Button(onClick = { vm.playChannel(c); vm.closeDetail() }, colors = ButtonDefaults.buttonColors(containerColor = Red)) {
+                                Icon(Icons.Filled.PlayArrow, null); Text(" Ver en vivo", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        ChannelActions(c)
+                        Text("Señal en vivo vía CineTV", color = Color(0xFF5C6879), fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp))
+                    }
+                }
             }
         }
         IconButton(onClick = { vm.closeDetail() }, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
             Icon(Icons.Filled.Close, "Cerrar", tint = Color.White)
+        }
+    }
+}
+
+// Cabecera de canal: logo centrado (Fit) sobre fondo oscuro + badge EN VIVO.
+@Composable
+private fun ChannelHeader(card: Card) {
+    Box(Modifier.fillMaxWidth().height(200.dp).background(Color(0xFF0E0F14)), contentAlignment = Alignment.Center) {
+        val logo = card.logo ?: card.image
+        if (logo != null) {
+            AsyncImage(
+                logo, card.displayTitle, contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth(0.5f).aspectRatio(1f).padding(8.dp)
+            )
+        }
+        Row(
+            Modifier.align(Alignment.TopStart).padding(12.dp)
+                .clip(RoundedCornerShape(5.dp)).background(Color(0xE6E50914)).padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
+            Spacer(Modifier.width(5.dp))
+            Text("EN VIVO", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
+        }
+    }
+    Text(card.displayTitle, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+    val sub = listOfNotNull(card.category, card.country).joinToString("  ·  ")
+    if (sub.isNotBlank()) Text(sub, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 2.dp, bottom = 8.dp))
+    else Spacer(Modifier.height(8.dp))
+}
+
+// Acciones de canal: Me gusta (local) + Compartir. (Mi Lista y comentarios
+// necesitan backend; se agregan cuando exista el endpoint.)
+@Composable
+private fun ChannelActions(card: Card) {
+    val ctx = LocalContext.current
+    var liked by remember(card.id) { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+        ActionBtn(if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, "Me gusta", if (liked) Red else Color.White) { liked = !liked }
+        ActionBtn(Icons.Filled.Share, "Compartir", Color.White) {
+            val i = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, "Mirá ${card.displayTitle} en vivo por CineTV 📺 https://live.cd.com.py")
+            }
+            ctx.startActivity(android.content.Intent.createChooser(i, "Compartir"))
         }
     }
 }

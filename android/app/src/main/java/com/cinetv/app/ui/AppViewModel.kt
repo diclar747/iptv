@@ -20,6 +20,7 @@ data class PlayTarget(val url: String, val mime: String, val title: String)
 sealed class Detail {
     data class Movie(val d: MovieDetail) : Detail()
     data class Serie(val d: SerieDetail) : Detail()
+    data class Channel(val c: Card) : Detail()
 }
 
 class AppViewModel : ViewModel() {
@@ -97,12 +98,23 @@ class AppViewModel : ViewModel() {
                 when (card.kind) {
                     "movie" -> detail = Detail.Movie(api.movie(card.id.toLong()))
                     "serie" -> detail = Detail.Serie(api.serie(card.id.toLong()))
-                    else -> {
-                        val s = api.channelStreams(card.id).streams?.firstOrNull { !it.url.isNullOrBlank() }
-                        if (s?.url != null) startPlay(s.url!!, card.displayTitle, s.userAgent, s.referrer)
-                        else error = "Canal sin señal disponible"
-                    }
+                    else -> detail = Detail.Channel(card) // ficha de canal (Ver en vivo + acciones)
                 }
+            } catch (e: Exception) {
+                error = humanize(e)
+            }
+            busy = false
+        }
+    }
+
+    // Reproduce un canal en vivo: busca su primera señal con URL y la lanza.
+    fun playChannel(card: Card) {
+        viewModelScope.launch {
+            busy = true; error = null
+            try {
+                val s = api.channelStreams(card.id).streams?.firstOrNull { !it.url.isNullOrBlank() }
+                if (s?.url != null) startPlay(s.url!!, card.displayTitle, s.userAgent, s.referrer)
+                else error = "Canal sin señal disponible"
             } catch (e: Exception) {
                 error = humanize(e)
             }
