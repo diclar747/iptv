@@ -6,7 +6,7 @@ import Icon from './ui/Icon.jsx';
 // Reproductor HLS/MP4. hls.js se carga BAJO DEMANDA (solo al reproducir HLS en
 // navegadores sin soporte nativo), para no engordar el bundle inicial.
 // Incluye botón de pantalla completa y de proyectar a Smart TV (Chromecast/AirPlay).
-export default function Player({ url, stream, title, poster, autoFullscreen = false }) {
+export default function Player({ url, stream, title, poster, autoFullscreen = false, onFail }) {
   const videoRef = useRef(null);
   const wrapRef = useRef(null);
   const [error, setError] = useState(null);
@@ -55,7 +55,7 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
       // Pantalla completa automática solo en móvil (best-effort; puede requerir gesto).
       if (autoFullscreen && window.matchMedia('(max-width: 900px)').matches) tryFullscreen();
     };
-    const onNativeError = () => { setError('No se pudo reproducir el archivo.'); setLoading(false); };
+    const onNativeError = () => { setError('No se pudo reproducir el archivo.'); setLoading(false); onFail && onFail(); };
     video.addEventListener('playing', onPlaying);
 
     // ¿El stream real (param ?url=) es HLS (.m3u8) o archivo directo (MP4)?
@@ -91,6 +91,7 @@ export default function Player({ url, stream, title, poster, autoFullscreen = fa
                   : 'Error de reproducción del stream.'
               );
               setLoading(false);
+              if (onFail) onFail(); // intentar el siguiente stream del canal
             }
           });
         })

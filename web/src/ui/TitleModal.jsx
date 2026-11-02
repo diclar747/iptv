@@ -91,6 +91,13 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
     [streams]
   );
 
+  // Si el stream actual falla, pasa automáticamente al siguiente del canal.
+  function tryNextStream() {
+    const i = streams.indexOf(activeStream);
+    const next = streams[i + 1];
+    if (next) setActiveStream(next);
+  }
+
   const title = item.title || item.name;
   const meta = isMovie ? `${item.year || ''} · ${item.category || ''}`
     : isSerie ? `${episodes.length} episodios · ${item.category || 'Serie'}`
@@ -118,7 +125,8 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
             </div>
           ) : activeStream ? (
             <Player url={proxyUrl(activeStream)} stream={activeStream} title={title}
-              poster={backdrop} autoFullscreen={isChannel} />
+              poster={backdrop} autoFullscreen={isChannel}
+              onFail={isChannel ? tryNextStream : undefined} />
           ) : (
             <div className="player placeholder">{error || 'Cargando…'}</div>
           )}
