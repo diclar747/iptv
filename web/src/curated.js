@@ -13,3 +13,23 @@ export const CURATED_EMBED = {
 export function curatedEmbed(type, id) {
   return type === 'channel' ? (CURATED_EMBED[id] || null) : null;
 }
+
+// TRANSCODIFICACIÓN: canales cuyo stream no decodifica en el navegador se
+// re-encodean en el VPS (vps-transcoder/transcoder.mjs, mismo server que la app).
+// La app lo pide por su proxy a localhost:8787, así que nunca sale al navegador.
+const TRANSCODER = 'http://194.163.138.20:8787';
+export const CURATED_TRANSCODE = {
+  'Telefuturo.py': {
+    src: 'https://copacotf.desdeparaguay.net/telefuturo/telefuturo_py_alta/playlist.m3u8',
+    ref: 'https://www.telefuturo.com.py',
+  },
+};
+
+export function transcodeUrl(type, id) {
+  if (type !== 'channel') return null;
+  const c = CURATED_TRANSCODE[id];
+  if (!c) return null;
+  const qs = new URLSearchParams({ src: c.src });
+  if (c.ref) qs.set('ref', c.ref);
+  return `${TRANSCODER}/tc.m3u8?${qs.toString()}`;
+}

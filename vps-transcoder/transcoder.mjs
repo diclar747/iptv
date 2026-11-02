@@ -93,16 +93,29 @@ http.createServer((req, res) => {
 
   if (u.pathname === '/health') { res.writeHead(200); return res.end('ok'); }
 
-  if (u.pathname === '/tc') {
+  // Manifiesto transcodificado. La URL termina en .m3u8 para que el reproductor
+  // la detecte como HLS. Devuelve el index.m3u8 con los segmentos apuntando a
+  // /hls/<id>/... (ruta absoluta en este transcodificador).
+  if (u.pathname === '/tc.m3u8') {
     const src = u.searchParams.get('src') || '';
     if (!/^https?:\/\//i.test(src) || !allowed(src)) { res.writeHead(400); return res.end('bad/forbidden src'); }
     const id = startJob(src, u.searchParams.get('ua') || DEFAULT_UA, u.searchParams.get('ref') || '');
     const file = path.join(ROOT, id, 'index.m3u8');
     const t0 = Date.now();
     const wait = () => {
-      if (fs.existsSync(file)) { res.writeHead(302, { Location: `/hls/${id}/index.m3u8` }); return res.end(); }
-      if (Date.now() - t0 > 25000) { res.writeHead(504); return res.end('timeout iniciando ffmpeg'); }
-      setTimeout(wait, 300);
+      fs.readFile(file, 'utf8', (err, txt) => {
+        if (!err && txt) {
+          const out = txt.split('\n').map((line) => {
+            const t = line.trim();
+            return (!t || t.startsWith('#')) ? line : `/hls/${id}/${t}`;
+          }).join('\n');
+          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+          res.setHeader('Cache-Control', 'no-cache');
+          return res.end(out);
+        }
+        if (Date.now() - t0 > 25000) { res.writeHead(504); return res.end('timeout iniciando ffmpeg'); }
+        setTimeout(wait, 300);
+      });
     };
     return wait();
   }

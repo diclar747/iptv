@@ -3,7 +3,7 @@ import { api, proxyUrl } from '../api.js';
 import Player from '../Player.jsx';
 import WatchActions from '../WatchActions.jsx';
 import { inMyList, toggleMyList, pushContinue, keyOf } from '../library.js';
-import { curatedEmbed } from '../curated.js';
+import { curatedEmbed, transcodeUrl } from '../curated.js';
 
 // Overlay de detalle + reproducción para una película, serie o canal.
 export default function TitleModal({ item, user, onClose, onAuthError }) {
@@ -44,10 +44,17 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
         if (s.episodes[0]) { setEp(s.episodes[0]); setActiveStream({ url: s.episodes[0].streamUrl }); }
       }).catch(handleErr);
     } else if (isChannel) {
-      api.streams(item.id).then((r) => {
-        setStreams(r.streams);
-        if (r.streams[0]) setActiveStream(r.streams[0]);
-      }).catch(handleErr);
+      // Canales curados para transcodificar: usan el stream del transcodificador.
+      const tc = transcodeUrl(item.type, item.id);
+      if (tc) {
+        setStreams([{ url: tc }]);
+        setActiveStream({ url: tc });
+      } else {
+        api.streams(item.id).then((r) => {
+          setStreams(r.streams);
+          if (r.streams[0]) setActiveStream(r.streams[0]);
+        }).catch(handleErr);
+      }
     }
   }, [item.id]);
 
