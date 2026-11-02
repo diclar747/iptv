@@ -50,6 +50,12 @@ const PATHS = {
       <path d="M3.3 9.6h17.4M3.3 14.4h17.4M7.6 5.3v13.4M16.4 5.3v13.4" />
     </>
   ),
+  collapse: (
+    <>
+      <path d="M14.5 7 9.5 12l5 5" />
+      <path d="M19.5 7l-5 5 5 5" />
+    </>
+  ),
   series: (
     <>
       <rect x="3" y="7" width="18" height="12.5" rx="2" />

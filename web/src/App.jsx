@@ -53,6 +53,10 @@ export default function App() {
   const [account, setAccount] = useState(false);
   const [pwa, setPwa] = useState({ canInstall: false, installed: false });
   const [geo, setGeo] = useState('PY'); // país detectado por IP (para TV en Vivo)
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('cinetv:nav') === '1'; } catch { return false; }
+  });
+  const [fs, setFs] = useState(false); // pantalla completa
 
   useEffect(() => subscribePwa(setPwa), []);
   useEffect(() => {
@@ -61,6 +65,25 @@ export default function App() {
       api.geo().then((r) => r?.country && setGeo(r.country)).catch(() => {});
     }
   }, [user?.id]);
+
+  // Pantalla completa de toda la app.
+  useEffect(() => {
+    const onFs = () => setFs(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  }
+  // Minimizar / expandir el menú lateral (solo iconos).
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const n = !v;
+      try { localStorage.setItem('cinetv:nav', n ? '1' : '0'); } catch { /* noop */ }
+      return n;
+    });
+  }
 
   if (loading) return (
     <div className="splash">
@@ -100,23 +123,35 @@ export default function App() {
     : <Home onOpen={onOpen} onNavigate={go} onAuthError={refresh} />;
 
   return (
-    <div className="app">
+    <div className={`app ${collapsed ? 'nav-collapsed' : ''}`}>
       {/* Sidebar (escritorio) / drawer (móvil) */}
       {drawer && <div className="drawer-scrim" onClick={() => setDrawer(false)} />}
       <aside className={`sidebar ${drawer ? 'open' : ''}`}>
-        <div className="side-logo"><span className="logo">▶</span> CineTV</div>
+        <div className="side-head">
+          <div className="side-logo"><span className="logo">▶</span><span className="side-brand">CineTV</span></div>
+          <button className="side-collapse" onClick={toggleCollapsed}
+            title={collapsed ? 'Expandir menú' : 'Minimizar menú'}
+            aria-label={collapsed ? 'Expandir menú' : 'Minimizar menú'}>
+            <Icon name="collapse" size={20} />
+          </button>
+        </div>
         <nav className="side-nav">
           {nav.map((n) => (
-            <button key={n.k} className={`side-item ${view === n.k ? 'on' : ''}`} onClick={() => go(n.k)}>
-              <span className="si-icon"><Icon name={n.icon} size={22} /></span> {n.label}
+            <button key={n.k} className={`side-item ${view === n.k ? 'on' : ''}`} onClick={() => go(n.k)} title={n.label}>
+              <span className="si-icon"><Icon name={n.icon} size={22} /></span>
+              <span className="si-label">{n.label}</span>
             </button>
           ))}
         </nav>
         <div className="side-foot">
           {pwa.canInstall && !pwa.installed && (
-            <button className="side-item" onClick={promptInstall}><span className="si-icon"><Icon name="download" size={22} /></span> Instalar app</button>
+            <button className="side-item" onClick={promptInstall} title="Instalar app">
+              <span className="si-icon"><Icon name="download" size={22} /></span><span className="si-label">Instalar app</span>
+            </button>
           )}
-          <button className="side-item" onClick={logout}><span className="si-icon"><Icon name="power" size={22} /></span> Salir</button>
+          <button className="side-item" onClick={logout} title="Salir">
+            <span className="si-icon"><Icon name="power" size={22} /></span><span className="si-label">Salir</span>
+          </button>
         </div>
       </aside>
 
@@ -129,6 +164,11 @@ export default function App() {
               aria-label="Buscar canales" placeholder="Buscar canales…" />
           </div>
           <div className="topbar2-right">
+            <button className="icon-btn fs-btn" onClick={toggleFullscreen}
+              title={fs ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              aria-label={fs ? 'Salir de pantalla completa' : 'Pantalla completa'}>
+              <Icon name="fullscreen" size={20} />
+            </button>
             <div className="account">
               <button className="account-btn" aria-expanded={account} aria-label="Mi cuenta" onClick={() => setAccount((v) => !v)}>
                 <span className="avatar">{user.username[0].toUpperCase()}</span>

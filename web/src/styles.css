@@ -960,3 +960,31 @@ body{background:#050609;background-image:radial-gradient(ellipse at 0 100%,#1710
 .cat-free .verify { background: var(--live); border: none; color: #fff; border-radius: 8px; padding: 10px 14px; font-family: var(--font-display); font-weight: 600; cursor: pointer; white-space: nowrap; }
 .cat-free .verify:disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width:480px){ .cat-free{ flex-direction: column; align-items: flex-start; } }
+
+/* ===================== Menú colapsable + botón pantalla completa ===================== */
+.side-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 6px 10px; }
+.side-collapse { background: #ffffff0a; border: 1px solid var(--line, #30313b); color: var(--muted); border-radius: 9px; width: 34px; height: 34px; display: inline-grid; place-items: center; cursor: pointer; flex: none; transition: background .15s, color .15s; }
+.side-collapse:hover { background: #ffffff14; color: var(--text); }
+.side-item .si-label { white-space: nowrap; overflow: hidden; }
+
+/* Botón de pantalla completa en la barra superior. */
+.icon-btn { background: #ffffff0d; border: 1px solid #ffffff12; color: var(--muted); border-radius: 10px; width: 40px; height: 40px; display: inline-grid; place-items: center; cursor: pointer; flex: none; transition: background .15s, color .15s; }
+.icon-btn:hover { background: #ffffff18; color: var(--text); }
+
+/* ----- Estado colapsado (solo iconos) — escritorio ----- */
+.app.nav-collapsed { grid-template-columns: 72px 1fr; }
+.app.nav-collapsed .side-brand,
+.app.nav-collapsed .si-label { display: none; }
+.app.nav-collapsed .side-logo { padding: 0; }
+.app.nav-collapsed .side-logo .logo { font-size: 26px; }
+/* logo arriba y el botón (expandir) debajo, ambos visibles y centrados */
+.app.nav-collapsed .side-head { flex-direction: column; gap: 10px; justify-content: center; }
+.app.nav-collapsed .side-item { justify-content: center; padding-left: 0; padding-right: 0; }
+.app.nav-collapsed .side-item .si-icon { margin: 0; }
+.app.nav-collapsed .side-collapse svg { transform: rotate(180deg); }
+
+@media (max-width: 760px) {
+  /* En móvil manda el drawer / bottom-nav; el colapsado no aplica. */
+  .app.nav-collapsed { grid-template-columns: 1fr; }
+  .fs-btn { display: none; } /* pantalla completa poco útil en móvil con navegador */
+}
