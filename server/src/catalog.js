@@ -64,15 +64,18 @@ router.get('/catalog/home', async (req, res) => {
   // Estrenos y populares: películas ACTUALES con tráiler (pósters/imágenes
   // modernas). Aunque no tengan fuente completa, reproducen el tráiler oficial,
   // así la cartelera se ve nueva en vez de solo clásicos viejos.
+  // Modernas = títulos de TMDB (pósters/imágenes actuales), ya estén como tráiler
+  // o solo ficha. Los que tienen tráiler van primero. No depende del import de
+  // tráilers: usa el metadato actual que ya está en la base.
+  const MODERN = `NOT m.hidden AND m.provider='tmdb' AND m.poster IS NOT NULL
+    AND (m.category IS NULL OR NOT (m.category = ANY($1)))`;
   const [estrenos, populares] = await Promise.all([
     many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-          WHERE NOT m.hidden AND m.trailer IS NOT NULL
-            AND (m.category IS NULL OR NOT (m.category = ANY($1)))
-          ORDER BY m.year DESC NULLS LAST, m.popularity DESC LIMIT 24`, [HOME_HIDE]),
+          WHERE ${MODERN}
+          ORDER BY (m.trailer IS NOT NULL) DESC, m.year DESC NULLS LAST, m.popularity DESC LIMIT 24`, [HOME_HIDE]),
     many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-          WHERE NOT m.hidden AND m.trailer IS NOT NULL
-            AND (m.category IS NULL OR NOT (m.category = ANY($1)))
-          ORDER BY m.popularity DESC LIMIT 24`, [HOME_HIDE]),
+          WHERE ${MODERN}
+          ORDER BY (m.trailer IS NOT NULL) DESC, m.popularity DESC LIMIT 24`, [HOME_HIDE]),
   ]);
 
   const rows = [];
@@ -91,11 +94,11 @@ router.get('/catalog/home', async (req, res) => {
   // el héroe no sea un clásico viejo; si no hay, cae a lo reproducible con fondo.
   const feat = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-     WHERE NOT m.hidden AND (${MOVIE_AVAIL} OR m.trailer IS NOT NULL)
-       AND m.backdrop IS NOT NULL
+     WHERE NOT m.hidden AND (${MOVIE_AVAIL} OR m.provider='tmdb')
+       AND (m.backdrop IS NOT NULL OR m.poster IS NOT NULL)
        AND m.title !~* 'S *[0-9]+ *E *[0-9]+'
        AND (m.category IS NULL OR NOT (m.category = ANY($1)))
-     ORDER BY (m.trailer IS NOT NULL) DESC, m.year DESC NULLS LAST, m.popularity DESC LIMIT 6`,
+     ORDER BY (m.trailer IS NOT NULL) DESC, (m.backdrop IS NOT NULL) DESC, m.year DESC NULLS LAST, m.popularity DESC LIMIT 6`,
     [HOME_HIDE]
   );
   res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
