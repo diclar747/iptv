@@ -93,6 +93,10 @@ export default function CatalogAdmin() {
             onClick={() => act(() => api.catImportTmdb({ pages: 40 }), 'Importación de TMDB iniciada')}>
             Importar TMDB
           </button>
+          <button className="verify" disabled={busy || !st?.tmdb?.configured || st?.tmdb?.running}
+            onClick={() => act(() => api.catImportTrailers({ pages: 5 }), 'Importación de Estrenos (tráilers) iniciada')}>
+            Importar Estrenos (tráilers)
+          </button>
         </div>
       </div>
 

@@ -9,7 +9,7 @@ import {
 } from './catalog/index.js';
 import { catalogStats, recentJobs } from './catalog/repo.js';
 import { importArchive, archiveStatus } from './catalog/archive.js';
-import { importTmdb, tmdbStatus, tmdbTest } from './catalog/tmdb.js';
+import { importTmdb, importTrailers, tmdbStatus, tmdbTest } from './catalog/tmdb.js';
 
 const router = express.Router();
 router.use('/admin/catalog', requireAuth, requireRole('admin'));
@@ -29,6 +29,11 @@ router.post('/admin/catalog/import-tmdb', (req, res) => {
   res.json(importTmdb({ pages: Number(req.body?.pages) || 5 }));
 });
 router.post('/admin/catalog/tmdb-test', async (req, res) => res.json(await tmdbTest()));
+
+// Importar ESTRENOS con tráiler oficial (now_playing + popular) desde TMDB.
+router.post('/admin/catalog/import-trailers', (req, res) => {
+  res.json(importTrailers({ pages: Number(req.body?.pages) || 5 }));
+});
 
 // Limpia la "basura" de Internet Archive ya cargada: películas poco populares
 // (las que entraron antes del filtro de calidad). No toca TMDB ni el seed.

@@ -5,9 +5,16 @@ import WatchActions from '../WatchActions.jsx';
 import { inMyList, toggleMyList, pushContinue, keyOf } from '../library.js';
 import { curatedEmbed, curatedDirect, transcodeUrl } from '../curated.js';
 
+// Convierte una URL de YouTube (watch?v= o youtu.be/) en URL de embed.
+function toYouTubeEmbed(url) {
+  const m = String(url || '').match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,})/);
+  return m ? `https://www.youtube.com/embed/${m[1]}?rel=0` : null;
+}
+
 // Overlay de detalle + reproducción para una película, serie o canal.
 // Catálogo (pelis/series): ficha con sinopsis, géneros, reparto y temporadas.
-// "Ver ahora" SOLO si hay fuente autorizada (available); si no, ficha informativa.
+// "Ver ahora" SOLO si hay fuente autorizada (available); si no, el tráiler
+// (estrenos) o una ficha informativa.
 export default function TitleModal({ item, user, onClose, onAuthError }) {
   const isMovie = item.type === 'movie';
   const isSerie = item.type === 'serie';
@@ -131,6 +138,9 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
   const backdrop = d.backdrop || item.poster || item.logo;
   const canPlay = isChannel || (activeStream && (isChannel || d.available || item.available));
   const notAvailable = (isMovie || isSerie) && detail && !activeStream;
+  // Estrenos: sin fuente completa pero con tráiler oficial de YouTube.
+  const trailerEmbed = isMovie ? toYouTubeEmbed(d.trailer || item.trailer) : null;
+  const showTrailer = notAvailable && !!trailerEmbed;
 
   // Agrupar episodios por temporada.
   const seasonsList = [...new Set(episodes.map((e) => e.season))].sort((a, b) => a - b);
@@ -147,6 +157,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
             <h2>{title}</h2>
             <div className="modal-meta">
               {isChannel && <span className="live-tag">● EN VIVO</span>}
+              {showTrailer && <span className="live-tag">▶ TRÁILER</span>}
               {meta}
             </div>
             {genres && <div className="modal-genres">{genres}</div>}
@@ -160,6 +171,11 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
           ) : limit ? (
             <div className="player placeholder limit">
               Límite de conexiones alcanzado ({limit.max}).<br />Cerrá otra pantalla e intentá de nuevo.
+            </div>
+          ) : showTrailer ? (
+            <div className="player">
+              <iframe className="embed-frame" src={trailerEmbed} title={`Tráiler · ${title}`}
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowFullScreen />
             </div>
           ) : notAvailable ? (
             <div className="player placeholder soon">

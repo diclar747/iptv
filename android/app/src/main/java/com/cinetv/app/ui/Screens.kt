@@ -568,6 +568,7 @@ private fun ActionBtn(icon: ImageVector, label: String, tint: Color, onClick: ()
 
 @Composable
 private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
+    val ctx = LocalContext.current
     Box(Modifier.fillMaxSize().background(Bg)) {
         LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
             when (detail) {
@@ -583,6 +584,12 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
                             if (d.available == true) {
                                 Button(onClick = { vm.playMovie(d) }, colors = ButtonDefaults.buttonColors(containerColor = Red)) {
                                     Icon(Icons.Filled.PlayArrow, null); Text(" Ver ahora", fontWeight = FontWeight.Bold)
+                                }
+                            } else if (!d.trailer.isNullOrBlank()) {
+                                Button(onClick = {
+                                    runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(d.trailer))) }
+                                }, colors = ButtonDefaults.buttonColors(containerColor = Red)) {
+                                    Icon(Icons.Filled.PlayArrow, null); Text(" Ver tráiler", fontWeight = FontWeight.Bold)
                                 }
                             } else Text("Próximamente — sin fuente disponible", color = Muted, fontSize = 13.sp)
                         }

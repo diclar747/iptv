@@ -71,6 +71,7 @@ data class MovieDetail(
     val runtime: Int? = null,
     val genres: List<String>? = null,
     val available: Boolean? = null,
+    val trailer: String? = null,
     val streamUrl: String? = null,
     val streams: List<Stream>? = null,
 )

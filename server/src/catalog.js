@@ -29,7 +29,7 @@ const SERIES_AVAIL = `EXISTS(SELECT 1 FROM episodes e WHERE e.series_id=s.id AND
 const movieCard = (m) => ({
   id: m.id, type: 'movie', title: m.title, year: m.year, poster: m.poster,
   backdrop: m.backdrop, rating: m.rating != null ? Number(m.rating) : null,
-  category: m.category, available: m.available,
+  category: m.category, available: m.available, trailer: m.trailer || null,
 });
 const seriesCard = (s) => ({
   id: s.id, type: 'serie', title: s.title, year: s.year, poster: s.poster,
@@ -61,7 +61,16 @@ router.get('/catalog/home', async (req, res) => {
           AND NOT (m.category = ANY($1)) GROUP BY category ORDER BY n DESC LIMIT 6`, [HOME_HIDE]),
   ]);
 
+  // Estrenos: películas actuales con tráiler (aunque no tengan fuente completa).
+  // Se reproduce el tráiler oficial; mantiene la portada actual y moderna.
+  const estrenos = await many(
+    `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
+     WHERE NOT m.hidden AND m.trailer IS NOT NULL
+       AND (m.category IS NULL OR NOT (m.category = ANY($1)))
+     ORDER BY m.year DESC NULLS LAST, m.popularity DESC LIMIT 24`, [HOME_HIDE]);
+
   const rows = [];
+  if (estrenos.length) rows.push({ key: 'estrenos', title: '🎬 Estrenos', nav: 'peliculas', items: estrenos.map(movieCard) });
   if (latestMovies.length) rows.push({ key: 'latest', title: 'Últimas películas', nav: 'peliculas', items: latestMovies });
   if (series.length) rows.push({ key: 'series', title: 'Series', nav: 'series', items: series.map(seriesCard) });
   for (const c of topCats) {

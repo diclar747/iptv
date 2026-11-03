@@ -82,6 +82,7 @@ export const api = {
   catImport: (b) => post('/admin/catalog/import', b),
   catImportArchive: (b) => post('/admin/catalog/import-archive', b || {}),
   catImportTmdb: (b) => post('/admin/catalog/import-tmdb', b || {}),
+  catImportTrailers: (b) => post('/admin/catalog/import-trailers', b || {}),
   catTmdbTest: () => post('/admin/catalog/tmdb-test', {}),
   catCleanArchive: () => post('/admin/catalog/clean-archive', {}),
   catStop: () => post('/admin/catalog/stop', {}),
