@@ -17,7 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -66,6 +69,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -93,6 +97,7 @@ import com.cinetv.app.data.ProfileUpdate
 import com.cinetv.app.data.ProviderBilling
 import com.cinetv.app.data.ReactReq
 import com.cinetv.app.data.User
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val Panel = Color(0xFF0A0B10)
@@ -231,11 +236,17 @@ private fun CastAction() {
     }
 }
 
+// Inicio: prioriza los CANALES. Arriba, un carrusel (portada) de canales que
+// va rotando con botón "Ver en vivo"; debajo, las filas de canales por país,
+// deportes, noticias, etc. Las películas viven en la pestaña Pelis.
 @Composable
 private fun HomeTab(vm: AppViewModel) {
+    val heroChannels = remember(vm.channelRows) {
+        vm.channelRows.flatMap { it.items ?: emptyList() }.distinctBy { it.id }.take(8)
+    }
     LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-        item { Banner(vm) }
-        items(vm.rows) { row ->
+        if (heroChannels.isNotEmpty()) item { ChannelHero(heroChannels, onPlay = { vm.playChannel(it) }, onOpen = { vm.openCard(it) }) }
+        items(vm.channelRows) { row ->
             if (!row.items.isNullOrEmpty()) {
                 Text(row.title ?: "", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 14.dp, top = 16.dp, bottom = 8.dp))
@@ -244,6 +255,71 @@ private fun HomeTab(vm: AppViewModel) {
                 }
             }
         }
+        if (vm.channelRows.isEmpty()) {
+            item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Red) } }
+        }
+    }
+}
+
+// Carrusel/portada de canales: rota automáticamente entre varios canales, con
+// el logo en una tarjeta elevada, badge EN VIVO, nombre y botón "Ver en vivo".
+@Composable
+private fun ChannelHero(channels: List<Card>, onPlay: (Card) -> Unit, onOpen: (Card) -> Unit) {
+    if (channels.isEmpty()) return
+    var idx by remember(channels) { mutableIntStateOf(0) }
+    LaunchedEffect(channels) {
+        while (channels.size > 1) { delay(4500); idx = (idx + 1) % channels.size }
+    }
+    val card = channels[idx.coerceIn(0, channels.lastIndex)]
+    Box(
+        Modifier.fillMaxWidth().height(252.dp)
+            .background(Brush.verticalGradient(listOf(Color(0xFF1A1F2B), Bg)))
+            .clickable { onOpen(card) }
+    ) {
+        Crossfade(targetState = card, animationSpec = tween(500), label = "hero", modifier = Modifier.align(Alignment.TopCenter)) { c ->
+            Box(Modifier.fillMaxWidth().padding(top = 20.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier.fillMaxWidth(0.5f).aspectRatio(16f / 10f)
+                        .shadow(12.dp, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFF232838), Color(0xFF12141B))))
+                        .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val logo = c.logo ?: c.image
+                    if (logo != null) AsyncImage(logo, c.displayTitle, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize(0.72f))
+                    else Text(c.displayTitle, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.padding(12.dp))
+                }
+            }
+        }
+        LiveChip(Modifier.align(Alignment.TopStart).padding(16.dp))
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+            Text(card.displayTitle, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = { onPlay(card) }, colors = ButtonDefaults.buttonColors(containerColor = Red), shape = RoundedCornerShape(10.dp)) {
+                    Icon(Icons.Filled.PlayArrow, null); Text("  Ver en vivo", fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    channels.indices.forEach { i ->
+                        Box(Modifier.size(if (i == idx) 8.dp else 6.dp).clip(CircleShape)
+                            .background(if (i == idx) Red else Color(0x55FFFFFF)))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveChip(modifier: Modifier = Modifier) {
+    Row(
+        modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xE6E50914)).padding(horizontal = 9.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
+        Spacer(Modifier.width(5.dp))
+        Text("EN VIVO", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -264,19 +340,23 @@ private fun Banner(vm: AppViewModel) {
     }
 }
 
+// Pelis: la portada de películas (banner) vive acá, arriba de la grilla, con
+// el filtro de categorías. Scrollea junto con la grilla.
 @Composable
 private fun MoviesTab(vm: AppViewModel) {
     var cat by remember { mutableStateOf<String?>(null) }
     val cats = vm.meta?.categories.orEmpty()
-    Column(Modifier.fillMaxSize()) {
-        if (cats.isNotEmpty()) {
-            LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { Chip("Todas", cat == null) { cat = null } }
-                items(cats) { c -> Chip(c.name ?: c.id ?: "", cat == c.id) { cat = c.id } }
+    GridTab(vm, key = cat, header = {
+        Column {
+            if (vm.featured.isNotEmpty()) Banner(vm)
+            if (cats.isNotEmpty()) {
+                LazyRow(contentPadding = PaddingValues(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item { Chip("Todas", cat == null) { cat = null } }
+                    items(cats) { c -> Chip(c.name ?: c.id ?: "", cat == c.id) { cat = c.id } }
+                }
             }
         }
-        GridTab(vm, key = cat) { Net.api.movies(category = cat) }
-    }
+    }) { Net.api.movies(category = cat) }
 }
 
 @Composable
@@ -339,22 +419,25 @@ private fun LiveTab(vm: AppViewModel) {
 }
 
 @Composable
-private fun GridTab(vm: AppViewModel, key: Any? = Unit, minCell: Dp = 112.dp, loader: suspend () -> List<Card>) {
+private fun GridTab(vm: AppViewModel, key: Any? = Unit, minCell: Dp = 112.dp, header: (@Composable () -> Unit)? = null, loader: suspend () -> List<Card>) {
     var items by remember(key) { mutableStateOf<List<Card>?>(null) }
     LaunchedEffect(key) { items = try { loader() } catch (_: Exception) { emptyList() } }
     val list = items
-    if (list == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Red) }
-        return
-    }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minCell), contentPadding = PaddingValues(12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        items(list) { card ->
-            // En grilla la tarjeta ocupa toda la celda (uniforme y responsive).
-            if (card.kind == "channel") ChannelCard(card, Modifier.fillMaxWidth()) { vm.openCard(card) }
-            else PosterCard(card, Modifier.fillMaxWidth()) { vm.openCard(card) }
+        header?.let { h -> item(span = { GridItemSpan(maxLineSpan) }) { h() } }
+        if (list == null) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Red) }
+            }
+        } else {
+            items(list) { card ->
+                // En grilla la tarjeta ocupa toda la celda (uniforme y responsive).
+                if (card.kind == "channel") ChannelCard(card, Modifier.fillMaxWidth()) { vm.openCard(card) }
+                else PosterCard(card, Modifier.fillMaxWidth()) { vm.openCard(card) }
+            }
         }
     }
 }

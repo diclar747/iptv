@@ -4,8 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
@@ -28,7 +28,9 @@ import com.cinetv.app.ui.MainScreen
 import com.cinetv.app.ui.PlayerScreen
 import com.cinetv.app.ui.SplashLoading
 
-class MainActivity : ComponentActivity() {
+// AppCompatActivity (= FragmentActivity): necesario para que el diálogo del
+// botón de Chromecast (MediaRouteButton) pueda abrirse sin crashear.
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

@@ -34,7 +34,11 @@ class AppViewModel : ViewModel() {
 
     var featured by mutableStateOf<List<Card>>(emptyList())
         private set
-    var rows by mutableStateOf<List<Row>>(emptyList())
+    // Filas de CANALES (inicio) y de PELÍCULAS (pestaña Pelis), separadas: el
+    // inicio prioriza los canales en vivo.
+    var channelRows by mutableStateOf<List<Row>>(emptyList())
+        private set
+    var movieRows by mutableStateOf<List<Row>>(emptyList())
         private set
     var meta by mutableStateOf<com.cinetv.app.data.Meta?>(null)
         private set
@@ -73,21 +77,21 @@ class AppViewModel : ViewModel() {
     fun loginDemo() = login("demo", "demo")
 
     fun logout() {
-        user = null; featured = emptyList(); rows = emptyList(); detail = null; play = null
+        user = null; featured = emptyList(); channelRows = emptyList(); movieRows = emptyList(); detail = null; play = null
     }
 
     private suspend fun loadHome() {
-        val out = mutableListOf<Row>()
+        // Canales primero (prioridad del inicio).
+        try {
+            val live = api.channelsHome()
+            channelRows = live.rows ?: emptyList()
+        } catch (_: Exception) {}
+        // Películas: para la pestaña Pelis (banner + filas).
         try {
             val cat = api.catalogHome()
             featured = cat.featured ?: emptyList()
-            cat.rows?.let { out.addAll(it) }
+            movieRows = cat.rows ?: emptyList()
         } catch (_: Exception) {}
-        try {
-            val live = api.channelsHome()
-            live.rows?.let { r -> out.addAll(r.map { it.copy(title = "📡 " + (it.title ?: "")) }) }
-        } catch (_: Exception) {}
-        rows = out
         try { meta = api.meta() } catch (_: Exception) { /* opcional */ }
         try { api.geo().country?.let { geoCountry = it } } catch (_: Exception) { /* queda PY */ }
     }
