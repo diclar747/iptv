@@ -1014,4 +1014,12 @@ body{background:#050609;background-image:radial-gradient(ellipse at 0 100%,#1710
 .vod-grid .pcard-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pcard-status { position: absolute; left: 8px; bottom: 8px; padding: 4px 8px; border-radius: 5px; background: #111d; color: white; font-size: 11px; }
 
+/* Centinela del scroll infinito: ocupa alto para que el observer lo detecte
+   antes del fondo; muestra el indicador solo mientras carga la próxima página. */
+.vod-sentinel { display: flex; justify-content: center; align-items: center; min-height: 48px; margin-top: 8px; }
+.vod-loading { color: var(--muted, #9aa0a6); font-size: 13px; letter-spacing: .3px; opacity: .85; }
+.vod-loading::before { content: ''; display: inline-block; width: 13px; height: 13px; margin-right: 8px; vertical-align: -2px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: vod-spin .7s linear infinite; }
+@keyframes vod-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .vod-loading::before { animation: none; } }
+
 @media (max-width: 480px) { .view .vod-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; } }
