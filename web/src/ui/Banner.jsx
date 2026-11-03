@@ -27,7 +27,7 @@ export default function Banner({ items = [], onOpen }) {
         {meta && <div className="cine-banner-meta">{meta}</div>}
         <div className="cine-banner-btns">
           <button className="cine-btn cine-btn-main" onClick={() => onOpen(it)}>
-            {it.available ? '▶ Ver ahora' : 'Más info'}
+            {it.available ? '▶ Ver ahora' : it.trailer ? '▶ Ver tráiler' : 'Más info'}
           </button>
         </div>
       </div>

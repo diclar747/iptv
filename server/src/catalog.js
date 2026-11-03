@@ -61,17 +61,24 @@ router.get('/catalog/home', async (req, res) => {
           AND NOT (m.category = ANY($1)) GROUP BY category ORDER BY n DESC LIMIT 6`, [HOME_HIDE]),
   ]);
 
-  // Estrenos: películas actuales con tráiler (aunque no tengan fuente completa).
-  // Se reproduce el tráiler oficial; mantiene la portada actual y moderna.
-  const estrenos = await many(
-    `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-     WHERE NOT m.hidden AND m.trailer IS NOT NULL
-       AND (m.category IS NULL OR NOT (m.category = ANY($1)))
-     ORDER BY m.year DESC NULLS LAST, m.popularity DESC LIMIT 24`, [HOME_HIDE]);
+  // Estrenos y populares: películas ACTUALES con tráiler (pósters/imágenes
+  // modernas). Aunque no tengan fuente completa, reproducen el tráiler oficial,
+  // así la cartelera se ve nueva en vez de solo clásicos viejos.
+  const [estrenos, populares] = await Promise.all([
+    many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
+          WHERE NOT m.hidden AND m.trailer IS NOT NULL
+            AND (m.category IS NULL OR NOT (m.category = ANY($1)))
+          ORDER BY m.year DESC NULLS LAST, m.popularity DESC LIMIT 24`, [HOME_HIDE]),
+    many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
+          WHERE NOT m.hidden AND m.trailer IS NOT NULL
+            AND (m.category IS NULL OR NOT (m.category = ANY($1)))
+          ORDER BY m.popularity DESC LIMIT 24`, [HOME_HIDE]),
+  ]);
 
   const rows = [];
   if (estrenos.length) rows.push({ key: 'estrenos', title: '🎬 Estrenos', nav: 'peliculas', items: estrenos.map(movieCard) });
-  if (latestMovies.length) rows.push({ key: 'latest', title: 'Últimas películas', nav: 'peliculas', items: latestMovies });
+  if (populares.length) rows.push({ key: 'populares', title: '🔥 Populares ahora', nav: 'peliculas', items: populares.map(movieCard) });
+  if (latestMovies.length) rows.push({ key: 'latest', title: 'Clásicos para ver ya', nav: 'peliculas', items: latestMovies });
   if (series.length) rows.push({ key: 'series', title: 'Series', nav: 'series', items: series.map(seriesCard) });
   for (const c of topCats) {
     const items = await movieRow('m.category=$1', [c.category], 20);
@@ -80,12 +87,15 @@ router.get('/catalog/home', async (req, res) => {
 
   // Banner: destacados. Prioriza los que tienen imagen de fondo (backdrop);
   // si no hay, cae al póster para que el banner no quede vacío.
+  // Prioriza títulos MODERNOS (estrenos con tráiler e imagen de fondo) para que
+  // el héroe no sea un clásico viejo; si no hay, cae a lo reproducible con fondo.
   const feat = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-     WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND (m.backdrop IS NOT NULL OR m.poster IS NOT NULL)
+     WHERE NOT m.hidden AND (${MOVIE_AVAIL} OR m.trailer IS NOT NULL)
+       AND m.backdrop IS NOT NULL
        AND m.title !~* 'S *[0-9]+ *E *[0-9]+'
        AND (m.category IS NULL OR NOT (m.category = ANY($1)))
-     ORDER BY (m.backdrop IS NOT NULL) DESC, m.featured DESC, m.popularity DESC, m.created_at DESC LIMIT 6`,
+     ORDER BY (m.trailer IS NOT NULL) DESC, m.year DESC NULLS LAST, m.popularity DESC LIMIT 6`,
     [HOME_HIDE]
   );
   res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
