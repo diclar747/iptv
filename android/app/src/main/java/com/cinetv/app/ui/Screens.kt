@@ -27,6 +27,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -261,49 +263,59 @@ private fun HomeTab(vm: AppViewModel) {
     }
 }
 
-// Carrusel/portada de canales: rota automáticamente entre varios canales, con
-// el logo en una tarjeta elevada, badge EN VIVO, nombre y botón "Ver en vivo".
+// Portada/carrusel de canales a todo el ancho (cover): el logo grande y
+// difuminado llena todo el encabezado como fondo, con un logo nítido centrado,
+// badge EN VIVO, nombre grande y botón "Ver en vivo". Rota solo.
 @Composable
 private fun ChannelHero(channels: List<Card>, onPlay: (Card) -> Unit, onOpen: (Card) -> Unit) {
     if (channels.isEmpty()) return
     var idx by remember(channels) { mutableIntStateOf(0) }
     LaunchedEffect(channels) {
-        while (channels.size > 1) { delay(4500); idx = (idx + 1) % channels.size }
+        while (channels.size > 1) { delay(5000); idx = (idx + 1) % channels.size }
     }
     val card = channels[idx.coerceIn(0, channels.lastIndex)]
-    Box(
-        Modifier.fillMaxWidth().height(252.dp)
-            .background(Brush.verticalGradient(listOf(Color(0xFF1A1F2B), Bg)))
-            .clickable { onOpen(card) }
-    ) {
-        Crossfade(targetState = card, animationSpec = tween(500), label = "hero", modifier = Modifier.align(Alignment.TopCenter)) { c ->
-            Box(Modifier.fillMaxWidth().padding(top = 20.dp), contentAlignment = Alignment.Center) {
-                Box(
-                    Modifier.fillMaxWidth(0.5f).aspectRatio(16f / 10f)
-                        .shadow(12.dp, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFF232838), Color(0xFF12141B))))
-                        .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val logo = c.logo ?: c.image
-                    if (logo != null) AsyncImage(logo, c.displayTitle, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize(0.72f))
-                    else Text(c.displayTitle, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.padding(12.dp))
+    Box(Modifier.fillMaxWidth().height(330.dp).clickable { onOpen(card) }) {
+        // Fondo tipo portada: logo grande difuminado que llena todo el ancho.
+        Crossfade(targetState = card, animationSpec = tween(650), label = "hero-bg", modifier = Modifier.matchParentSize()) { c ->
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF1E2430), Color(0xFF0B0C11))))) {
+                val logo = c.logo ?: c.image
+                if (logo != null) {
+                    AsyncImage(
+                        logo, null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().blur(30.dp).alpha(0.40f)
+                    )
                 }
             }
         }
+        // Scrim: oscurece hacia abajo para legibilidad y funde con el fondo.
+        Box(Modifier.matchParentSize().background(
+            Brush.verticalGradient(listOf(Color(0x33000000), Color(0xAA0A0B10), Bg))))
+        // Logo nítido grande, arriba-centro.
+        Crossfade(
+            targetState = card, animationSpec = tween(650), label = "hero-logo",
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(top = 40.dp)
+        ) { c ->
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val logo = c.logo ?: c.image
+                if (logo != null) AsyncImage(logo, c.displayTitle, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth(0.56f).height(130.dp))
+                else Text(c.displayTitle, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
+            }
+        }
         LiveChip(Modifier.align(Alignment.TopStart).padding(16.dp))
-        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
-            Text(card.displayTitle, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(8.dp))
+        // Nombre + CTA + puntitos abajo.
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 16.dp)) {
+            Text(card.displayTitle, color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = { onPlay(card) }, colors = ButtonDefaults.buttonColors(containerColor = Red), shape = RoundedCornerShape(10.dp)) {
-                    Icon(Icons.Filled.PlayArrow, null); Text("  Ver en vivo", fontWeight = FontWeight.Bold)
-                }
+                Button(
+                    onClick = { onPlay(card) }, colors = ButtonDefaults.buttonColors(containerColor = Red),
+                    shape = RoundedCornerShape(12.dp), modifier = Modifier.height(48.dp)
+                ) { Icon(Icons.Filled.PlayArrow, null); Text("  Ver en vivo", fontWeight = FontWeight.Bold, fontSize = 15.sp) }
                 Spacer(Modifier.weight(1f))
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     channels.indices.forEach { i ->
-                        Box(Modifier.size(if (i == idx) 8.dp else 6.dp).clip(CircleShape)
-                            .background(if (i == idx) Red else Color(0x55FFFFFF)))
+                        Box(Modifier.size(if (i == idx) 9.dp else 7.dp).clip(CircleShape)
+                            .background(if (i == idx) Red else Color(0x66FFFFFF)))
                     }
                 }
             }
@@ -362,10 +374,11 @@ private fun MoviesTab(vm: AppViewModel) {
 @Composable
 private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(
-        selected = selected, onClick = onClick, label = { Text(label) },
+        selected = selected, onClick = onClick,
+        label = { Text(label, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium) },
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = Red, selectedLabelColor = Color.White,
-            containerColor = Color(0xFF16171D), labelColor = Muted
+            containerColor = Color(0xFF262B36), labelColor = Color(0xFFD9DEE7)
         )
     )
 }

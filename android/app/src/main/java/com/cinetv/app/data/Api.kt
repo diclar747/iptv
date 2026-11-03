@@ -22,6 +22,15 @@ interface Api {
     @GET("api/geo")
     suspend fun geo(): GeoResp
 
+    // URL absoluta y FIRMADA (con token) para proyectar a Chromecast/Smart TV
+    // sin cookie de sesión (el receptor del TV la abre directo).
+    @GET("api/cast-url")
+    suspend fun castUrl(
+        @Query("url") url: String,
+        @Query("ua") ua: String? = null,
+        @Query("ref") ref: String? = null,
+    ): CastUrlResp
+
     @GET("api/app/version")
     suspend fun appVersion(): AppVersion
 

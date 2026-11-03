@@ -23,7 +23,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,6 +54,9 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
     val activity = context.findActivity()
     val castContext = remember { runCatching { CastContext.getSharedInstance(context) }.getOrNull() }
 
+    val scope = rememberCoroutineScope()
+
+    // Teléfono: URL del proxy (autenticada por cookie vía OkHttp).
     val mediaItem = remember(target) {
         MediaItem.Builder()
             .setUri(target.url)
@@ -59,6 +64,16 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
             .setMediaMetadata(MediaMetadata.Builder().setTitle(target.title).build())
             .build()
     }
+
+    // TV (cast): URL ABSOLUTA y FIRMADA (con token) que el receptor abre sin
+    // cookie. Se pide al backend; hasta que llegue, se usa la del proxy.
+    var castUri by remember(target) { mutableStateOf<String?>(null) }
+    fun castMediaItem(): MediaItem =
+        MediaItem.Builder()
+            .setUri(castUri ?: target.url)
+            .setMimeType(target.mime)
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(target.title).build())
+            .build()
 
     val exoPlayer = remember {
         val ds = OkHttpDataSource.Factory(Net.okHttp)
@@ -69,17 +84,18 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
     val castPlayer = remember(castContext) { castContext?.let { CastPlayer(it) } }
     var currentPlayer by remember { mutableStateOf<Player>(exoPlayer) }
 
-    // Carga inicial: reproduce en el teléfono, o en la TV si ya hay sesión de cast.
+    // Carga inicial: reproduce en el teléfono enseguida; en paralelo pide la URL
+    // firmada de cast y, si ya hay sesión en la TV, proyecta con esa URL.
     LaunchedEffect(target) {
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
+        if (castPlayer?.isCastSessionAvailable != true) exoPlayer.playWhenReady = true
+        castUri = runCatching { Net.api.castUrl(target.rawUrl, target.ua, target.ref).url }.getOrNull()
         if (castPlayer?.isCastSessionAvailable == true) {
-            castPlayer.setMediaItem(mediaItem)
+            castPlayer.setMediaItem(castMediaItem())
             castPlayer.playWhenReady = true
             exoPlayer.playWhenReady = false
             currentPlayer = castPlayer
-        } else {
-            exoPlayer.playWhenReady = true
         }
     }
 
@@ -87,10 +103,21 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
     DisposableEffect(castPlayer) {
         val listener = object : SessionAvailabilityListener {
             override fun onCastSessionAvailable() {
-                castPlayer?.setMediaItem(mediaItem, exoPlayer.currentPosition)
-                castPlayer?.playWhenReady = true
-                exoPlayer.playWhenReady = false
-                currentPlayer = castPlayer ?: exoPlayer
+                // Asegura la URL firmada antes de proyectar (si aún no llegó).
+                if (castUri == null) {
+                    scope.launch {
+                        castUri = runCatching { Net.api.castUrl(target.rawUrl, target.ua, target.ref).url }.getOrNull()
+                        castPlayer?.setMediaItem(castMediaItem())
+                        castPlayer?.playWhenReady = true
+                        exoPlayer.playWhenReady = false
+                        currentPlayer = castPlayer ?: exoPlayer
+                    }
+                } else {
+                    castPlayer?.setMediaItem(castMediaItem())
+                    castPlayer?.playWhenReady = true
+                    exoPlayer.playWhenReady = false
+                    currentPlayer = castPlayer ?: exoPlayer
+                }
             }
             override fun onCastSessionUnavailable() {
                 castPlayer?.let { exoPlayer.seekTo(it.currentPosition) }

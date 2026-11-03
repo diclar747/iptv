@@ -14,7 +14,11 @@ import com.cinetv.app.data.SerieDetail
 import com.cinetv.app.data.User
 import kotlinx.coroutines.launch
 
-data class PlayTarget(val url: String, val mime: String, val title: String)
+data class PlayTarget(
+    val url: String, val mime: String, val title: String,
+    // Datos crudos para generar la URL firmada de cast (proyección a TV).
+    val rawUrl: String, val ua: String? = null, val ref: String? = null,
+)
 
 // Detalle abierto (ficha de película o serie).
 sealed class Detail {
@@ -147,7 +151,7 @@ class AppViewModel : ViewModel() {
     private fun startPlay(rawUrl: String, title: String, ua: String?, ref: String?) {
         val proxied = Net.proxied(rawUrl, ua, ref)
         val mime = if (Net.isHls(rawUrl)) "application/x-mpegURL" else "video/mp4"
-        play = PlayTarget(proxied, mime, title)
+        play = PlayTarget(proxied, mime, title, rawUrl, ua, ref)
     }
 
     fun closePlayer() { play = null }
