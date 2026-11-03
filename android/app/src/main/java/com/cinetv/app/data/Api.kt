@@ -1,6 +1,7 @@
 package com.cinetv.app.data
 
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -61,9 +62,38 @@ interface Api {
 
     @POST("api/catalog/favorites")
     suspend fun addFavorite(@Body body: FavReq)
+
+    // Me gusta y comentarios (compartidos entre usuarios).
+    @GET("api/catalog/reactions")
+    suspend fun reactions(@Query("type") type: String, @Query("id") id: String): ReactionsResp
+
+    @POST("api/catalog/likes")
+    suspend fun toggleLike(@Body body: ReactReq): LikeResp
+
+    @POST("api/catalog/comments")
+    suspend fun addComment(@Body body: CommentReq): Comment
+
+    @DELETE("api/catalog/comments/{id}")
+    suspend fun deleteComment(@Path("id") id: String)
 }
 
 data class FavReq(val type: String, val id: Long)
 
 data class ChannelStreamsResp(val streams: List<Stream>? = null)
 data class SearchResp(val movies: List<Card>? = null, val series: List<Card>? = null)
+
+data class ReactReq(val type: String, val id: String)
+data class CommentReq(val type: String, val id: String, val body: String)
+data class LikeResp(val liked: Boolean = false, val likes: Int = 0)
+data class Comment(
+    val id: String = "",
+    val author: String? = null,
+    val body: String? = null,
+    val created: String? = null,
+    val mine: Boolean = false,
+)
+data class ReactionsResp(
+    val likes: Int = 0,
+    val liked: Boolean = false,
+    val comments: List<Comment> = emptyList(),
+)

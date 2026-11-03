@@ -1,29 +1,34 @@
-// Interacciones del visor (me gusta / comentarios), por ahora guardadas en el
-// dispositivo (localStorage). Más adelante se pueden mover al backend para que
-// sean compartidas entre usuarios.
+// Interacciones del visor (me gusta / comentarios) — ahora compartidas entre
+// usuarios vía backend (tablas content_likes / comments). El "contentId" que
+// usa el visor se traduce a {type, id}: los canales llegan con el id crudo
+// ("Telefuturo.py") y las pelis/series como "movie:ID" / "serie:ID".
+import { api } from './api.js';
 
-const key = (type, ch) => `senal:${type}:${ch}`;
-
-function read(k, fallback) {
-  try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
-}
-function write(k, v) {
-  try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* modo privado */ }
-}
-
-export function isLiked(ch) { return read(key('like', ch), false); }
-export function toggleLike(ch) {
-  const v = !isLiked(ch);
-  write(key('like', ch), v);
-  return v;
+function parse(ref) {
+  const s = String(ref ?? '');
+  const i = s.indexOf(':');
+  if (i < 0) return { type: 'channel', id: s };
+  return { type: s.slice(0, i), id: s.slice(i + 1) };
 }
 
-export function getComments(ch) { return read(key('cmt', ch), []); }
-export function addComment(ch, author, text) {
-  const list = getComments(ch);
-  const c = { id: Date.now(), author, text, at: new Date().toISOString() };
-  list.unshift(c);
-  write(key('cmt', ch), list);
-  return list;
+// { likes, liked, comments: [{ id, author, body, created, mine }] }
+export async function getReactions(ref) {
+  const { type, id } = parse(ref);
+  return api.reactions(type, id);
+}
+
+// { liked, likes }
+export async function toggleLike(ref) {
+  const { type, id } = parse(ref);
+  return api.toggleLike(type, id);
+}
+
+// Devuelve el comentario recién creado.
+export async function addComment(ref, body) {
+  const { type, id } = parse(ref);
+  return api.addComment(type, id, body);
+}
+
+export async function deleteComment(id) {
+  return api.deleteComment(id);
 }

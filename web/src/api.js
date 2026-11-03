@@ -70,6 +70,12 @@ export const api = {
   getProgress: () => get('/catalog/progress'),
   setProgress: (b) => put('/catalog/progress', b),
 
+  // Me gusta y comentarios (compartidos entre usuarios)
+  reactions: (type, id) => get('/catalog/reactions', { type, id }),
+  toggleLike: (type, id) => post('/catalog/likes', { type, id }),
+  addComment: (type, id, body) => post('/catalog/comments', { type, id, body }),
+  deleteComment: (id) => del(`/catalog/comments/${id}`),
+
   // Admin: gestión de catálogo (películas y series)
   catStatus: () => get('/admin/catalog/status'),
   catTest: () => post('/admin/catalog/test', {}),

@@ -1,23 +1,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { isLiked, toggleLike, getComments, addComment } from './social.js';
+import { getReactions, toggleLike, addComment, deleteComment } from './social.js';
 
 // Barra de acciones del visor, estilo "YouTube": me gusta, compartir, comentar
-// y selección de calidad. No muestra URLs técnicas.
+// y selección de calidad. Me gusta y comentarios son compartidos (backend).
 export default function WatchActions({
   contentId, title, streams, activeStream, onSelectStream,
   onVerify, checking, activeCount, user, kind = 'canal',
 }) {
   const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
   const [shared, setShared] = useState(false);
 
   useEffect(() => {
-    setLiked(isLiked(contentId));
-    setComments(getComments(contentId));
+    let alive = true;
     setShowComments(false);
     setShared(false);
+    getReactions(contentId)
+      .then((r) => { if (!alive) return; setLiked(!!r.liked); setLikes(r.likes || 0); setComments(r.comments || []); })
+      .catch(() => { if (alive) { setLiked(false); setLikes(0); setComments([]); } });
+    return () => { alive = false; };
   }, [contentId]);
 
   // Opciones de calidad a partir de las señales (etiqueta amigable, sin URL).
@@ -30,7 +35,13 @@ export default function WatchActions({
     });
   }, [streams]);
 
-  function like() { setLiked(toggleLike(contentId)); }
+  async function like() {
+    // Optimista: refleja el cambio al toque y confirma con el backend.
+    setLiked((v) => !v);
+    setLikes((n) => (liked ? Math.max(0, n - 1) : n + 1));
+    try { const r = await toggleLike(contentId); setLiked(!!r.liked); setLikes(r.likes || 0); }
+    catch { setLiked((v) => !v); setLikes((n) => (liked ? n + 1 : Math.max(0, n - 1))); }
+  }
 
   async function share() {
     const url = window.location.origin;
@@ -41,19 +52,29 @@ export default function WatchActions({
     } catch { /* cancelado */ }
   }
 
-  function submitComment(e) {
+  async function submitComment(e) {
     e.preventDefault();
     const text = draft.trim();
-    if (!text) return;
-    setComments(addComment(contentId, user?.username || 'invitado', text));
-    setDraft('');
+    if (!text || sending) return;
+    setSending(true);
+    try {
+      const c = await addComment(contentId, text);
+      setComments((list) => [c, ...list]);
+      setDraft('');
+    } catch { /* reintentar */ }
+    setSending(false);
+  }
+
+  async function removeComment(id) {
+    try { await deleteComment(id); setComments((list) => list.filter((c) => c.id !== id)); }
+    catch { /* ignore */ }
   }
 
   return (
     <div className="watch">
       <div className="watch-bar">
         <button className={`wbtn ${liked ? 'liked' : ''}`} onClick={like}>
-          <span className="wi">♥</span> Me gusta
+          <span className="wi">♥</span> Me gusta{likes ? ` · ${likes}` : ''}
         </button>
         <button className="wbtn" onClick={share}>
           <span className="wi">↗</span> {shared ? 'Enlace copiado' : 'Compartir'}
@@ -103,7 +124,10 @@ export default function WatchActions({
             {comments.map((c) => (
               <li key={c.id}>
                 <span className="c-author">{c.author}</span>
-                <span className="c-text">{c.text}</span>
+                <span className="c-text">{c.body}</span>
+                {c.mine && (
+                  <button className="c-del" title="Borrar" onClick={() => removeComment(c.id)}>×</button>
+                )}
               </li>
             ))}
             {comments.length === 0 && <li className="c-empty">Sé el primero en comentar.</li>}

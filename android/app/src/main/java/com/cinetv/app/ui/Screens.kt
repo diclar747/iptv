@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -61,6 +62,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,8 +78,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.cinetv.app.data.Card
+import com.cinetv.app.data.Comment
+import com.cinetv.app.data.CommentReq
 import com.cinetv.app.data.Net
+import com.cinetv.app.data.ReactReq
 import com.cinetv.app.data.User
+import kotlinx.coroutines.launch
 
 private val Panel = Color(0xFF0A0B10)
 
@@ -453,22 +459,100 @@ private fun roleLabel(r: String?) = when (r) {
     "admin" -> "Administrador"; "reseller" -> "Vendedor"; "client" -> "Cliente"; else -> r ?: ""
 }
 
+// Sección social compartida (backend): Me gusta con contador, Mi Lista (solo
+// pelis/series), Compartir, y comentarios reales con autor y borrado propio.
 @Composable
-private fun ActionRow(vm: AppViewModel, kind: String, id: Long, title: String) {
+private fun SocialSection(vm: AppViewModel, type: String, id: String, title: String, allowList: Boolean) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     var liked by remember(id) { mutableStateOf(false) }
+    var likes by remember(id) { mutableStateOf(0) }
     var inList by remember(id) { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
-        ActionBtn(if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, "Me gusta", if (liked) Red else Color.White) { liked = !liked }
-        ActionBtn(Icons.Filled.Add, if (inList) "✓ Mi Lista" else "Mi Lista", if (inList) Red else Color.White) {
-            if (!inList) { vm.addFavorite(kind, id); inList = true }
+    var comments by remember(id) { mutableStateOf<List<Comment>>(emptyList()) }
+    var draft by remember(id) { mutableStateOf("") }
+    var sending by remember(id) { mutableStateOf(false) }
+
+    LaunchedEffect(id) {
+        try {
+            val r = Net.api.reactions(type, id)
+            liked = r.liked; likes = r.likes; comments = r.comments
+        } catch (_: Exception) { /* sin reacciones */ }
+    }
+
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+        ActionBtn(
+            if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            if (likes > 0) likes.toString() else "Me gusta", if (liked) Red else Color.White
+        ) {
+            val was = liked
+            liked = !was; likes = if (was) (likes - 1).coerceAtLeast(0) else likes + 1
+            scope.launch {
+                try { val r = Net.api.toggleLike(ReactReq(type, id)); liked = r.liked; likes = r.likes }
+                catch (_: Exception) { liked = was; likes = if (was) likes + 1 else (likes - 1).coerceAtLeast(0) }
+            }
+        }
+        if (allowList) {
+            ActionBtn(Icons.Filled.Add, if (inList) "✓ Mi Lista" else "Mi Lista", if (inList) Red else Color.White) {
+                if (!inList) { id.toLongOrNull()?.let { vm.addFavorite(if (type == "serie") "serie" else "movie", it) }; inList = true }
+            }
         }
         ActionBtn(Icons.Filled.Share, "Compartir", Color.White) {
+            val txt = if (type == "channel") "Mirá $title en vivo por CineTV 📺 https://live.cd.com.py"
+                      else "Mirá \"$title\" en CineTV 🎬 https://live.cd.com.py"
             val i = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(android.content.Intent.EXTRA_TEXT, "Mirá \"$title\" en CineTV 📺 https://live.cd.com.py")
+                this.type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, txt)
             }
             ctx.startActivity(android.content.Intent.createChooser(i, "Compartir"))
+        }
+    }
+
+    Text(
+        "Comentarios" + if (comments.isNotEmpty()) " (${comments.size})" else "",
+        color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 8.dp)
+    )
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            draft, { draft = it }, placeholder = { Text("Escribí un comentario…") },
+            singleLine = true, modifier = Modifier.weight(1f)
+        )
+        Spacer(Modifier.width(8.dp))
+        IconButton(enabled = draft.isNotBlank() && !sending, onClick = {
+            val text = draft.trim()
+            if (text.isNotEmpty()) {
+                sending = true
+                scope.launch {
+                    try {
+                        val c = Net.api.addComment(CommentReq(type, id, text))
+                        comments = listOf(c) + comments; draft = ""
+                    } catch (_: Exception) { /* reintentar */ }
+                    sending = false
+                }
+            }
+        }) { Icon(Icons.Filled.Send, "Enviar", tint = if (draft.isNotBlank()) Red else Muted) }
+    }
+    Spacer(Modifier.height(6.dp))
+    if (comments.isEmpty()) {
+        Text("Sé el primero en comentar.", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+    } else {
+        comments.forEach { c ->
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(c.author ?: "—", color = Red, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    if (c.mine) {
+                        Text("Borrar", color = Muted, fontSize = 12.sp, modifier = Modifier.clickable {
+                            scope.launch {
+                                try { Net.api.deleteComment(c.id); comments = comments.filterNot { it.id == c.id } }
+                                catch (_: Exception) { /* ignore */ }
+                            }
+                        })
+                    }
+                }
+                Text(c.body ?: "", color = Color(0xFFC7CBD4), fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF1C1D25)))
         }
     }
 }
@@ -502,16 +586,15 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
                                 }
                             } else Text("Próximamente — sin fuente disponible", color = Muted, fontSize = 13.sp)
                         }
-                        ActionRow(vm, "movie", d.id, d.title ?: "")
                         d.overview?.let { Text(it, color = Color(0xFFC7CBD4), fontSize = 14.sp, modifier = Modifier.padding(16.dp)) }
                         Text("Metadatos por TheTVDB / TMDB", color = Color(0xFF5C6879), fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp))
+                        SocialSection(vm, "movie", d.id.toString(), d.title ?: "", allowList = true)
                     }
                 }
                 is Detail.Serie -> {
                     val d = detail.d
                     item {
                         DetailHeader(d.backdrop ?: d.poster, d.title ?: "", "${d.episodes?.size ?: 0} episodios", d.genres?.joinToString(" · ") ?: "")
-                        ActionRow(vm, "serie", d.id, d.title ?: "")
                         d.overview?.let { Text(it, color = Color(0xFFC7CBD4), fontSize = 14.sp, modifier = Modifier.padding(16.dp)) }
                         Text("EPISODIOS", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(start = 16.dp, bottom = 6.dp))
                     }
@@ -527,6 +610,7 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
                             else Text("próx.", color = Muted, fontSize = 11.sp)
                         }
                     }
+                    item { SocialSection(vm, "serie", d.id.toString(), d.title ?: "", allowList = true) }
                 }
                 is Detail.Channel -> {
                     val c = detail.c
@@ -537,8 +621,8 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
                                 Icon(Icons.Filled.PlayArrow, null); Text(" Ver en vivo", fontWeight = FontWeight.Bold)
                             }
                         }
-                        ChannelActions(c)
                         Text("Señal en vivo vía CineTV", color = Color(0xFF5C6879), fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp))
+                        SocialSection(vm, "channel", c.id, c.displayTitle, allowList = false)
                     }
                 }
             }
@@ -574,24 +658,6 @@ private fun ChannelHeader(card: Card) {
     val sub = listOfNotNull(card.category, card.country).joinToString("  ·  ")
     if (sub.isNotBlank()) Text(sub, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 2.dp, bottom = 8.dp))
     else Spacer(Modifier.height(8.dp))
-}
-
-// Acciones de canal: Me gusta (local) + Compartir. (Mi Lista y comentarios
-// necesitan backend; se agregan cuando exista el endpoint.)
-@Composable
-private fun ChannelActions(card: Card) {
-    val ctx = LocalContext.current
-    var liked by remember(card.id) { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
-        ActionBtn(if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, "Me gusta", if (liked) Red else Color.White) { liked = !liked }
-        ActionBtn(Icons.Filled.Share, "Compartir", Color.White) {
-            val i = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(android.content.Intent.EXTRA_TEXT, "Mirá ${card.displayTitle} en vivo por CineTV 📺 https://live.cd.com.py")
-            }
-            ctx.startActivity(android.content.Intent.createChooser(i, "Compartir"))
-        }
-    }
 }
 
 @Composable

@@ -244,4 +244,65 @@ router.put('/catalog/progress', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Me gusta y comentarios (compartidos entre usuarios) ---
+// content_id es texto: canales ("Telefuturo.py"), pelis/series (id numérico en texto).
+const ctype = (t) => (t === 'serie' ? 'series' : (['movie', 'series', 'channel'].includes(t) ? t : 'channel'));
+
+// Estado social de un contenido: cantidad de me gusta, si YO di me gusta, y comentarios.
+router.get('/catalog/reactions', async (req, res) => {
+  const type = ctype(req.query.type);
+  const id = String(req.query.id || '').slice(0, 200);
+  if (!id) return res.status(400).json({ error: 'falta id' });
+  const [likeRow, mineRow, comments] = await Promise.all([
+    one(`SELECT count(*)::int n FROM content_likes WHERE content_type=$1 AND content_id=$2`, [type, id]),
+    one(`SELECT 1 FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3`, [type, id, req.user.id]),
+    many(`SELECT c.id, c.body, c.created_at, u.username, (c.user_id=$3) AS mine
+          FROM comments c JOIN users u ON u.id=c.user_id
+          WHERE c.content_type=$1 AND c.content_id=$2 AND NOT c.hidden
+          ORDER BY c.created_at DESC LIMIT 100`, [type, id, req.user.id]),
+  ]);
+  res.json({
+    likes: likeRow?.n || 0,
+    liked: !!mineRow,
+    comments: comments.map((c) => ({ id: String(c.id), author: c.username, body: c.body, created: c.created_at, mine: c.mine })),
+  });
+});
+
+// Alterna el me gusta y devuelve el nuevo estado + total.
+router.post('/catalog/likes', async (req, res) => {
+  const type = ctype(req.body?.type);
+  const id = String(req.body?.id || '').slice(0, 200);
+  if (!id) return res.status(400).json({ error: 'falta id' });
+  const existing = await one(`SELECT 1 FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3`, [type, id, req.user.id]);
+  if (existing) {
+    await query(`DELETE FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3`, [type, id, req.user.id]);
+  } else {
+    await query(`INSERT INTO content_likes (user_id, content_type, content_id) VALUES ($3,$1,$2) ON CONFLICT DO NOTHING`, [type, id, req.user.id]);
+  }
+  const n = await one(`SELECT count(*)::int n FROM content_likes WHERE content_type=$1 AND content_id=$2`, [type, id]);
+  res.json({ liked: !existing, likes: n?.n || 0 });
+});
+
+// Publica un comentario.
+router.post('/catalog/comments', async (req, res) => {
+  const type = ctype(req.body?.type);
+  const id = String(req.body?.id || '').slice(0, 200);
+  const body = String(req.body?.body || '').trim().slice(0, 500);
+  if (!id || !body) return res.status(400).json({ error: 'faltan datos' });
+  const c = await one(
+    `INSERT INTO comments (user_id, content_type, content_id, body) VALUES ($1,$2,$3,$4)
+     RETURNING id, body, created_at`, [req.user.id, type, id, body]);
+  res.json({ id: String(c.id), author: req.user.username, body: c.body, created: c.created_at, mine: true });
+});
+
+// Borra un comentario propio (o cualquiera si es admin).
+router.delete('/catalog/comments/:id', async (req, res) => {
+  const cid = parseInt(req.params.id, 10);
+  if (!cid) return res.status(400).json({ error: 'id inválido' });
+  const cond = req.user.role === 'admin' ? '' : ' AND user_id=$2';
+  const params = req.user.role === 'admin' ? [cid] : [cid, req.user.id];
+  await query(`DELETE FROM comments WHERE id=$1${cond}`, params);
+  res.json({ ok: true });
+});
+
 export default router;

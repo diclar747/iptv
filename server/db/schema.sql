@@ -229,6 +229,28 @@ CREATE TABLE IF NOT EXISTS watch_progress (
   PRIMARY KEY (user_id, content_type, content_id)
 );
 
+-- Interacciones sociales (me gusta y comentarios). content_id es TEXT para
+-- soportar canales (id tipo "Telefuturo.py") además de películas y series.
+CREATE TABLE IF NOT EXISTS content_likes (
+  user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content_type TEXT NOT NULL,            -- 'movie'|'series'|'channel'
+  content_id   TEXT NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, content_type, content_id)
+);
+CREATE INDEX IF NOT EXISTS idx_content_likes_item ON content_likes(content_type, content_id);
+
+CREATE TABLE IF NOT EXISTS comments (
+  id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content_type TEXT NOT NULL,            -- 'movie'|'series'|'channel'
+  content_id   TEXT NOT NULL,
+  body         TEXT NOT NULL,
+  hidden       BOOLEAN NOT NULL DEFAULT false,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_comments_item ON comments(content_type, content_id, created_at DESC);
+
 -- Importación / sincronización.
 CREATE TABLE IF NOT EXISTS sync_jobs (
   id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
