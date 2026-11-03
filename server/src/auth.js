@@ -88,6 +88,11 @@ export function publicUser(u) {
     logoUrl: u.logo_url || null,
     phone: u.phone || null,
     address: u.address || null,
+    bankName: u.bank_name || null,
+    bankHolder: u.bank_holder || null,
+    bankAccount: u.bank_account || null,
+    bankAlias: u.bank_alias || null,
+    bankDoc: u.bank_doc || null,
   };
   if (u.role === 'reseller') base.credits = u.credits || 0;
   if (u.role === 'client') {

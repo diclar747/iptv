@@ -35,6 +35,27 @@ function h(fn) {
   };
 }
 
+// Normaliza un monto en guaraníes: null si vacío/ inválido, si no número >= 0.
+function money(v) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+// Vista de un paquete para el frontend (camelCase, precios numéricos).
+function packageDTO(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    durationDays: p.duration_days,
+    credits: p.credits,
+    maxConnections: p.max_connections,
+    active: p.active,
+    adminPrice: p.admin_price != null ? Number(p.admin_price) : null,
+    suggestedPrice: p.suggested_price != null ? Number(p.suggested_price) : null,
+  };
+}
+
 // ---------- Seed inicial ----------
 export async function ensureSeed() {
   const admin = await one("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
@@ -211,14 +232,47 @@ router.patch(
   '/profile',
   requireAuth,
   h(async (req, res) => {
-    const { displayName, logoUrl, phone, address } = req.body || {};
+    const b = req.body || {};
+    const { displayName, logoUrl, phone, address } = b;
     if (logoUrl && String(logoUrl).length > 300000) throw httpError(400, 'La imagen es muy grande (máx ~200KB)');
     const cut = (v, n) => (v == null || v === '' ? null : String(v).slice(0, n));
     const row = await one(
-      `UPDATE users SET display_name=$1, logo_url=$2, phone=$3, address=$4 WHERE id=$5 RETURNING *`,
-      [cut(displayName, 80), logoUrl || null, cut(phone, 40), cut(address, 200), req.user.id]
+      `UPDATE users SET display_name=$1, logo_url=$2, phone=$3, address=$4,
+         bank_name=$5, bank_holder=$6, bank_account=$7, bank_alias=$8, bank_doc=$9
+       WHERE id=$10 RETURNING *`,
+      [cut(displayName, 80), logoUrl || null, cut(phone, 40), cut(address, 200),
+       cut(b.bankName, 80), cut(b.bankHolder, 120), cut(b.bankAccount, 60), cut(b.bankAlias, 80), cut(b.bankDoc, 40),
+       req.user.id]
     );
     res.json(profileDTO(row));
+  })
+);
+
+// Datos de pago del "proveedor" del usuario actual: a quién le paga por
+// transferencia. Para un cliente o sub-vendedor es su padre; para un
+// distribuidor de primer nivel (sin padre) es el super admin.
+router.get(
+  '/billing/provider',
+  requireAuth,
+  h(async (req, res) => {
+    let provider = null;
+    if (req.user.parent_id) {
+      provider = await one('SELECT * FROM users WHERE id=$1', [req.user.parent_id]);
+    }
+    if (!provider) {
+      provider = await one("SELECT * FROM users WHERE role='admin' ORDER BY id LIMIT 1");
+    }
+    if (!provider) return res.json(null);
+    res.json({
+      username: provider.username,
+      displayName: provider.display_name || null,
+      phone: provider.phone || null,
+      bankName: provider.bank_name || null,
+      bankHolder: provider.bank_holder || null,
+      bankAccount: provider.bank_account || null,
+      bankAlias: provider.bank_alias || null,
+      bankDoc: provider.bank_doc || null,
+    });
   })
 );
 
@@ -228,7 +282,8 @@ router.get(
   requireRole('reseller'),
   h(async (req, res) => {
     const rows = await many(
-      `SELECT p.id, p.name, p.duration_days, p.credits, p.max_connections, rp.price
+      `SELECT p.id, p.name, p.duration_days, p.credits, p.max_connections,
+              p.admin_price, p.suggested_price, rp.price
        FROM packages p
        LEFT JOIN reseller_prices rp ON rp.package_id = p.id AND rp.reseller_id = $1
        WHERE p.active ORDER BY p.credits`,
@@ -236,7 +291,10 @@ router.get(
     );
     res.json(rows.map((p) => ({
       id: p.id, name: p.name, durationDays: p.duration_days, credits: p.credits,
-      maxConnections: p.max_connections, price: p.price != null ? Number(p.price) : null,
+      maxConnections: p.max_connections,
+      adminPrice: p.admin_price != null ? Number(p.admin_price) : null,
+      suggestedPrice: p.suggested_price != null ? Number(p.suggested_price) : null,
+      price: p.price != null ? Number(p.price) : null,
     })));
   })
 );
@@ -408,16 +466,7 @@ router.get(
       req.user.role === 'admin'
         ? await many('SELECT * FROM packages ORDER BY credits')
         : await many('SELECT * FROM packages WHERE active ORDER BY credits');
-    res.json(
-      rows.map((p) => ({
-        id: p.id,
-        name: p.name,
-        durationDays: p.duration_days,
-        credits: p.credits,
-        maxConnections: p.max_connections,
-        active: p.active,
-      }))
-    );
+    res.json(rows.map(packageDTO));
   })
 );
 
@@ -425,16 +474,15 @@ router.post(
   '/admin/packages',
   requireRole('admin'),
   h(async (req, res) => {
-    const { name, durationDays, credits, maxConnections = 1 } = req.body || {};
+    const { name, durationDays, credits, maxConnections = 1, adminPrice, suggestedPrice } = req.body || {};
     if (!name || !durationDays || credits == null) throw httpError(400, 'Datos incompletos');
     const p = await one(
-      'INSERT INTO packages (name, duration_days, credits, max_connections) VALUES ($1,$2,$3,$4) RETURNING *',
-      [name, parseInt(durationDays, 10), parseInt(credits, 10), parseInt(maxConnections, 10) || 1]
+      `INSERT INTO packages (name, duration_days, credits, max_connections, admin_price, suggested_price)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [name, parseInt(durationDays, 10), parseInt(credits, 10), parseInt(maxConnections, 10) || 1,
+       money(adminPrice), money(suggestedPrice)]
     );
-    res.status(201).json({
-      id: p.id, name: p.name, durationDays: p.duration_days,
-      credits: p.credits, maxConnections: p.max_connections, active: p.active,
-    });
+    res.status(201).json(packageDTO(p));
   })
 );
 
@@ -442,10 +490,23 @@ router.patch(
   '/admin/packages/:id',
   requireRole('admin'),
   h(async (req, res) => {
-    const { active } = req.body || {};
-    const p = await one('UPDATE packages SET active=$1 WHERE id=$2 RETURNING *', [!!active, req.params.id]);
+    const b = req.body || {};
+    // Edición parcial: solo actualiza los campos presentes en el body.
+    const sets = [];
+    const vals = [];
+    const add = (col, val) => { sets.push(`${col}=$${sets.length + 1}`); vals.push(val); };
+    if (b.name != null) add('name', String(b.name).slice(0, 120));
+    if (b.durationDays != null) add('duration_days', parseInt(b.durationDays, 10));
+    if (b.credits != null) add('credits', parseInt(b.credits, 10));
+    if (b.maxConnections != null) add('max_connections', parseInt(b.maxConnections, 10) || 1);
+    if (b.adminPrice !== undefined) add('admin_price', money(b.adminPrice));
+    if (b.suggestedPrice !== undefined) add('suggested_price', money(b.suggestedPrice));
+    if (b.active != null) add('active', !!b.active);
+    if (!sets.length) throw httpError(400, 'Nada para actualizar');
+    vals.push(req.params.id);
+    const p = await one(`UPDATE packages SET ${sets.join(', ')} WHERE id=$${vals.length} RETURNING *`, vals);
     if (!p) throw httpError(404, 'Paquete no encontrado');
-    res.json({ id: p.id, active: p.active });
+    res.json(packageDTO(p));
   })
 );
 
@@ -675,6 +736,176 @@ router.post(
       return upd.rows[0];
     });
     res.json(publicUser(updated));
+  })
+);
+
+// ================= SOLICITUDES DE SALDO / ALTA DISTRIBUIDOR =================
+// Un distribuidor pide saldo (kind='credits') a su padre o al admin; un cliente
+// pide convertirse en distribuidor (kind='upgrade') al admin. El pago se hace
+// por transferencia (fuera del sistema). Al APROBAR se asigna el saldo y, si es
+// upgrade, se cambia el rol a 'reseller'.
+
+function requestDTO(r) {
+  return {
+    id: r.id, kind: r.kind, amount: r.amount, status: r.status, note: r.note || null,
+    createdAt: r.created_at, resolvedAt: r.resolved_at || null,
+    requesterId: r.requester_id, requester: r.requester_username || null,
+    targetId: r.target_id, target: r.target_username || null,
+  };
+}
+
+// Id del super admin (a quién van las solicitudes de nivel superior).
+async function adminId() {
+  const a = await one("SELECT id FROM users WHERE role='admin' ORDER BY id LIMIT 1");
+  return a?.id || null;
+}
+
+router.post(
+  '/credit-requests',
+  requireAuth,
+  h(async (req, res) => {
+    const kind = req.body?.kind === 'upgrade' ? 'upgrade' : 'credits';
+    const amount = Math.max(0, parseInt(req.body?.amount, 10) || 0);
+    const note = req.body?.note ? String(req.body.note).slice(0, 300) : null;
+
+    if (kind === 'credits') {
+      if (req.user.role !== 'reseller') throw httpError(403, 'Solo un distribuidor puede pedir saldo');
+      if (amount <= 0) throw httpError(400, 'Indicá la cantidad de saldo');
+    } else {
+      if (req.user.role !== 'client') throw httpError(400, 'Tu cuenta ya es distribuidor o admin');
+    }
+
+    // Destino: upgrade siempre al admin; saldo al padre, o al admin si no tiene.
+    const target = kind === 'upgrade' ? await adminId() : (req.user.parent_id || await adminId());
+
+    // Evita duplicados: una sola solicitud pendiente del mismo tipo por usuario.
+    const dup = await one(
+      "SELECT id FROM credit_requests WHERE requester_id=$1 AND kind=$2 AND status='pending'",
+      [req.user.id, kind]
+    );
+    if (dup) throw httpError(409, 'Ya tenés una solicitud pendiente de este tipo');
+
+    const row = await one(
+      `INSERT INTO credit_requests (requester_id, target_id, kind, amount, note)
+       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [req.user.id, target, kind, amount, note]
+    );
+    res.status(201).json(requestDTO(row));
+  })
+);
+
+// Mis solicitudes (las que yo envié).
+router.get(
+  '/credit-requests/mine',
+  requireAuth,
+  h(async (req, res) => {
+    const rows = await many(
+      `SELECT cr.*, t.username AS target_username
+       FROM credit_requests cr LEFT JOIN users t ON t.id = cr.target_id
+       WHERE cr.requester_id=$1 ORDER BY cr.created_at DESC LIMIT 50`,
+      [req.user.id]
+    );
+    res.json(rows.map(requestDTO));
+  })
+);
+
+// Solicitudes dirigidas a MÍ (distribuidor: de sus sub-vendedores/clientes).
+router.get(
+  '/reseller/credit-requests',
+  requireRole('reseller'),
+  h(async (req, res) => {
+    const status = req.query.status || null;
+    const rows = await many(
+      `SELECT cr.*, u.username AS requester_username
+       FROM credit_requests cr JOIN users u ON u.id = cr.requester_id
+       WHERE cr.target_id=$1 ${status ? 'AND cr.status=$2' : ''}
+       ORDER BY cr.created_at DESC LIMIT 100`,
+      status ? [req.user.id, status] : [req.user.id]
+    );
+    res.json(rows.map(requestDTO));
+  })
+);
+
+// Todas las solicitudes (admin): saldo y upgrades.
+router.get(
+  '/admin/credit-requests',
+  requireRole('admin'),
+  h(async (req, res) => {
+    const status = req.query.status || null;
+    const rows = await many(
+      `SELECT cr.*, u.username AS requester_username, t.username AS target_username
+       FROM credit_requests cr
+       JOIN users u ON u.id = cr.requester_id
+       LEFT JOIN users t ON t.id = cr.target_id
+       ${status ? 'WHERE cr.status=$1' : ''}
+       ORDER BY cr.created_at DESC LIMIT 200`,
+      status ? [status] : []
+    );
+    res.json(rows.map(requestDTO));
+  })
+);
+
+// Aprobar: asigna saldo (y rol si es upgrade). El aprobador debe ser el admin o
+// el destinatario de la solicitud. Un distribuidor-aprobador gasta su saldo.
+router.post(
+  '/credit-requests/:id/approve',
+  requireRole('reseller', 'admin'),
+  h(async (req, res) => {
+    const out = await tx(async (c) => {
+      const cr = (await c.query('SELECT * FROM credit_requests WHERE id=$1 FOR UPDATE', [req.params.id])).rows[0];
+      if (!cr) throw httpError(404, 'Solicitud no encontrada');
+      if (cr.status !== 'pending') throw httpError(409, 'La solicitud ya fue resuelta');
+      const isAdmin = req.user.role === 'admin';
+      if (!isAdmin && cr.target_id !== req.user.id) throw httpError(403, 'No es tu solicitud para aprobar');
+
+      // Si el aprobador es distribuidor, descuenta de SU saldo lo que asigna.
+      if (!isAdmin && cr.amount > 0) {
+        const me = await c.query('SELECT credits FROM users WHERE id=$1 FOR UPDATE', [req.user.id]);
+        if (me.rows[0].credits < cr.amount) throw httpError(402, 'No tenés saldo suficiente para aprobar');
+        await c.query('UPDATE users SET credits = credits - $1 WHERE id=$2', [cr.amount, req.user.id]);
+      }
+
+      // Aplica el efecto sobre el solicitante.
+      if (cr.kind === 'upgrade') {
+        await c.query(
+          "UPDATE users SET role='reseller', credits = credits + $1, expires_at=NULL WHERE id=$2",
+          [cr.amount, cr.requester_id]
+        );
+      } else {
+        await c.query('UPDATE users SET credits = credits + $1 WHERE id=$2', [cr.amount, cr.requester_id]);
+      }
+
+      if (cr.amount > 0) {
+        await c.query(
+          `INSERT INTO transactions (type, amount, reseller_id, by_user_id, note)
+           VALUES ('allocate',$1,$2,$3,$4)`,
+          [cr.amount, cr.requester_id, req.user.id,
+           cr.kind === 'upgrade' ? 'Alta como distribuidor (saldo inicial)' : 'Saldo aprobado por solicitud']
+        );
+      }
+      const upd = (await c.query(
+        "UPDATE credit_requests SET status='approved', resolved_at=now(), resolved_by=$1 WHERE id=$2 RETURNING *",
+        [req.user.id, req.params.id]
+      )).rows[0];
+      return upd;
+    });
+    res.json(requestDTO(out));
+  })
+);
+
+router.post(
+  '/credit-requests/:id/reject',
+  requireRole('reseller', 'admin'),
+  h(async (req, res) => {
+    const cr = await one('SELECT * FROM credit_requests WHERE id=$1', [req.params.id]);
+    if (!cr) throw httpError(404, 'Solicitud no encontrada');
+    if (cr.status !== 'pending') throw httpError(409, 'La solicitud ya fue resuelta');
+    if (req.user.role !== 'admin' && cr.target_id !== req.user.id) throw httpError(403, 'No es tu solicitud');
+    const upd = await one(
+      "UPDATE credit_requests SET status='rejected', resolved_at=now(), resolved_by=$1 WHERE id=$2 RETURNING *",
+      [req.user.id, req.params.id]
+    );
+    res.json(requestDTO(upd));
   })
 );
 

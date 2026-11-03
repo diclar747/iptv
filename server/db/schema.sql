@@ -86,6 +86,41 @@ CREATE TABLE IF NOT EXISTS reseller_prices (
   PRIMARY KEY (reseller_id, package_id)
 );
 
+-- ---------- Datos bancarios (pago por transferencia) ----------
+-- El admin carga los suyos (los ven sus distribuidores); cada distribuidor carga
+-- los suyos (los ven sus clientes/compradores). Todo opcional.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_name    TEXT;  -- banco
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_holder  TEXT;  -- titular
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_account TEXT;  -- nº de cuenta
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_alias   TEXT;  -- alias
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_doc     TEXT;  -- cédula/RUC
+
+-- ---------- Precios por paquete (en guaraníes) ----------
+-- admin_price = lo que el distribuidor le paga al admin por ese paquete.
+-- suggested_price = precio sugerido de venta al público (referencia).
+-- El precio real distribuidor->cliente lo fija cada vendedor en reseller_prices.
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS admin_price     NUMERIC(14,2);
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS suggested_price NUMERIC(14,2);
+
+-- ---------- Solicitudes de saldo / de alta como distribuidor ----------
+-- Un distribuidor pide saldo a su padre (o al admin); un cliente puede pedir
+-- convertirse en distribuidor. El pago se hace por transferencia, fuera del
+-- sistema; al aprobar se asigna el saldo (y, si es upgrade, cambia el rol).
+CREATE TABLE IF NOT EXISTS credit_requests (
+  id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  requester_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_id    BIGINT REFERENCES users(id) ON DELETE SET NULL,  -- a quién se le pide
+  kind         TEXT NOT NULL DEFAULT 'credits' CHECK (kind IN ('credits', 'upgrade')),
+  amount       INTEGER NOT NULL DEFAULT 0,
+  status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  note         TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at  TIMESTAMPTZ,
+  resolved_by  BIGINT REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_credit_requests_target ON credit_requests(target_id, status);
+CREATE INDEX IF NOT EXISTS idx_credit_requests_requester ON credit_requests(requester_id);
+
 -- ========== CATÁLOGO de películas y series (metadatos multi-proveedor) ==========
 -- Separa METADATOS (TheTVDB/TMDB) de la REPRODUCCIÓN (media_sources). El catálogo
 -- puede ser enorme; "Ver ahora" solo si hay una fuente autorizada vinculada.
