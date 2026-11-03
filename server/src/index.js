@@ -20,7 +20,7 @@ import accountsRouter, { ensureSeed } from './accounts.js';
 import catalogRouter from './catalog.js';
 import catalogAdminRouter from './catalog-admin.js';
 import { ensureVodSeed } from './vod.js';
-import { startSyncScheduler } from './catalog/sync.js';
+import { retireMetadataOnlyMovies } from './catalog/cleanup.js';
 
 // Red de seguridad: el proxy maneja flujos de red inestables. Un error suelto
 // (p. ej. un socket que corta) no debe tumbar todo el servidor.
@@ -226,6 +226,7 @@ async function start() {
     await initSchema();
     await ensureSeed();
     await ensureVodSeed(); // contenido de dominio público (catálogo base reproducible)
+    await retireMetadataOnlyMovies();
     console.log('[api] PostgreSQL conectado y listo');
   } catch (e) {
     console.error('[api] ERROR conectando a PostgreSQL:', e.message);
@@ -240,7 +241,7 @@ async function start() {
       .then(() => console.log('[api] datos de iptv-org cargados'))
       .catch((e) => console.error('[api] error precargando:', e.message));
     // Sincronización incremental del catálogo (solo si hay API Key de TheTVDB).
-    startSyncScheduler();
+
   });
 }
 

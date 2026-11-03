@@ -1007,13 +1007,6 @@ body{background:#050609;background-image:radial-gradient(ellipse at 0 100%,#1710
 .app.nav-collapsed .side-foot .side-item { width: 46px; height: 46px; }
 .app.nav-collapsed .side-collapse { width: 40px; height: 40px; }
 .app.nav-collapsed .side-head { padding: 4px 0 10px; }
-.cinecalidad-admin { margin: 18px 0; }
-.cinecalidad-admin .cat-free { flex-wrap: wrap; }
-.cinecalidad-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 12px 0; }
-.cinecalidad-card { display: flex; gap: 12px; padding: 12px; border: 1px solid #ffffff18; border-radius: 10px; min-width: 0; }
-.cinecalidad-card img { width: 64px; height: 96px; object-fit: cover; border-radius: 6px; }
-.cinecalidad-card p { font-size: 12px; opacity: .7; margin: 6px 0; }
-.cinecalidad-card span { font-size: 12px; }
 .view .vod-grid { grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 24px 18px; }
 .vod-grid .pcard { width: 100%; min-width: 0; }
 .vod-grid .pcard-img { aspect-ratio: 2 / 3; }

@@ -67,7 +67,7 @@ router.get('/catalog/home', async (req, res) => {
   // Modernas = títulos de TMDB (pósters/imágenes actuales), ya estén como tráiler
   // o solo ficha. Los que tienen tráiler van primero. No depende del import de
   // tráilers: usa el metadato actual que ya está en la base.
-  const MODERN = `NOT m.hidden AND m.provider IN ('tmdb','cinecalidad') AND m.poster IS NOT NULL
+  const MODERN = `NOT m.hidden AND (${MOVIE_AVAIL}) AND m.poster IS NOT NULL
     AND (m.category IS NULL OR NOT (m.category = ANY($1)))`;
   const [estrenos, populares] = await Promise.all([
     many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
@@ -79,7 +79,7 @@ router.get('/catalog/home', async (req, res) => {
   ]);
 
   const rows = [];
-  if (estrenos.length) rows.push({ key: 'estrenos', title: '🎬 Estrenos', nav: 'peliculas', items: estrenos.map(movieCard) });
+  if (estrenos.length) rows.push({ key: 'estrenos', title: 'Películas recientes del catálogo', nav: 'peliculas', items: estrenos.map(movieCard) });
   if (populares.length) rows.push({ key: 'populares', title: '🔥 Populares ahora', nav: 'peliculas', items: populares.map(movieCard) });
   if (latestMovies.length) rows.push({ key: 'latest', title: 'Clásicos para ver ya', nav: 'peliculas', items: latestMovies });
   if (series.length) rows.push({ key: 'series', title: 'Series', nav: 'series', items: series.map(seriesCard) });
@@ -94,7 +94,7 @@ router.get('/catalog/home', async (req, res) => {
   // el héroe no sea un clásico viejo; si no hay, cae a lo reproducible con fondo.
   const feat = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-     WHERE NOT m.hidden AND (${MOVIE_AVAIL} OR m.provider IN ('tmdb','cinecalidad'))
+     WHERE NOT m.hidden AND ${MOVIE_AVAIL}
        AND (m.backdrop IS NOT NULL OR m.poster IS NOT NULL)
        AND m.title !~* 'S *[0-9]+ *E *[0-9]+'
        AND (m.category IS NULL OR NOT (m.category = ANY($1)))
@@ -108,7 +108,7 @@ router.get('/catalog/home', async (req, res) => {
 // Listado de películas con filtros + paginación.
 router.get('/catalog/movies', async (req, res) => {
   const { search, category, page = '1', pageSize = '48' } = req.query;
-  const where = ['NOT m.hidden'];
+  const where = ['NOT m.hidden', MOVIE_AVAIL];
   const params = [];
   if (search) { params.push(`%${search}%`); where.push(`m.title ILIKE $${params.length}`); }
   if (category) { params.push(category); where.push(`m.category=$${params.length}`); }
@@ -143,7 +143,7 @@ router.get('/catalog/search', async (req, res) => {
   const like = `%${q}%`;
   const [mv, sr] = await Promise.all([
     many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-          WHERE NOT m.hidden AND (m.title ILIKE $1 OR m.original_title ILIKE $1)
+          WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND (m.title ILIKE $1 OR m.original_title ILIKE $1)
           ORDER BY m.year DESC NULLS LAST, m.id DESC LIMIT 40`, [like]),
     many(`SELECT s.* FROM series s WHERE NOT s.hidden AND ${SERIES_AVAIL} AND (s.title ILIKE $1 OR s.original_title ILIKE $1)
           ORDER BY s.popularity DESC LIMIT 40`, [like]),
@@ -211,7 +211,7 @@ router.get('/catalog/meta', async (req, res) => {
   // Categorías de todas las fichas visibles, igual que la grilla.
   const cats = await many(
     `SELECT category AS slug, count(*)::int n FROM movies m
-     WHERE NOT m.hidden AND m.category IS NOT NULL
+     WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND m.category IS NOT NULL
      GROUP BY category ORDER BY n DESC LIMIT 30`);
   res.json({
     attribution: p.attribution,

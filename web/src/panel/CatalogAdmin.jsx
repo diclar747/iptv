@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
-import CinecalidadAdmin from './CinecalidadAdmin.jsx';
 
 // Super Admin — Gestión de películas y series: conexión con TheTVDB, importación
 // (start/stop/resume), sincronización, estadísticas y errores.
@@ -35,16 +34,6 @@ export default function CatalogAdmin() {
 
   return (
     <div className="cat-admin">
-      <div className={`cat-conn ${connected ? 'on' : 'off'}`}>
-        <div>
-          <strong>TheTVDB</strong>{' '}
-          {connected ? <span className="ok">conectado</span> : <span className="bad">sin API Key</span>}
-          {st?.lastApiError && <div className="cat-err">último error API: {st.lastApiError}</div>}
-          {!connected && <div className="cat-hint">Cargá <code>THETVDB_API_KEY</code> y <code>THETVDB_PIN</code> en el <code>.env</code> del servidor y reiniciá.</div>}
-        </div>
-        <button disabled={busy} onClick={() => act(api.catTest, null)}>Probar conexión</button>
-      </div>
-
       <div className="stat-grid compact">
         <Stat label="Películas" value={stats.movies} />
         <Stat label="Series" value={stats.series} />
@@ -79,45 +68,6 @@ export default function CatalogAdmin() {
         <button className="verify" disabled={busy || st?.archive?.running}
           onClick={() => act(() => api.catImportArchive({ perGenre: 150 }), 'Importación de Internet Archive iniciada')}>
           Importar dominio público
-        </button>
-      </div>
-
-      <div className="cat-free">
-        <div>
-          <strong>Títulos actuales (TMDB)</strong>{' '}
-          {st?.tmdb?.configured ? <span className="ok">conectado</span> : <span className="bad">sin API Key</span>}
-          <div className="cat-hint">Metadatos de películas actuales y populares (póster, sinopsis, año) para que la portada se vea representable. El "Ver ahora" solo aparece con fuente licenciada. Cargá <code>TMDB_API_KEY</code> en el <code>.env</code>.</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button disabled={busy} onClick={() => act(api.catTmdbTest, null)}>Probar</button>
-          <button className="verify" disabled={busy || !st?.tmdb?.configured || st?.tmdb?.running}
-            onClick={() => act(() => api.catImportTmdb({ pages: 40 }), 'Importación de TMDB iniciada')}>
-            Importar TMDB
-          </button>
-          <button className="verify" disabled={busy || !st?.tmdb?.configured || st?.tmdb?.running}
-            onClick={() => act(() => api.catImportTrailers({ pages: 5 }), 'Importación de Estrenos (tráilers) iniciada')}>
-            Importar Estrenos (tráilers)
-          </button>
-        </div>
-      </div>
-
-      <CinecalidadAdmin status={st?.cinecalidad} onChange={load} />
-
-      <div className="cat-controls">
-        <button className="verify" disabled={busy || !connected || st?.running}
-          onClick={() => act(() => api.catImport({ maxItems: 100 }), 'Importación de prueba iniciada (100)')}>
-          Importar prueba (100)
-        </button>
-        <button className="verify" disabled={busy || !connected || st?.running}
-          onClick={() => act(() => api.catImport({}), 'Importación completa iniciada')}>
-          Importar todo
-        </button>
-        <button disabled={busy || !st?.running} onClick={() => act(api.catStop, 'Deteniendo…')}>Detener</button>
-        <button disabled={busy || st?.running} onClick={() => act(api.catReset, 'Cursores reiniciados')}>Reiniciar cursores</button>
-        <button disabled={busy || !connected || st?.running} onClick={() => act(api.catSync, 'Sincronizando…')}>Sincronizar ahora</button>
-        <button disabled={busy}
-          onClick={() => { if (window.confirm('¿Borrar las películas poco populares de Internet Archive (la basura vieja)? El contenido bueno y TMDB no se tocan.')) act(api.catCleanArchive, null); }}>
-          Limpiar basura
         </button>
       </div>
 

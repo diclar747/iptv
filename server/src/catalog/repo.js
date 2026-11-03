@@ -146,7 +146,7 @@ export async function upsertSeries(provider, { series: dto, seasons = [] }, epis
 // Conteos para el panel admin.
 export async function catalogStats() {
   const [m, s, e, src] = await Promise.all([
-    one('SELECT count(*)::int n FROM movies'),
+    one('SELECT count(*)::int n FROM movies WHERE NOT hidden'),
     one('SELECT count(*)::int n FROM series'),
     one('SELECT count(*)::int n FROM episodes'),
     one('SELECT count(*)::int n FROM media_sources WHERE enabled'),
