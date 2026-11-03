@@ -12,7 +12,8 @@ export default function PosterCard({ item, onOpen }) {
           ? <img src={poster} alt="" loading="lazy"
               onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
           : <span className="pcard-ph">{title?.[0]}</span>}
-        <span className="pcard-play">▶</span>
+        <span className="pcard-play">{item.available === false ? 'Ver ficha' : '▶'}</span>
+        {item.available === false && <span className="pcard-status">{item.trailer ? 'Tráiler' : 'Ficha'}</span>}
       </div>
       <div className="pcard-title">{title}</div>
       {meta && <div className="pcard-meta">{meta}</div>}

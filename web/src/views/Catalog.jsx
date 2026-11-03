@@ -10,6 +10,19 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
   const [category, setCategory] = useState(initialCategory || '');
   const [cats, setCats] = useState([]);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const next = await api.movies({ search, category: fixedCategory || category, page: page + 1 });
+      setItems(old => [...old, ...next.filter(x => !old.some(y => y.id === x.id))]);
+      setPage(page + 1); setHasMore(next.length === 48);
+    } catch (e) { handleErr(e); }
+    finally { setLoadingMore(false); }
+  }
 
   function handleErr(e) {
     if (e.status === 401 || (e.status === 403 && e.data?.reason)) return onAuthError?.(e);
@@ -29,7 +42,7 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
     // movies
     const t = setTimeout(() => {
       api.movies({ search, category: fixedCategory || category })
-        .then((m) => setItems(m.map((x) => ({ type: 'movie', ...x })))).catch(handleErr);
+        .then((m) => { setItems(m.map((x) => ({ type: 'movie', ...x }))); setPage(1); setHasMore(m.length === 48); setError(null); }).catch(handleErr);
     }, 300);
     return () => clearTimeout(t);
   }, [mode, search, category, fixedCategory]);
@@ -73,6 +86,7 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
       <div className="vod-grid">
         {items.map((it) => <PosterCard key={it.key || `${it.type}${it.id}`} item={it} onOpen={onOpen} />)}
       </div>
+      {mode === 'movies' && hasMore && <button className="pill" disabled={loadingMore} onClick={loadMore} style={{ marginTop: 24 }}>{loadingMore ? 'Cargando…' : 'Cargar más películas'}</button>}
     </div>
   );
 }

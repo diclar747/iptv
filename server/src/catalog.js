@@ -67,7 +67,7 @@ router.get('/catalog/home', async (req, res) => {
   // Modernas = títulos de TMDB (pósters/imágenes actuales), ya estén como tráiler
   // o solo ficha. Los que tienen tráiler van primero. No depende del import de
   // tráilers: usa el metadato actual que ya está en la base.
-  const MODERN = `NOT m.hidden AND m.provider='tmdb' AND m.poster IS NOT NULL
+  const MODERN = `NOT m.hidden AND m.provider IN ('tmdb','cinecalidad') AND m.poster IS NOT NULL
     AND (m.category IS NULL OR NOT (m.category = ANY($1)))`;
   const [estrenos, populares] = await Promise.all([
     many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
@@ -94,7 +94,7 @@ router.get('/catalog/home', async (req, res) => {
   // el héroe no sea un clásico viejo; si no hay, cae a lo reproducible con fondo.
   const feat = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-     WHERE NOT m.hidden AND (${MOVIE_AVAIL} OR m.provider='tmdb')
+     WHERE NOT m.hidden AND (${MOVIE_AVAIL} OR m.provider IN ('tmdb','cinecalidad'))
        AND (m.backdrop IS NOT NULL OR m.poster IS NOT NULL)
        AND m.title !~* 'S *[0-9]+ *E *[0-9]+'
        AND (m.category IS NULL OR NOT (m.category = ANY($1)))
@@ -108,7 +108,7 @@ router.get('/catalog/home', async (req, res) => {
 // Listado de películas con filtros + paginación.
 router.get('/catalog/movies', async (req, res) => {
   const { search, category, page = '1', pageSize = '48' } = req.query;
-  const where = ['NOT m.hidden', MOVIE_AVAIL];
+  const where = ['NOT m.hidden'];
   const params = [];
   if (search) { params.push(`%${search}%`); where.push(`m.title ILIKE $${params.length}`); }
   if (category) { params.push(category); where.push(`m.category=$${params.length}`); }
@@ -117,7 +117,7 @@ router.get('/catalog/movies', async (req, res) => {
   params.push(ps, off);
   const rows = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m WHERE ${where.join(' AND ')}
-     ORDER BY m.popularity DESC, m.title LIMIT $${params.length - 1} OFFSET $${params.length}`,
+     ORDER BY m.year DESC NULLS LAST, m.created_at DESC, m.id DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
   res.json(rows.map(movieCard));
@@ -143,8 +143,8 @@ router.get('/catalog/search', async (req, res) => {
   const like = `%${q}%`;
   const [mv, sr] = await Promise.all([
     many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-          WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND (m.title ILIKE $1 OR m.original_title ILIKE $1)
-          ORDER BY m.popularity DESC LIMIT 40`, [like]),
+          WHERE NOT m.hidden AND (m.title ILIKE $1 OR m.original_title ILIKE $1)
+          ORDER BY m.year DESC NULLS LAST, m.id DESC LIMIT 40`, [like]),
     many(`SELECT s.* FROM series s WHERE NOT s.hidden AND ${SERIES_AVAIL} AND (s.title ILIKE $1 OR s.original_title ILIKE $1)
           ORDER BY s.popularity DESC LIMIT 40`, [like]),
   ]);
@@ -208,11 +208,10 @@ router.get('/catalog/series/:id', async (req, res) => {
 // Metadatos del catálogo (géneros + atribución + si el proveedor está conectado).
 router.get('/catalog/meta', async (req, res) => {
   const p = getProvider();
-  // Solo categorías con películas REPRODUCIBLES (lo mismo que muestra la grilla),
-  // para que el filtro del catálogo no ofrezca géneros vacíos.
+  // Categorías de todas las fichas visibles, igual que la grilla.
   const cats = await many(
     `SELECT category AS slug, count(*)::int n FROM movies m
-     WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND m.category IS NOT NULL
+     WHERE NOT m.hidden AND m.category IS NOT NULL
      GROUP BY category ORDER BY n DESC LIMIT 30`);
   res.json({
     attribution: p.attribution,
