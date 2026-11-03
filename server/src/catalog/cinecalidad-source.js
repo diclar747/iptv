@@ -40,7 +40,8 @@ export function parseListing(html, page = 1) {
   }
   const pages = [...html.matchAll(/href=["'](?:https:\/\/www\.cinecalidad\.am)?\/page\/(\d+)\//gi)].map(m => Number(m[1]));
   const lastPage = Math.max(page, ...pages);
-  if (!items.size) throw new Error('No se encontraron películas. La fuente puede estar bloqueada o haber cambiado de formato.');
+  const seriesOnly = /<article\b[^>]*>[\s\S]*?href=["'](?:https:\/\/www\.cinecalidad\.am)?\/ver-serie\//i.test(html);
+  if (!items.size && !seriesOnly) throw new Error('No se encontraron películas. La fuente puede estar bloqueada o haber cambiado de formato.');
   return { items: [...items.values()], page, lastPage, hasMore: lastPage > page };
 }
 const cache = new Map();

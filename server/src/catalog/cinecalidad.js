@@ -55,6 +55,7 @@ async function run(resume) {
       state.page = page;
       state.note = `Leyendo página ${page}`;
       if (state.stopping) break;
+      await repo.saveCursor(PROVIDER, 'movies', { page, done: false });
       const listing = await fetchListing(page);
       for (const item of listing.items) {
         if (state.stopping) break;

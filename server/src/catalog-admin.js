@@ -10,14 +10,29 @@ import {
 import { catalogStats, recentJobs } from './catalog/repo.js';
 import { importArchive, archiveStatus } from './catalog/archive.js';
 import { importTmdb, importTrailers, tmdbStatus, tmdbTest } from './catalog/tmdb.js';
+import { listCinecalidad, importCinecalidad, cinecalidadStatus, stopCinecalidad } from './catalog/cinecalidad.js';
+import { validPage } from './catalog/cinecalidad-source.js';
 
 const router = express.Router();
 router.use('/admin/catalog', requireAuth, requireRole('admin'));
 
 // Estado general + conteos.
 router.get('/admin/catalog/status', async (req, res) => {
-  res.json({ ...importStatus(), archive: archiveStatus(), tmdb: tmdbStatus(), stats: await catalogStats() });
+  res.json({ ...importStatus(), archive: archiveStatus(), tmdb: tmdbStatus(), cinecalidad: cinecalidadStatus(), stats: await catalogStats() });
 });
+
+router.get('/admin/catalog/cinecalidad', async (req, res) => {
+  let page;
+  try { page = validPage(req.query.page ?? 1); }
+  catch (e) { return res.status(400).json({ error: e.message }); }
+  try { res.json(await listCinecalidad(page)); }
+  catch (e) { res.status(502).json({ error: e.message }); }
+});
+router.post('/admin/catalog/import-cinecalidad', (req, res) => {
+  const result = importCinecalidad({ resume: req.body?.resume === true });
+  res.status(result.ok ? 202 : 409).json(result);
+});
+router.post('/admin/catalog/cinecalidad/stop', (req, res) => res.json(stopCinecalidad()));
 
 // Importar películas de DOMINIO PÚBLICO desde Internet Archive (reproducibles).
 router.post('/admin/catalog/import-archive', (req, res) => {

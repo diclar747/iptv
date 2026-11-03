@@ -78,6 +78,9 @@ export const api = {
 
   // Admin: gestión de catálogo (películas y series)
   catStatus: () => get('/admin/catalog/status'),
+  catCinecalidad: (page = 1) => get('/admin/catalog/cinecalidad', { page }),
+  catImportCinecalidad: (b) => post('/admin/catalog/import-cinecalidad', b || {}),
+  catStopCinecalidad: () => post('/admin/catalog/cinecalidad/stop', {}),
   catTest: () => post('/admin/catalog/test', {}),
   catImport: (b) => post('/admin/catalog/import', b),
   catImportArchive: (b) => post('/admin/catalog/import-archive', b || {}),

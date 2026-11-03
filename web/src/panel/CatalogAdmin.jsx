@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
+import CinecalidadAdmin from './CinecalidadAdmin.jsx';
 
 // Super Admin — Gestión de películas y series: conexión con TheTVDB, importación
 // (start/stop/resume), sincronización, estadísticas y errores.
@@ -100,6 +101,8 @@ export default function CatalogAdmin() {
         </div>
       </div>
 
+      <CinecalidadAdmin status={st?.cinecalidad} onChange={load} />
+
       <div className="cat-controls">
         <button className="verify" disabled={busy || !connected || st?.running}
           onClick={() => act(() => api.catImport({ maxItems: 100 }), 'Importación de prueba iniciada (100)')}>
@@ -125,7 +128,7 @@ export default function CatalogAdmin() {
         <div className="tr th"><span>Tipo</span><span>Estado</span><span>Nuevos</span><span>Actualiz.</span><span>Errores</span></div>
         {jobs.map((j) => (
           <div className="tr" key={j.id}>
-            <span className="strong">{j.kind}</span>
+            <span className="strong">{j.provider} · {j.kind}</span>
             <span className={`mono ${j.status === 'error' ? 'bad' : ''}`}>{j.status}</span>
             <span className="mono">{j.created}</span>
             <span className="mono">{j.updated}</span>

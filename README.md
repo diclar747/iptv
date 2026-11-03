@@ -135,6 +135,29 @@ npm start
 5. **Afinar el verificador** (hoy marca "activo" por HTTP 200; algunos orígenes
    devuelven HTML/error con 200 — validar que el cuerpo sea un manifiesto real).
 
+## Cartelera de Cinecalidad en el administrador
+
+En la gestión del catálogo, **Cinecalidad · Cartelera** permite consultar una
+lista paginada e **Importar todo / buscar novedades**. Cada búsqueda empieza en
+la primera página y agrega las fichas faltantes. **Detener** guarda el progreso;
+**Reanudar** retoma la página pendiente. También se puede reanudar después de
+reiniciar el servidor. El historial identifica el proveedor y registra errores.
+
+Se importan metadatos (título, año, carátula, sinopsis y géneros), sin descargar
+videos ni agregar enlaces de reproducción. Las fichas se identifican por su URL
+de origen; si ya existe el mismo título y año se vincula esa película. La portada
+pública mantiene sus filtros de disponibilidad actuales. La vista previa refleja
+el estado al consultarla; usar **Ver lista / actualizar** después de importar.
+No requiere clave API. El servidor necesita acceso a `www.cinecalidad.am`; si la
+fuente cambia su HTML o bloquea el acceso, se muestra un error y se conserva el
+cursor para reintentar. El proceso corre mientras el servidor permanece activo;
+la búsqueda de novedades se inicia manualmente desde el administrador.
+
+Endpoints exclusivos de admin: `GET /api/admin/catalog/cinecalidad?page=1`,
+`POST /api/admin/catalog/import-cinecalidad` (opcional `{ "resume": true }`),
+`POST /api/admin/catalog/cinecalidad/stop`. El progreso se incluye en
+`GET /api/admin/catalog/status` y los resultados en el historial existente.
+
 ## Importar películas y series de Internet Archive
 
 Ejecutar `npm run import:vod` con PostgreSQL disponible y acceso a archive.org.
