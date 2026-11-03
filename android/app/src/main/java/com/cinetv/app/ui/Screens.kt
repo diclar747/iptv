@@ -22,7 +22,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -355,18 +357,21 @@ private fun PosterCard(card: Card, modifier: Modifier = Modifier.width(118.dp), 
     }
 }
 
-// Tarjeta de canal: tile 16:10 uniforme con fondo CLARO (igual que la web), el
-// logo centrado SIN recortar (Fit) ocupando una fracción fija del tile para que
-// todos se vean del mismo tamaño, con badge "EN VIVO". Resuelve los logos
-// disparejos/encimados y los logos oscuros que se perdían sobre fondo negro.
-private val LogoTile = Brush.radialGradient(listOf(Color(0xFFF4F7FB), Color(0xFFDBE3EE)))
+// Tarjeta de canal: tile 16:10 uniforme con fondo OSCURO moderno (igual que la
+// web), borde sutil y sombra, logo centrado SIN recortar (Fit) ocupando una
+// fracción fija del tile para que todos se vean del mismo tamaño, con badge
+// "EN VIVO".
+private val LogoTile = Brush.linearGradient(listOf(Color(0xFF1B1F28), Color(0xFF101217)))
+private val TileBorder = Color(0x14FFFFFF) // blanco 8% para el borde sutil
 
 @Composable
 private fun ChannelCard(card: Card, modifier: Modifier = Modifier.width(150.dp), onClick: () -> Unit) {
     Column(modifier.clickable { onClick() }) {
         Box(
             Modifier.fillMaxWidth().aspectRatio(16f / 10f)
-                .clip(RoundedCornerShape(12.dp)).background(LogoTile),
+                .shadow(6.dp, RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp)).background(LogoTile)
+                .border(1.dp, TileBorder, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
             val logo = card.logo ?: card.image
@@ -379,7 +384,7 @@ private fun ChannelCard(card: Card, modifier: Modifier = Modifier.width(150.dp),
                 )
             } else {
                 Text(
-                    card.displayTitle, color = Color(0xFF1B2433), fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                    card.displayTitle, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(10.dp)
                 )
