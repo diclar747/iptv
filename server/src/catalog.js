@@ -217,7 +217,7 @@ router.get('/catalog/meta', async (req, res) => {
   res.json({
     attribution: p.attribution,
     providerConfigured: p.isConfigured(),
-    genres: cats.map((c) => ({ value: c.category, label: label(c.category), count: c.n })),
+    genres: cats.map((c) => ({ value: c.slug, label: label(c.slug), count: c.n })),
   });
 });
 
