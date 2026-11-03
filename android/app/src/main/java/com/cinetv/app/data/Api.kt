@@ -54,6 +54,7 @@ interface Api {
         @Query("country") country: String? = null,
         @Query("category") category: String? = null,
         @Query("search") search: String? = null,
+        @Query("prefer") prefer: String? = null,
         @Query("pageSize") pageSize: Int = 80,
     ): ChannelList
 

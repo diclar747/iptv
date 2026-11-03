@@ -271,7 +271,13 @@ private fun LiveTab(vm: AppViewModel) {
         }
         // Canales -> celdas más anchas (16:10) para que el logo entre bien.
         GridTab(vm, key = country + (cat ?: ""), minCell = 156.dp) {
-            Net.api.channels(country = country, category = cat).items ?: emptyList()
+            // Deportes/Noticias: traer de TODOS los países (prefiriendo el elegido),
+            // porque por país suele haber muy pocos. "Todos": solo el país elegido.
+            val resp = if (cat != null)
+                Net.api.channels(country = null, category = cat, prefer = country)
+            else
+                Net.api.channels(country = country, category = null)
+            resp.items ?: emptyList()
         }
     }
 }
