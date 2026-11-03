@@ -214,9 +214,18 @@ export default function Landing() {
   const [quick, setQuick] = useState('');
   const [scrolled, setScrolled] = useState(false);
   const [faq, setFaq] = useState(-1);
+  const [appVer, setAppVer] = useState(''); // versión real del APK hospedado
   const revealRefs = useRef([]);
 
   const openAuth = (mode, prefill = '') => setAuth({ open: true, mode, prefill });
+
+  // Versión del APK que está realmente arriba (misma que descarga el usuario).
+  useEffect(() => {
+    fetch('/api/app/version')
+      .then((r) => r.json())
+      .then((v) => v?.versionName && setAppVer(String(v.versionName)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -289,11 +298,12 @@ export default function Landing() {
           <div className="lp-hero-price">
             Desde <strong>{PRICE} Gs</strong> por mes · <button className="lp-link" onClick={() => openAuth('login')}>probá gratis</button>
           </div>
-          <a className="lp-apk" href={APK_URL} rel="noopener noreferrer">
+          <a className="lp-apk" href={APK_URL} download rel="noopener noreferrer">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 3.5v9m0 0 3.5-3.5M12 12.5 8.5 9M5 16.5v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Descargar app para Android
+            {appVer && <span className="lp-apk-ver">versión {appVer}</span>}
           </a>
         </div>
       </section>
@@ -380,7 +390,7 @@ export default function Landing() {
             <button className="lp-link" onClick={() => openAuth('register')}>Crear cuenta</button>
             <a className="lp-link" href={WA_LINK} target="_blank" rel="noopener noreferrer">WhatsApp</a>
             <a className="lp-link" href="#planes">Planes</a>
-            <a className="lp-link" href={APK_URL}>Descargar app</a>
+            <a className="lp-link" href={APK_URL} download>Descargar app{appVer ? ` (v${appVer})` : ''}</a>
           </div>
           <p className="lp-foot-copy">© {new Date().getFullYear()} CineTV · Hecho en Paraguay 🇵🇾</p>
         </div>
