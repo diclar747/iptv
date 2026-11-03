@@ -41,6 +41,10 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.mediarouter.app.MediaRouteButton
+import com.google.android.gms.cast.framework.CastButtonFactory
+import com.google.android.gms.cast.framework.CastContext
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -167,6 +171,7 @@ private fun TopBar(user: User?, onSearch: () -> Unit, onProfile: () -> Unit) {
     ) {
         Text("CineTV", color = Red, fontSize = 24.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.weight(1f))
+        CastButton()
         IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, "Buscar", tint = Color.White) }
         Box(
             Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF3A3F49)).clickable { onProfile() },
@@ -175,6 +180,24 @@ private fun TopBar(user: User?, onSearch: () -> Unit, onProfile: () -> Unit) {
             Text((user?.username?.firstOrNull() ?: 'U').uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
+}
+
+// Botón de Chromecast (MediaRouteButton nativo). Solo aparece si Cast está
+// disponible en el dispositivo; al tocarlo muestra los dispositivos para
+// proyectar. Igual que el del reproductor, pero accesible desde la navegación.
+@Composable
+private fun CastButton() {
+    val context = LocalContext.current
+    val available = remember { runCatching { CastContext.getSharedInstance(context) }.isSuccess }
+    if (!available) return
+    AndroidView(
+        modifier = Modifier.size(40.dp),
+        factory = { ctx ->
+            MediaRouteButton(ctx).apply {
+                CastButtonFactory.setUpMediaRouteButton(ctx.applicationContext, this)
+            }
+        }
+    )
 }
 
 @Composable
@@ -239,7 +262,9 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun LiveTab(vm: AppViewModel) {
     val countries = vm.meta?.countries.orEmpty()
-    var country by remember { mutableStateOf("PY") }
+    // Arranca en el país detectado por IP; si cambia la detección, se reajusta
+    // (hasta que el usuario elija otro manualmente).
+    var country by remember(vm.geoCountry) { mutableStateOf(vm.geoCountry) }
     var cat by remember { mutableStateOf<String?>(null) } // null | "sports" | "news"
     var expanded by remember { mutableStateOf(false) }
     val current = countries.firstOrNull { it.code == country }
@@ -324,25 +349,31 @@ private fun PosterCard(card: Card, modifier: Modifier = Modifier.width(118.dp), 
     }
 }
 
-// Tarjeta de canal: tile 16:10 uniforme, logo centrado SIN recortar (Fit) sobre
-// fondo oscuro, con badge "EN VIVO". Resuelve los logos disparejos/cortados.
+// Tarjeta de canal: tile 16:10 uniforme con fondo CLARO (igual que la web), el
+// logo centrado SIN recortar (Fit) ocupando una fracción fija del tile para que
+// todos se vean del mismo tamaño, con badge "EN VIVO". Resuelve los logos
+// disparejos/encimados y los logos oscuros que se perdían sobre fondo negro.
+private val LogoTile = Brush.radialGradient(listOf(Color(0xFFF4F7FB), Color(0xFFDBE3EE)))
+
 @Composable
 private fun ChannelCard(card: Card, modifier: Modifier = Modifier.width(150.dp), onClick: () -> Unit) {
     Column(modifier.clickable { onClick() }) {
         Box(
             Modifier.fillMaxWidth().aspectRatio(16f / 10f)
-                .clip(RoundedCornerShape(12.dp)).background(Color(0xFF14161C)),
+                .clip(RoundedCornerShape(12.dp)).background(LogoTile),
             contentAlignment = Alignment.Center
         ) {
             val logo = card.logo ?: card.image
             if (logo != null) {
+                // 76% del tile: padding proporcional (como object-fit:contain + %),
+                // así el logo entra uniforme sin importar su relación de aspecto.
                 AsyncImage(
                     logo, card.displayTitle, contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().padding(16.dp)
+                    modifier = Modifier.fillMaxSize(0.76f)
                 )
             } else {
                 Text(
-                    card.displayTitle, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                    card.displayTitle, color = Color(0xFF1B2433), fontSize = 15.sp, fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(10.dp)
                 )

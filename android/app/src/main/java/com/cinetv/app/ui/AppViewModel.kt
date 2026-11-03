@@ -38,6 +38,9 @@ class AppViewModel : ViewModel() {
         private set
     var meta by mutableStateOf<com.cinetv.app.data.Meta?>(null)
         private set
+    // País detectado por IP (para abrir En Vivo en el país del usuario).
+    var geoCountry by mutableStateOf("PY")
+        private set
 
     var detail by mutableStateOf<Detail?>(null)
     var play by mutableStateOf<PlayTarget?>(null)
@@ -86,6 +89,7 @@ class AppViewModel : ViewModel() {
         } catch (_: Exception) {}
         rows = out
         try { meta = api.meta() } catch (_: Exception) { /* opcional */ }
+        try { api.geo().country?.let { geoCountry = it } } catch (_: Exception) { /* queda PY */ }
     }
 
     fun refreshHome() { viewModelScope.launch { loadHome() } }

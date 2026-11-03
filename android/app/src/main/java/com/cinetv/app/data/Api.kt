@@ -18,6 +18,9 @@ interface Api {
     @GET("api/meta")
     suspend fun meta(): Meta
 
+    @GET("api/geo")
+    suspend fun geo(): GeoResp
+
     @GET("api/app/version")
     suspend fun appVersion(): AppVersion
 

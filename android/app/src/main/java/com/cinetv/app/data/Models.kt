@@ -25,6 +25,7 @@ data class Country(val code: String = "", val name: String? = null, val flag: St
 data class CategoryMeta(val id: String? = null, val name: String? = null, val count: Int? = null)
 data class Meta(val countries: List<Country>? = null, val categories: List<CategoryMeta>? = null)
 data class AppVersion(val versionCode: Int = 0, val versionName: String? = null, val url: String? = null)
+data class GeoResp(val country: String? = null)
 
 // Tarjeta común para película, serie o canal (los campos sobrantes quedan null).
 data class Card(
