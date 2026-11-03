@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import CatalogAdmin from './CatalogAdmin.jsx';
 
+const fmtGs = (n) => (n == null ? '—' : '₲' + new Intl.NumberFormat('es-PY').format(n));
+
 export default function AdminPanel() {
   const [tab, setTab] = useState('resumen');
   const [stats, setStats] = useState(null);
   const [resellers, setResellers] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [error, setError] = useState(null);
 
   async function loadAll() {
@@ -16,24 +19,28 @@ export default function AdminPanel() {
       setStats(s); setResellers(r); setPackages(p);
     } catch (e) { setError(e.message); }
   }
+  async function loadRequests() {
+    try { setRequests(await api.adminCreditRequests()); } catch (e) { setError(e.message); }
+  }
   useEffect(() => { loadAll(); }, []);
+  useEffect(() => { if (tab === 'solicitudes') loadRequests(); }, [tab]);
 
-  // --- Formularios ---
+  const pending = requests.filter((r) => r.status === 'pending').length;
+
+  // --- Resellers ---
   const [nr, setNr] = useState({ username: '', password: '', credits: 10 });
   async function createReseller(e) {
-    e.preventDefault();
-    setError(null);
+    e.preventDefault(); setError(null);
     try {
       await api.createReseller({ ...nr, credits: Number(nr.credits) || 0 });
-      setNr({ username: '', password: '', credits: 10 });
-      loadAll();
+      setNr({ username: '', password: '', credits: 10 }); loadAll();
     } catch (e) { setError(e.message); }
   }
-
-  async function addCredits(r) {
-    const v = window.prompt(`Créditos a sumar a "${r.username}" (negativo para restar):`, '10');
-    if (v == null) return;
-    try { await api.addCredits(r.id, parseInt(v, 10), 'Ajuste manual'); loadAll(); }
+  const [editCr, setEditCr] = useState({ id: null, value: '' }); // asignar créditos inline
+  async function saveCredits(r) {
+    const amount = parseInt(editCr.value, 10);
+    if (!amount) { setEditCr({ id: null, value: '' }); return; }
+    try { await api.addCredits(r.id, amount, 'Ajuste manual'); setEditCr({ id: null, value: '' }); loadAll(); }
     catch (e) { setError(e.message); }
   }
   async function toggleReseller(r) {
@@ -41,17 +48,18 @@ export default function AdminPanel() {
     catch (e) { setError(e.message); }
   }
 
-  const [np, setNp] = useState({ name: '', durationDays: 30, credits: 1, maxConnections: 1 });
+  // --- Paquetes ---
+  const [np, setNp] = useState({ name: '', durationDays: 30, credits: 1, maxConnections: 1, adminPrice: '', suggestedPrice: '' });
   async function createPackage(e) {
     e.preventDefault();
     try {
       await api.createPackage({
-        name: np.name,
-        durationDays: Number(np.durationDays),
-        credits: Number(np.credits),
+        name: np.name, durationDays: Number(np.durationDays), credits: Number(np.credits),
         maxConnections: Number(np.maxConnections),
+        adminPrice: np.adminPrice === '' ? null : Number(np.adminPrice),
+        suggestedPrice: np.suggestedPrice === '' ? null : Number(np.suggestedPrice),
       });
-      setNp({ name: '', durationDays: 30, credits: 1, maxConnections: 1 });
+      setNp({ name: '', durationDays: 30, credits: 1, maxConnections: 1, adminPrice: '', suggestedPrice: '' });
       loadAll();
     } catch (e) { setError(e.message); }
   }
@@ -59,12 +67,29 @@ export default function AdminPanel() {
     try { await api.setPackageActive(p.id, !p.active); loadAll(); }
     catch (e) { setError(e.message); }
   }
+  async function savePkgPrice(p, field, value) {
+    const num = value === '' ? null : Number(value);
+    if ((p[field] ?? null) === num) return;
+    try { await api.updatePackage(p.id, { [field]: num }); loadAll(); }
+    catch (e) { setError(e.message); }
+  }
+
+  // --- Solicitudes ---
+  async function resolveReq(r, ok) {
+    try {
+      await (ok ? api.approveCreditRequest(r.id) : api.rejectCreditRequest(r.id));
+      await Promise.all([loadRequests(), loadAll()]);
+    } catch (e) { setError(e.message); }
+  }
 
   return (
     <div className="panel">
       <div className="panel-tabs">
         <button className={tab === 'resumen' ? 'on' : ''} onClick={() => setTab('resumen')}>Resumen</button>
-        <button className={tab === 'resellers' ? 'on' : ''} onClick={() => setTab('resellers')}>Resellers</button>
+        <button className={tab === 'resellers' ? 'on' : ''} onClick={() => setTab('resellers')}>Distribuidores</button>
+        <button className={tab === 'solicitudes' ? 'on' : ''} onClick={() => setTab('solicitudes')}>
+          Solicitudes{pending ? <span className="tab-badge">{pending}</span> : null}
+        </button>
         <button className={tab === 'paquetes' ? 'on' : ''} onClick={() => setTab('paquetes')}>Paquetes</button>
         <button className={tab === 'catalogo' ? 'on' : ''} onClick={() => setTab('catalogo')}>Películas y Series</button>
       </div>
@@ -75,10 +100,10 @@ export default function AdminPanel() {
 
       {tab === 'resumen' && stats && (
         <div className="stat-grid">
-          <Stat label="Resellers" value={stats.resellers} />
+          <Stat label="Distribuidores" value={stats.resellers} />
           <Stat label="Clientes" value={stats.clients} />
           <Stat label="Clientes activos" value={stats.clients_active} accent />
-          <Stat label="Créditos en circulación" value={stats.credits_in_circulation} />
+          <Stat label="Saldo en circulación" value={stats.credits_in_circulation} />
           <Stat label="Paquetes activos" value={stats.packages} />
         </div>
       )}
@@ -90,13 +115,13 @@ export default function AdminPanel() {
               onChange={(e) => setNr({ ...nr, username: e.target.value })} required />
             <input placeholder="contraseña" value={nr.password}
               onChange={(e) => setNr({ ...nr, password: e.target.value })} required />
-            <input type="number" placeholder="créditos" value={nr.credits} min="0" style={{ width: 90 }}
+            <input type="number" placeholder="saldo" value={nr.credits} min="0" style={{ width: 90 }}
               onChange={(e) => setNr({ ...nr, credits: e.target.value })} />
-            <button className="verify" type="submit">+ Reseller</button>
+            <button className="verify" type="submit">+ Distribuidor</button>
           </form>
           <div className="table">
             <div className="tr th">
-              <span>Usuario</span><span>Créditos</span><span>Clientes</span><span>Estado</span><span>Acciones</span>
+              <span>Usuario</span><span>Saldo</span><span>Clientes</span><span>Estado</span><span>Acciones</span>
             </div>
             {resellers.map((r) => (
               <div className="tr" key={r.id}>
@@ -105,39 +130,90 @@ export default function AdminPanel() {
                 <span className="mono">{r.clientCount}</span>
                 <span><Badge ok={r.status === 'active'}>{r.status === 'active' ? 'activo' : 'off'}</Badge></span>
                 <span className="actions">
-                  <button onClick={() => addCredits(r)}>+ créd.</button>
-                  <button onClick={() => toggleReseller(r)}>{r.status === 'active' ? 'Deshab.' : 'Activar'}</button>
+                  {editCr.id === r.id ? (
+                    <>
+                      <input type="number" autoFocus value={editCr.value} placeholder="±saldo" style={{ width: 70 }}
+                        onChange={(e) => setEditCr({ id: r.id, value: e.target.value })}
+                        onKeyDown={(e) => e.key === 'Enter' && saveCredits(r)} />
+                      <button onClick={() => saveCredits(r)}>OK</button>
+                      <button onClick={() => setEditCr({ id: null, value: '' })}>✕</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => setEditCr({ id: r.id, value: '' })}>+ saldo</button>
+                      <button onClick={() => toggleReseller(r)}>{r.status === 'active' ? 'Deshab.' : 'Activar'}</button>
+                    </>
+                  )}
                 </span>
               </div>
             ))}
-            {resellers.length === 0 && <div className="tr empty">Sin resellers todavía.</div>}
+            {resellers.length === 0 && <div className="tr empty">Sin distribuidores todavía.</div>}
           </div>
         </>
       )}
 
+      {tab === 'solicitudes' && (
+        <div className="table">
+          <div className="tr th">
+            <span>Fecha</span><span>Quién</span><span>Tipo</span><span>Saldo</span><span>Estado</span><span>Acciones</span>
+          </div>
+          {requests.map((r) => (
+            <div className="tr" key={r.id}>
+              <span className="mono small">{new Date(r.createdAt).toLocaleString('es-PY')}</span>
+              <span className="strong">{r.requester}</span>
+              <span>{r.kind === 'upgrade' ? 'Alta distribuidor' : 'Saldo'}</span>
+              <span className="mono">{r.amount || '—'}</span>
+              <span><Badge ok={r.status === 'approved'} off={r.status === 'rejected'}>
+                {r.status === 'pending' ? 'pendiente' : r.status === 'approved' ? 'aprobada' : 'rechazada'}</Badge></span>
+              <span className="actions">
+                {r.status === 'pending' ? (
+                  <>
+                    <button className="verify" onClick={() => resolveReq(r, true)}>Aprobar</button>
+                    <button onClick={() => resolveReq(r, false)}>Rechazar</button>
+                  </>
+                ) : <span className="small muted">{r.note || '—'}</span>}
+              </span>
+            </div>
+          ))}
+          {requests.length === 0 && <div className="tr empty">Sin solicitudes.</div>}
+        </div>
+      )}
+
       {tab === 'paquetes' && (
         <>
-          <form className="row-form" onSubmit={createPackage}>
+          <form className="row-form wrap" onSubmit={createPackage}>
             <input placeholder="nombre" value={np.name}
               onChange={(e) => setNp({ ...np, name: e.target.value })} required />
-            <input type="number" placeholder="días" value={np.durationDays} min="1" style={{ width: 80 }}
+            <input type="number" placeholder="días" value={np.durationDays} min="1" style={{ width: 70 }}
               onChange={(e) => setNp({ ...np, durationDays: e.target.value })} />
-            <input type="number" placeholder="créditos" value={np.credits} min="0" style={{ width: 90 }}
+            <input type="number" placeholder="saldo" value={np.credits} min="0" style={{ width: 70 }}
               onChange={(e) => setNp({ ...np, credits: e.target.value })} />
-            <input type="number" placeholder="conex." value={np.maxConnections} min="1" style={{ width: 80 }}
+            <input type="number" placeholder="conex." value={np.maxConnections} min="1" style={{ width: 70 }}
               onChange={(e) => setNp({ ...np, maxConnections: e.target.value })} />
+            <input type="number" placeholder="₲ al admin" value={np.adminPrice} min="0" step="1000" style={{ width: 100 }}
+              onChange={(e) => setNp({ ...np, adminPrice: e.target.value })} />
+            <input type="number" placeholder="₲ sugerido" value={np.suggestedPrice} min="0" step="1000" style={{ width: 100 }}
+              onChange={(e) => setNp({ ...np, suggestedPrice: e.target.value })} />
             <button className="verify" type="submit">+ Paquete</button>
           </form>
-          <div className="table">
+          <p className="muted small" style={{ margin: '4px 2px 10px' }}>
+            <b>₲ al admin</b> = lo que el distribuidor te paga. <b>₲ sugerido</b> = precio de referencia al público.
+          </p>
+          <div className="table pkg">
             <div className="tr th">
-              <span>Paquete</span><span>Días</span><span>Créditos</span><span>Conex.</span><span>Estado</span>
+              <span>Paquete</span><span>Días</span><span>Saldo</span><span>₲ al admin</span><span>₲ sugerido</span><span>Estado</span>
             </div>
             {packages.map((p) => (
               <div className="tr" key={p.id}>
                 <span className="strong">{p.name}</span>
                 <span className="mono">{p.durationDays}</span>
                 <span className="mono">{p.credits}</span>
-                <span className="mono">{p.maxConnections}</span>
+                <span className="price-cell"><span>₲</span>
+                  <input type="number" min="0" step="1000" defaultValue={p.adminPrice ?? ''} placeholder="0"
+                    onBlur={(e) => savePkgPrice(p, 'adminPrice', e.target.value)} /></span>
+                <span className="price-cell"><span>₲</span>
+                  <input type="number" min="0" step="1000" defaultValue={p.suggestedPrice ?? ''} placeholder="0"
+                    onBlur={(e) => savePkgPrice(p, 'suggestedPrice', e.target.value)} /></span>
                 <span className="actions">
                   <button onClick={() => togglePackage(p)}>
                     <Badge ok={p.active}>{p.active ? 'activo' : 'off'}</Badge>
@@ -160,6 +236,6 @@ function Stat({ label, value, accent }) {
     </div>
   );
 }
-function Badge({ ok, children }) {
-  return <span className={`badge ${ok ? 'ok' : 'off'}`}>{children}</span>;
+function Badge({ ok, off, children }) {
+  return <span className={`badge ${ok ? 'ok' : off ? 'off' : ''}`}>{children}</span>;
 }

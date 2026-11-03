@@ -50,6 +50,17 @@ export const api = {
   updateProfile: (b) => patch('/profile', b),
   resellerPrices: () => get('/reseller/prices'),
   setResellerPrice: (packageId, price) => patch('/reseller/prices', { packageId, price }),
+  // Datos de pago del proveedor al que le pago (admin para un distribuidor,
+  // distribuidor para un cliente).
+  billingProvider: () => get('/billing/provider'),
+
+  // Solicitudes de saldo / de alta como distribuidor
+  createCreditRequest: (b) => post('/credit-requests', b),
+  myCreditRequests: () => get('/credit-requests/mine'),
+  resellerCreditRequests: (status) => get('/reseller/credit-requests', { status }),
+  adminCreditRequests: (status) => get('/admin/credit-requests', { status }),
+  approveCreditRequest: (id) => post(`/credit-requests/${id}/approve`, {}),
+  rejectCreditRequest: (id) => post(`/credit-requests/${id}/reject`, {}),
 
   // Control de conexiones
   watchStart: (channelId) => post('/watch/start', { channelId }),
@@ -103,6 +114,7 @@ export const api = {
   addCredits: (id, amount, note) => post(`/admin/resellers/${id}/credits`, { amount, note }),
   createPackage: (b) => post('/admin/packages', b),
   setPackageActive: (id, active) => patch(`/admin/packages/${id}`, { active }),
+  updatePackage: (id, b) => patch(`/admin/packages/${id}`, b),
 
   // Reseller
   resellerMe: () => get('/reseller/me'),

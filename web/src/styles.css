@@ -869,6 +869,32 @@ body{background:#050609;background-image:radial-gradient(ellipse at 0 100%,#1710
 .price-in span { color: var(--muted); }
 .price-in input { width: 112px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font-size: 15px; text-align: right; }
 
+/* ---------- Distribuidores: solicitudes, precios, datos bancarios ---------- */
+/* Contador de pendientes en la pestaña */
+.tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px;
+  margin-left: 6px; padding: 0 5px; border-radius: 9px; background: var(--live); color: #fff;
+  font-size: 11px; font-weight: 700; line-height: 1; }
+
+/* Solicitar saldo (barra sobre las pestañas del distribuidor) */
+.ask-credits { margin: 2px 0 4px; }
+.ask-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ask-row input { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font-size: 15px; width: 180px; }
+.ask-row input:focus { border-color: var(--signal); outline: none; }
+
+/* Precio editable dentro de una celda de la tabla de paquetes */
+.price-cell { display: flex; align-items: center; gap: 4px; }
+.price-cell span { color: var(--muted); }
+.price-cell input { width: 90px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 8px; font-size: 14px; text-align: right; }
+.price-cell input:focus { border-color: var(--signal); outline: none; }
+
+/* Caja de datos bancarios del proveedor (cómo pagar) */
+.bank-box { display: grid; gap: 8px; margin-top: 10px; }
+.bank-box > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px;
+  background: var(--panel); border: 1px solid var(--line-soft); border-radius: 8px; }
+.bank-box span { color: var(--muted); font-size: 13px; }
+.bank-box b { font-size: 14px; text-align: right; word-break: break-word; }
+
 /* ---------- Barra inferior tipo app (solo móvil) ---------- */
 .bottom-nav { display: none; }
 @media (max-width: 900px) {
