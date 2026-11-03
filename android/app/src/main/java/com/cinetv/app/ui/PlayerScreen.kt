@@ -135,6 +135,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
                     factory = { ctx ->
                         MediaRouteButton(ctx).apply {
                             CastButtonFactory.setUpMediaRouteButton(ctx.applicationContext, this)
+                            setAlwaysVisible(true) // ícono visible aunque no haya dispositivos aún
                         }
                     }
                 )

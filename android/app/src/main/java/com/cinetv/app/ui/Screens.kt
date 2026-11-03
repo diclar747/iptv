@@ -203,9 +203,32 @@ private fun CastButton() {
         factory = { ctx ->
             MediaRouteButton(ctx).apply {
                 CastButtonFactory.setUpMediaRouteButton(ctx.applicationContext, this)
+                setAlwaysVisible(true) // mostrar el ícono aunque no haya dispositivos aún
             }
         }
     )
+}
+
+// Acción "Transmitir" (Chromecast) con etiqueta, para la barra de acciones de
+// la ficha. Siempre visible; al tocarla abre el selector de dispositivos.
+@Composable
+private fun CastAction() {
+    val context = LocalContext.current
+    val available = remember { runCatching { CastContext.getSharedInstance(context) }.isSuccess }
+    if (!available) return
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        AndroidView(
+            modifier = Modifier.size(26.dp),
+            factory = { ctx ->
+                MediaRouteButton(ctx).apply {
+                    CastButtonFactory.setUpMediaRouteButton(ctx.applicationContext, this)
+                    setAlwaysVisible(true)
+                }
+            }
+        )
+        Spacer(Modifier.height(4.dp))
+        Text("Transmitir", color = Muted, fontSize = 11.sp)
+    }
 }
 
 @Composable
@@ -658,6 +681,7 @@ private fun SocialSection(vm: AppViewModel, type: String, id: String, title: Str
             }
             ctx.startActivity(android.content.Intent.createChooser(i, "Compartir"))
         }
+        CastAction()
     }
 
     Text(
@@ -776,12 +800,15 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
                     val c = detail.c
                     item {
                         ChannelHeader(c)
-                        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                            Button(onClick = { vm.playChannel(c); vm.closeDetail() }, colors = ButtonDefaults.buttonColors(containerColor = Red)) {
-                                Icon(Icons.Filled.PlayArrow, null); Text(" Ver en vivo", fontWeight = FontWeight.Bold)
-                            }
+                        Button(
+                            onClick = { vm.playChannel(c); vm.closeDetail() },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(52.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Red)
+                        ) {
+                            Icon(Icons.Filled.PlayArrow, null); Text("  Ver en vivo", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
-                        Text("Señal en vivo vía CineTV", color = Color(0xFF5C6879), fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp))
+                        Text("Señal en vivo vía CineTV", color = Color(0xFF5C6879), fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 2.dp))
                         SocialSection(vm, "channel", c.id, c.displayTitle, allowList = false)
                     }
                 }
@@ -793,20 +820,35 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
     }
 }
 
-// Cabecera de canal: logo centrado (Fit) sobre fondo oscuro + badge EN VIVO.
+// Cabecera de canal moderna: hero con degradado y el logo en una tarjeta
+// elevada (mismo lenguaje que los tiles: oscuro, borde sutil y sombra), badge
+// EN VIVO, título grande y chips de país/categoría.
 @Composable
 private fun ChannelHeader(card: Card) {
-    Box(Modifier.fillMaxWidth().height(200.dp).background(Color(0xFF0E0F14)), contentAlignment = Alignment.Center) {
-        val logo = card.logo ?: card.image
-        if (logo != null) {
-            AsyncImage(
-                logo, card.displayTitle, contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxWidth(0.5f).aspectRatio(1f).padding(8.dp)
-            )
+    Box(
+        Modifier.fillMaxWidth().height(240.dp)
+            .background(Brush.verticalGradient(listOf(Color(0xFF1C2130), Color(0xFF0C0D12)))),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            Modifier.fillMaxWidth(0.56f).aspectRatio(16f / 10f)
+                .shadow(12.dp, RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF232838), Color(0xFF12141B))))
+                .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(16.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            val logo = card.logo ?: card.image
+            if (logo != null) {
+                AsyncImage(logo, card.displayTitle, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize(0.72f))
+            } else {
+                Text(card.displayTitle, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(14.dp))
+            }
         }
         Row(
-            Modifier.align(Alignment.TopStart).padding(12.dp)
-                .clip(RoundedCornerShape(5.dp)).background(Color(0xE6E50914)).padding(horizontal = 8.dp, vertical = 4.dp),
+            Modifier.align(Alignment.TopStart).padding(16.dp)
+                .clip(RoundedCornerShape(6.dp)).background(Color(0xE6E50914)).padding(horizontal = 9.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
@@ -814,10 +856,22 @@ private fun ChannelHeader(card: Card) {
             Text("EN VIVO", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
         }
     }
-    Text(card.displayTitle, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
-    val sub = listOfNotNull(card.category, card.country).joinToString("  ·  ")
-    if (sub.isNotBlank()) Text(sub, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 2.dp, bottom = 8.dp))
-    else Spacer(Modifier.height(8.dp))
+    Text(card.displayTitle, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 16.dp, top = 12.dp))
+    val chips = listOfNotNull(card.country, card.category)
+    if (chips.isNotEmpty()) {
+        Row(Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            chips.forEach { HeaderPill(it) }
+        }
+    } else Spacer(Modifier.height(8.dp))
+}
+
+@Composable
+private fun HeaderPill(text: String) {
+    Text(
+        text, color = Color(0xFFC7CBD4), fontSize = 12.sp,
+        modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF1B1F28))
+            .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(20.dp)).padding(horizontal = 12.dp, vertical = 5.dp)
+    )
 }
 
 @Composable
