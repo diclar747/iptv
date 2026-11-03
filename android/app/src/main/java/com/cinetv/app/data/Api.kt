@@ -3,6 +3,7 @@ package com.cinetv.app.data
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -79,7 +80,111 @@ interface Api {
 
     @DELETE("api/catalog/comments/{id}")
     suspend fun deleteComment(@Path("id") id: String)
+
+    // ---------- Panel distribuidor (reseller) ----------
+    @GET("api/reseller/me")
+    suspend fun resellerMe(): ResellerMe
+
+    @GET("api/reseller/clients")
+    suspend fun clients(): List<ClientUser>
+
+    @POST("api/reseller/clients")
+    suspend fun createClient(@Body body: CreateClientReq): ClientUser
+
+    @POST("api/reseller/clients/{id}/renew")
+    suspend fun renewClient(@Path("id") id: String, @Body body: PackageIdReq): ClientUser
+
+    @PATCH("api/reseller/clients/{id}")
+    suspend fun setClientStatus(@Path("id") id: String, @Body body: StatusReq): ClientUser
+
+    @GET("api/reseller/subresellers")
+    suspend fun subresellers(): List<SubReseller>
+
+    @POST("api/reseller/subresellers")
+    suspend fun createSubreseller(@Body body: CreateSubReq): SubReseller
+
+    @POST("api/reseller/subresellers/{id}/credits")
+    suspend fun transferToSub(@Path("id") id: String, @Body body: AmountReq): SubReseller
+
+    @GET("api/reseller/transactions")
+    suspend fun transactions(): List<Tx>
+
+    @GET("api/packages")
+    suspend fun packages(): List<Pkg>
+
+    @GET("api/profile")
+    suspend fun profile(): Profile
+
+    @PATCH("api/profile")
+    suspend fun updateProfile(@Body body: ProfileUpdate): Profile
+
+    @GET("api/billing/provider")
+    suspend fun billingProvider(): ProviderBilling
+
+    @POST("api/credit-requests")
+    suspend fun createCreditRequest(@Body body: CreditReqReq): CreditRequest
+
+    @GET("api/credit-requests/mine")
+    suspend fun myCreditRequests(): List<CreditRequest>
+
+    @GET("api/reseller/credit-requests")
+    suspend fun resellerCreditRequests(): List<CreditRequest>
+
+    @POST("api/credit-requests/{id}/approve")
+    suspend fun approveCreditRequest(@Path("id") id: String): CreditRequest
+
+    @POST("api/credit-requests/{id}/reject")
+    suspend fun rejectCreditRequest(@Path("id") id: String): CreditRequest
 }
+
+// ---------- Modelos del panel distribuidor ----------
+data class ResellerMe(
+    val credits: Int? = null, val unlimited: Boolean = false,
+    val clients: Int = 0, val clientsActive: Int = 0,
+)
+data class ClientUser(
+    val id: String = "", val username: String = "", val status: String? = null,
+    val packageName: String? = null, val expiresAt: String? = null, val maxConnections: Int? = null,
+)
+data class SubReseller(
+    val id: String = "", val username: String = "", val credits: Int = 0,
+    val clientCount: Int = 0, val status: String? = null,
+)
+data class Pkg(
+    val id: String = "", val name: String? = null, val durationDays: Int = 0, val credits: Int = 0,
+    val maxConnections: Int = 1, val adminPrice: Double? = null, val suggestedPrice: Double? = null,
+)
+data class Tx(val id: String = "", val at: String? = null, val type: String? = null, val amount: Int = 0, val note: String? = null)
+data class Profile(
+    val username: String = "", val role: String? = null, val credits: Int? = null,
+    val displayName: String? = null, val phone: String? = null, val address: String? = null,
+    val affiliateCode: String? = null,
+    val bankName: String? = null, val bankHolder: String? = null, val bankAccount: String? = null,
+    val bankAlias: String? = null, val bankDoc: String? = null,
+)
+data class ProviderBilling(
+    val username: String? = null, val displayName: String? = null, val phone: String? = null,
+    val bankName: String? = null, val bankHolder: String? = null, val bankAccount: String? = null,
+    val bankAlias: String? = null, val bankDoc: String? = null,
+)
+data class CreditRequest(
+    val id: String = "", val kind: String = "credits", val amount: Int = 0,
+    val status: String = "pending", val note: String? = null, val createdAt: String? = null,
+    val requester: String? = null,
+)
+
+// Cuerpos de petición
+data class CreateClientReq(val username: String, val password: String, val packageId: Int)
+data class PackageIdReq(val packageId: Int)
+data class StatusReq(val status: String)
+data class CreateSubReq(val username: String, val password: String, val credits: Int)
+data class AmountReq(val amount: Int)
+data class CreditReqReq(val kind: String, val amount: Int)
+data class ProfileUpdate(
+    val displayName: String? = null, val phone: String? = null, val address: String? = null,
+    val bankName: String? = null, val bankHolder: String? = null, val bankAccount: String? = null,
+    val bankAlias: String? = null, val bankDoc: String? = null,
+)
 
 data class FavReq(val type: String, val id: Long)
 

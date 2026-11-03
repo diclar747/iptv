@@ -84,7 +84,11 @@ import coil.compose.AsyncImage
 import com.cinetv.app.data.Card
 import com.cinetv.app.data.Comment
 import com.cinetv.app.data.CommentReq
+import com.cinetv.app.data.CreditReqReq
 import com.cinetv.app.data.Net
+import com.cinetv.app.data.Profile
+import com.cinetv.app.data.ProfileUpdate
+import com.cinetv.app.data.ProviderBilling
 import com.cinetv.app.data.ReactReq
 import com.cinetv.app.data.User
 import kotlinx.coroutines.launch
@@ -128,6 +132,7 @@ fun LoginScreen(vm: AppViewModel) {
 fun MainScreen(vm: AppViewModel) {
     var tab by remember { mutableStateOf(0) }
     var searchOpen by remember { mutableStateOf(false) }
+    var panelOpen by remember { mutableStateOf(false) }
     val tabs = listOf(
         "Inicio" to Icons.Filled.Home, "Pelis" to Icons.Filled.Movie,
         "Series" to Icons.Filled.Tv, "En Vivo" to Icons.Filled.LiveTv, "Perfil" to Icons.Filled.Person,
@@ -155,11 +160,12 @@ fun MainScreen(vm: AppViewModel) {
                 1 -> MoviesTab(vm)
                 2 -> GridTab(vm) { Net.api.seriesList() }
                 3 -> LiveTab(vm)
-                else -> ProfileScreen(vm)
+                else -> ProfileScreen(vm, onOpenPanel = { panelOpen = true })
             }
         }
     }
     if (searchOpen) SearchOverlay(vm) { searchOpen = false }
+    if (panelOpen) ResellerPanelScreen(onClose = { panelOpen = false })
     vm.detail?.let { DetailOverlay(vm, it) }
 }
 
@@ -423,12 +429,53 @@ private fun SearchOverlay(vm: AppViewModel, onClose: () -> Unit) {
 }
 
 @Composable
-private fun ProfileScreen(vm: AppViewModel) {
+private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
     val u = vm.user ?: return
     val ctx = LocalContext.current
-    val staff = u.role == "admin" || u.role == "reseller"
+    val scope = rememberCoroutineScope()
+    val isReseller = u.role == "reseller"
+    val isAdmin = u.role == "admin"
+    val staff = isReseller || isAdmin
     var favs by remember { mutableStateOf<List<Card>>(emptyList()) }
-    LaunchedEffect(Unit) { favs = try { Net.api.favorites() } catch (_: Exception) { emptyList() } }
+    var prof by remember { mutableStateOf<Profile?>(null) }
+    var provider by remember { mutableStateOf<ProviderBilling?>(null) }
+    var upPending by remember { mutableStateOf(false) }
+    var msg by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        favs = try { Net.api.favorites() } catch (_: Exception) { emptyList() }
+        prof = try { Net.api.profile() } catch (_: Exception) { null }
+        if (!isAdmin) provider = try { Net.api.billingProvider() } catch (_: Exception) { null }
+        if (u.role == "client") upPending = try {
+            Net.api.myCreditRequests().any { it.kind == "upgrade" && it.status == "pending" }
+        } catch (_: Exception) { false }
+    }
+
+    // Formulario de datos (incluye bancarios); se inicializa al llegar el perfil.
+    var displayName by remember(prof) { mutableStateOf(prof?.displayName ?: "") }
+    var phone by remember(prof) { mutableStateOf(prof?.phone ?: "") }
+    var bankName by remember(prof) { mutableStateOf(prof?.bankName ?: "") }
+    var bankHolder by remember(prof) { mutableStateOf(prof?.bankHolder ?: "") }
+    var bankAccount by remember(prof) { mutableStateOf(prof?.bankAccount ?: "") }
+    var bankAlias by remember(prof) { mutableStateOf(prof?.bankAlias ?: "") }
+    var bankDoc by remember(prof) { mutableStateOf(prof?.bankDoc ?: "") }
+
+    fun saveProfile() {
+        scope.launch {
+            try {
+                prof = Net.api.updateProfile(ProfileUpdate(
+                    displayName = displayName, phone = phone, bankName = bankName, bankHolder = bankHolder,
+                    bankAccount = bankAccount, bankAlias = bankAlias, bankDoc = bankDoc))
+                msg = "Guardado ✓"
+            } catch (e: Exception) { msg = e.message }
+        }
+    }
+    fun askUpgrade() {
+        scope.launch {
+            try { Net.api.createCreditRequest(CreditReqReq("upgrade", 0)); upPending = true; msg = "Solicitud enviada ✓" }
+            catch (e: Exception) { msg = e.message }
+        }
+    }
 
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
@@ -443,10 +490,8 @@ private fun ProfileScreen(vm: AppViewModel) {
         }
         item {
             Column(Modifier.padding(horizontal = 16.dp)) {
-                if (u.role == "reseller") {
-                    InfoRow("Créditos", (u.credits ?: 0).toString())
-                    u.phone?.let { InfoRow("Teléfono", it) }
-                    u.address?.let { InfoRow("Dirección", it) }
+                if (isReseller) {
+                    InfoRow("Saldo", (u.credits ?: 0).toString())
                     InfoRow("Enlace de afiliado", "live.cd.com.py/?ref=${u.username}")
                 }
                 if (u.role == "client") {
@@ -455,16 +500,74 @@ private fun ProfileScreen(vm: AppViewModel) {
                     u.expiresAt?.let { InfoRow("Vence", it.take(10)) }
                     InfoRow("Pantallas", (u.maxConnections ?: 1).toString())
                 }
-                if (u.role == "admin") InfoRow("Rol", "Administrador")
-                Spacer(Modifier.height(18.dp))
+                if (isAdmin) InfoRow("Rol", "Administrador")
+
+                Spacer(Modifier.height(16.dp))
                 if (staff) {
                     Button(
-                        onClick = { runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://live.cd.com.py"))) } },
+                        onClick = {
+                            if (isReseller) onOpenPanel()
+                            else runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://live.cd.com.py"))) }
+                        },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Red)
                     ) { Text("Panel de gestión", fontWeight = FontWeight.Bold) }
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(16.dp))
                 }
+
+                // Datos + datos bancarios (staff)
+                if (staff) {
+                    Text("Datos bancarios", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(if (isAdmin) "Tus distribuidores los ven para pagarte." else "Tus clientes los ven para pagarte.",
+                        color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+                    ProfileField("Nombre / Negocio", displayName) { displayName = it }
+                    ProfileField("Teléfono / WhatsApp", phone) { phone = it }
+                    ProfileField("Banco", bankName) { bankName = it }
+                    ProfileField("Titular", bankHolder) { bankHolder = it }
+                    ProfileField("Nº de cuenta", bankAccount) { bankAccount = it }
+                    ProfileField("Alias", bankAlias) { bankAlias = it }
+                    ProfileField("Cédula / RUC", bankDoc) { bankDoc = it }
+                    Button(onClick = { saveProfile() }, modifier = Modifier.fillMaxWidth().height(46.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("Guardar datos", fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                // Cómo pagar al proveedor (distribuidor ve al admin; cliente a su vendedor)
+                if (!isAdmin) {
+                    val p = provider
+                    val hasBank = p != null && (!p.bankName.isNullOrBlank() || !p.bankAccount.isNullOrBlank() || !p.bankAlias.isNullOrBlank())
+                    Text(if (isReseller) "Cómo pagar tu saldo" else "Cómo pagar", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    if (hasBank) {
+                        Text("Transferí a ${p!!.displayName ?: p.username ?: "tu proveedor"} y enviá el comprobante.",
+                            color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+                        p.bankName?.let { InfoRow("Banco", it) }
+                        p.bankHolder?.let { InfoRow("Titular", it) }
+                        p.bankAccount?.let { InfoRow("Cuenta", it) }
+                        p.bankAlias?.let { InfoRow("Alias", it) }
+                        p.bankDoc?.let { InfoRow("CI/RUC", it) }
+                        p.phone?.let { InfoRow("WhatsApp", it) }
+                    } else {
+                        Text("Tu proveedor todavía no cargó sus datos de pago. Contactalo para renovar o ampliar tu acceso." +
+                            (p?.phone?.let { " ($it)" } ?: ""), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp))
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                // Cliente: convertirse en distribuidor
+                if (u.role == "client") {
+                    Text("¿Querés vender CineTV?", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Convertite en distribuidor: comprás saldo y revendés a tus clientes al precio que quieras.",
+                        color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+                    if (upPending) {
+                        Text("Solicitud enviada ⏳ — esperando aprobación.", color = Red, fontSize = 13.sp)
+                    } else {
+                        Button(onClick = { askUpgrade() }, modifier = Modifier.fillMaxWidth().height(46.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("Quiero ser distribuidor", fontWeight = FontWeight.Bold) }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                msg?.let { Text(it, color = Red, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp)) }
                 Button(
                     onClick = { vm.logout() }, modifier = Modifier.fillMaxWidth().height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16171D))
@@ -490,6 +593,14 @@ private fun InfoRow(label: String, value: String) {
         Text(value, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF1C1D25)))
+}
+
+@Composable
+private fun ProfileField(label: String, value: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value, onChange, label = { Text(label) }, singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    )
 }
 
 private fun roleLabel(r: String?) = when (r) {
