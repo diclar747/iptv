@@ -90,6 +90,17 @@ export default function AdminPanel() {
   // --- Canales manuales ---
   const emptyMc = { name: '', streamUrl: '', logoUrl: '', userAgent: '', referrer: '', country: 'PY', category: 'sports' };
   const [nmc, setNmc] = useState(emptyMc);
+  // Accesos rápidos: deportivos de Paraguay precargados (nombre + logo). Solo
+  // falta pegarles la URL .m3u8 y guardar.
+  const presetsDeportes = [
+    { name: 'GEN', logoUrl: 'https://i.imgur.com/vEMnZF4.png' },
+    { name: 'Tigo Sports', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Tigo_Sports_2025.png/960px-Tigo_Sports_2025.png' },
+    { name: 'Conmebol TV 1', logoUrl: 'https://i.imgur.com/0MnTzFK.png' },
+    { name: 'Conmebol TV 2', logoUrl: 'https://i.imgur.com/AeQ1IRU.png' },
+    { name: 'Conmebol TV 3', logoUrl: 'https://i.imgur.com/i7czXKt.png' },
+    { name: 'Conmebol TV 4', logoUrl: 'https://i.imgur.com/GLX8MhD.png' },
+  ];
+  const usePreset = (p) => setNmc({ ...emptyMc, ...p, country: 'PY', category: 'sports' });
   async function createManual(e) {
     e.preventDefault(); setError(null);
     try { await api.createManualChannel(nmc); setNmc(emptyMc); loadManual(); }
@@ -256,10 +267,16 @@ export default function AdminPanel() {
 
       {tab === 'canales' && (
         <>
-          <p className="muted small" style={{ margin: '2px 2px 10px' }}>
-            Canales cargados a mano (p. ej. <b>Tigo Sport</b> y deportes de Paraguay que iptv-org no trae).
+          <p className="muted small" style={{ margin: '2px 2px 8px' }}>
+            Canales cargados a mano (p. ej. <b>Tigo Sports</b> y deportes de Paraguay que iptv-org no trae).
             Aparecen en Inicio y en su categoría, y se reproducen por el mismo reproductor.
           </p>
+          <div className="row-form wrap" style={{ marginBottom: 10, alignItems: 'center' }}>
+            <span className="muted small" style={{ marginRight: 4 }}>Rápido:</span>
+            {presetsDeportes.map((p) => (
+              <button key={p.name} type="button" onClick={() => usePreset(p)}>+ {p.name}</button>
+            ))}
+          </div>
           <form className="row-form wrap" onSubmit={createManual}>
             <input placeholder="nombre" value={nmc.name} required
               onChange={(e) => setNmc({ ...nmc, name: e.target.value })} />
