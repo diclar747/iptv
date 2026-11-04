@@ -10,6 +10,7 @@
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { streamToken } from './streamToken.js';
+import { isResolvable, resolvePlatform } from './resolver.js';
 
 // UA de navegador por defecto: algunos orígenes rechazan UA vacío o de Node.
 const DEFAULT_UA =
@@ -59,9 +60,18 @@ function rewriteManifest(text, baseUrl, ua, ref, tokenMode) {
 
 export function streamHandler() {
   return async (req, res) => {
-    const target = req.query.url;
+    let target = req.query.url;
     if (!target || !/^https?:\/\//i.test(target)) {
       return res.status(400).json({ error: 'Parámetro url inválido' });
+    }
+    // Link de plataforma (Twitch/YouTube/Facebook): resolver a su HLS actual
+    // antes de proxear. Se hace tras la autorización (token/cookie) y con cache.
+    if (isResolvable(target)) {
+      try {
+        target = await resolvePlatform(target);
+      } catch (e) {
+        return res.status(502).json({ error: 'No se pudo resolver la señal', detail: e.message });
+      }
     }
     const ua = req.query.ua || DEFAULT_UA;
     const ref = req.query.ref || undefined;

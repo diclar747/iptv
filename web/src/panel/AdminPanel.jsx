@@ -100,10 +100,10 @@ export default function AdminPanel() {
     { name: 'Conmebol TV 3', logoUrl: 'https://i.imgur.com/i7czXKt.png', category: 'sports' },
     { name: 'Conmebol TV 4', logoUrl: 'https://i.imgur.com/GLX8MhD.png', category: 'sports' },
     { name: 'A24 Paraguay', logoUrl: 'https://i.imgur.com/XWBmjBk.png', category: 'news' },
-    { name: 'TVS Encarnación', logoUrl: 'https://i.ibb.co/s14qLnR/TVS.png', category: 'general' },
+    { name: 'TVS Encarnación', logoUrl: 'https://i.ibb.co/s14qLnR/TVS.png', category: 'general', streamUrl: 'https://twitch.tv/tvs_encarnacion' },
     { name: 'Telequince', logoUrl: 'https://i.imgur.com/og7xuqe.png', category: 'general' },
   ];
-  const usePreset = (p) => setNmc({ ...emptyMc, name: p.name, logoUrl: p.logoUrl, country: 'PY', category: p.category || 'general' });
+  const usePreset = (p) => setNmc({ ...emptyMc, name: p.name, logoUrl: p.logoUrl, streamUrl: p.streamUrl || '', country: 'PY', category: p.category || 'general' });
   async function createManual(e) {
     e.preventDefault(); setError(null);
     try { await api.createManualChannel(nmc); setNmc(emptyMc); loadManual(); }
@@ -272,7 +272,8 @@ export default function AdminPanel() {
         <>
           <p className="muted small" style={{ margin: '2px 2px 8px' }}>
             Canales cargados a mano (p. ej. <b>Tigo Sports</b> y deportes de Paraguay que iptv-org no trae).
-            Aparecen en Inicio y en su categoría, y se reproducen por el mismo reproductor.
+            En el stream podés pegar un <b>.m3u8 directo</b> o un <b>link de Twitch/YouTube/Facebook</b> en vivo
+            (el servidor lo resuelve solo). Aparecen en Inicio y en su categoría.
           </p>
           <div className="row-form wrap" style={{ marginBottom: 10, alignItems: 'center' }}>
             <span className="muted small" style={{ marginRight: 4 }}>Rápido:</span>
@@ -283,7 +284,7 @@ export default function AdminPanel() {
           <form className="row-form wrap" onSubmit={createManual}>
             <input placeholder="nombre" value={nmc.name} required
               onChange={(e) => setNmc({ ...nmc, name: e.target.value })} />
-            <input placeholder="URL del stream (.m3u8)" value={nmc.streamUrl} required style={{ minWidth: 220, flex: 1 }}
+            <input placeholder="URL .m3u8 o link de Twitch/YouTube/Facebook" value={nmc.streamUrl} required style={{ minWidth: 220, flex: 1 }}
               onChange={(e) => setNmc({ ...nmc, streamUrl: e.target.value })} />
             <input placeholder="URL del logo (opcional)" value={nmc.logoUrl} style={{ minWidth: 180, flex: 1 }}
               onChange={(e) => setNmc({ ...nmc, logoUrl: e.target.value })} />
