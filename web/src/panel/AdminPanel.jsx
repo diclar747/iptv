@@ -10,6 +10,7 @@ export default function AdminPanel() {
   const [resellers, setResellers] = useState([]);
   const [packages, setPackages] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [manual, setManual] = useState([]);
   const [error, setError] = useState(null);
 
   async function loadAll() {
@@ -22,8 +23,12 @@ export default function AdminPanel() {
   async function loadRequests() {
     try { setRequests(await api.adminCreditRequests()); } catch (e) { setError(e.message); }
   }
+  async function loadManual() {
+    try { setManual(await api.manualChannels()); } catch (e) { setError(e.message); }
+  }
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { if (tab === 'solicitudes') loadRequests(); }, [tab]);
+  useEffect(() => { if (tab === 'canales') loadManual(); }, [tab]);
 
   const pending = requests.filter((r) => r.status === 'pending').length;
 
@@ -82,6 +87,29 @@ export default function AdminPanel() {
     } catch (e) { setError(e.message); }
   }
 
+  // --- Canales manuales ---
+  const emptyMc = { name: '', streamUrl: '', logoUrl: '', userAgent: '', referrer: '', country: 'PY', category: 'sports' };
+  const [nmc, setNmc] = useState(emptyMc);
+  async function createManual(e) {
+    e.preventDefault(); setError(null);
+    try { await api.createManualChannel(nmc); setNmc(emptyMc); loadManual(); }
+    catch (e) { setError(e.message); }
+  }
+  async function toggleManual(c) {
+    try { await api.updateManualChannel(c.id, { ...toMc(c), enabled: !c.enabled }); loadManual(); }
+    catch (e) { setError(e.message); }
+  }
+  async function deleteManual(c) {
+    if (!window.confirm(`¿Eliminar el canal "${c.name}"?`)) return;
+    try { await api.deleteManualChannel(c.id); loadManual(); }
+    catch (e) { setError(e.message); }
+  }
+  // Mapea la fila (snake_case del backend) al cuerpo que espera la API.
+  const toMc = (c) => ({
+    name: c.name, streamUrl: c.stream_url, logoUrl: c.logo_url, userAgent: c.user_agent,
+    referrer: c.referrer, country: c.country, category: c.category, sort: c.sort,
+  });
+
   return (
     <div className="panel">
       <div className="panel-tabs">
@@ -91,6 +119,7 @@ export default function AdminPanel() {
           Solicitudes{pending ? <span className="tab-badge">{pending}</span> : null}
         </button>
         <button className={tab === 'paquetes' ? 'on' : ''} onClick={() => setTab('paquetes')}>Paquetes</button>
+        <button className={tab === 'canales' ? 'on' : ''} onClick={() => setTab('canales')}>Canales</button>
         <button className={tab === 'catalogo' ? 'on' : ''} onClick={() => setTab('catalogo')}>Películas y Series</button>
       </div>
 
@@ -221,6 +250,58 @@ export default function AdminPanel() {
                 </span>
               </div>
             ))}
+          </div>
+        </>
+      )}
+
+      {tab === 'canales' && (
+        <>
+          <p className="muted small" style={{ margin: '2px 2px 10px' }}>
+            Canales cargados a mano (p. ej. <b>Tigo Sport</b> y deportes de Paraguay que iptv-org no trae).
+            Aparecen en Inicio y en su categoría, y se reproducen por el mismo reproductor.
+          </p>
+          <form className="row-form wrap" onSubmit={createManual}>
+            <input placeholder="nombre" value={nmc.name} required
+              onChange={(e) => setNmc({ ...nmc, name: e.target.value })} />
+            <input placeholder="URL del stream (.m3u8)" value={nmc.streamUrl} required style={{ minWidth: 220, flex: 1 }}
+              onChange={(e) => setNmc({ ...nmc, streamUrl: e.target.value })} />
+            <input placeholder="URL del logo (opcional)" value={nmc.logoUrl} style={{ minWidth: 180, flex: 1 }}
+              onChange={(e) => setNmc({ ...nmc, logoUrl: e.target.value })} />
+            <input placeholder="User-Agent (opcional)" value={nmc.userAgent} style={{ minWidth: 160 }}
+              onChange={(e) => setNmc({ ...nmc, userAgent: e.target.value })} />
+            <input placeholder="Referer (opcional)" value={nmc.referrer} style={{ minWidth: 160 }}
+              onChange={(e) => setNmc({ ...nmc, referrer: e.target.value })} />
+            <input placeholder="país" value={nmc.country} style={{ width: 70 }}
+              onChange={(e) => setNmc({ ...nmc, country: e.target.value })} />
+            <select value={nmc.category} onChange={(e) => setNmc({ ...nmc, category: e.target.value })}>
+              <option value="sports">Deportes</option>
+              <option value="news">Noticias</option>
+              <option value="general">General</option>
+              <option value="movies">Películas</option>
+              <option value="entertainment">Entretenimiento</option>
+              <option value="kids">Infantil</option>
+              <option value="music">Música</option>
+              <option value="documentary">Documentales</option>
+            </select>
+            <button className="verify" type="submit">+ Canal</button>
+          </form>
+          <div className="table">
+            <div className="tr th">
+              <span>Canal</span><span>País</span><span>Categoría</span><span>Estado</span><span>Acciones</span>
+            </div>
+            {manual.map((c) => (
+              <div className="tr" key={c.id}>
+                <span className="strong" title={c.stream_url}>{c.name}</span>
+                <span className="mono">{c.country}</span>
+                <span>{c.category}</span>
+                <span><Badge ok={c.enabled}>{c.enabled ? 'activo' : 'off'}</Badge></span>
+                <span className="actions">
+                  <button onClick={() => toggleManual(c)}>{c.enabled ? 'Deshab.' : 'Activar'}</button>
+                  <button onClick={() => deleteManual(c)}>Eliminar</button>
+                </span>
+              </div>
+            ))}
+            {manual.length === 0 && <div className="tr empty">Sin canales manuales todavía.</div>}
           </div>
         </>
       )}

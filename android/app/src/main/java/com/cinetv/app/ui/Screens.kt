@@ -89,6 +89,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import androidx.compose.ui.unit.TextUnit
 import com.cinetv.app.data.Card
 import com.cinetv.app.data.Comment
 import com.cinetv.app.data.CommentReq
@@ -296,9 +298,7 @@ private fun ChannelHero(channels: List<Card>, onPlay: (Card) -> Unit, onOpen: (C
             modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(top = 40.dp)
         ) { c ->
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                val logo = c.logo ?: c.image
-                if (logo != null) AsyncImage(logo, c.displayTitle, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth(0.56f).height(130.dp))
-                else Text(c.displayTitle, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
+                ChannelLogo(c.logo ?: c.image, c.displayTitle, Modifier.fillMaxWidth(0.56f).height(130.dp), fontSize = 28.sp, textPadding = 16.dp)
             }
         }
         LiveChip(Modifier.align(Alignment.TopStart).padding(16.dp))
@@ -483,6 +483,28 @@ private fun PosterCard(card: Card, modifier: Modifier = Modifier.width(118.dp), 
 private val LogoTile = Brush.linearGradient(listOf(Color(0xFF1B1F28), Color(0xFF101217)))
 private val TileBorder = Color(0x14FFFFFF) // blanco 8% para el borde sutil
 
+// Logo de canal con respaldo: si la imagen no existe O FALLA al cargar, muestra
+// el nombre. Antes, un logo que no cargaba (p. ej. http bloqueado) dejaba el
+// tile vacío; ahora siempre se ve algo.
+@Composable
+private fun ChannelLogo(
+    logo: String?, title: String, imageModifier: Modifier,
+    fontSize: TextUnit = 15.sp, textPadding: Dp = 10.dp,
+) {
+    val fallback: @Composable () -> Unit = {
+        Text(
+            title, color = Color.White, fontSize = fontSize, fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(textPadding)
+        )
+    }
+    if (logo == null) { fallback(); return }
+    SubcomposeAsyncImage(
+        model = logo, contentDescription = title, contentScale = ContentScale.Fit,
+        modifier = imageModifier, error = { fallback() }
+    )
+}
+
 @Composable
 private fun ChannelCard(card: Card, modifier: Modifier = Modifier.width(150.dp), onClick: () -> Unit) {
     Column(modifier.clickable { onClick() }) {
@@ -493,21 +515,9 @@ private fun ChannelCard(card: Card, modifier: Modifier = Modifier.width(150.dp),
                 .border(1.dp, TileBorder, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
-            val logo = card.logo ?: card.image
-            if (logo != null) {
-                // 76% del tile: padding proporcional (como object-fit:contain + %),
-                // así el logo entra uniforme sin importar su relación de aspecto.
-                AsyncImage(
-                    logo, card.displayTitle, contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(0.76f)
-                )
-            } else {
-                Text(
-                    card.displayTitle, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(10.dp)
-                )
-            }
+            // 76% del tile: logo uniforme (object-fit:contain), con respaldo al
+            // nombre si la imagen falta o no carga.
+            ChannelLogo(card.logo ?: card.image, card.displayTitle, Modifier.fillMaxSize(0.76f))
             Row(
                 Modifier.align(Alignment.TopStart).padding(8.dp)
                     .clip(RoundedCornerShape(5.dp)).background(Color(0xE6E50914))
@@ -934,13 +944,7 @@ private fun ChannelHeader(card: Card) {
                 .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
-            val logo = card.logo ?: card.image
-            if (logo != null) {
-                AsyncImage(logo, card.displayTitle, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize(0.72f))
-            } else {
-                Text(card.displayTitle, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(14.dp))
-            }
+            ChannelLogo(card.logo ?: card.image, card.displayTitle, Modifier.fillMaxSize(0.72f), fontSize = 20.sp, textPadding = 14.dp)
         }
         Row(
             Modifier.align(Alignment.TopStart).padding(16.dp)

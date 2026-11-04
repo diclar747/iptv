@@ -9,21 +9,36 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
 
-// Red compartida: el MISMO OkHttpClient (con la cookie de sesión) lo usan Retrofit
-// y el reproductor (ExoPlayer), así los streams proxied pasan autenticados.
+// Red compartida. Dos clientes, ambos con la MISMA cookie de sesión:
+//  · okHttp      -> API (Retrofit): timeouts cortos normales.
+//  · okHttpMedia -> reproductor (ExoPlayer): read largo + sin callTimeout +
+//                   ping, para que un stream en vivo que titubea no se corte.
 object Net {
     const val BASE = "https://live.cd.com.py/"
 
     lateinit var okHttp: OkHttpClient
+        private set
+    lateinit var okHttpMedia: OkHttpClient
         private set
     lateinit var api: Api
         private set
 
     fun init(ctx: Context) {
         if (::okHttp.isInitialized) return
+        val jar = PrefsCookieJar(ctx.applicationContext)
         okHttp = OkHttpClient.Builder()
-            .cookieJar(PrefsCookieJar(ctx.applicationContext))
+            .cookieJar(jar)
+            .build()
+        okHttpMedia = OkHttpClient.Builder()
+            .cookieJar(jar)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .callTimeout(0, TimeUnit.MILLISECONDS) // sin tope: vivo continuo
+            .pingInterval(20, TimeUnit.SECONDS)    // mantiene viva la conexión HLS
+            .retryOnConnectionFailure(true)
             .build()
         api = Retrofit.Builder()
             .baseUrl(BASE)

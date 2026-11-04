@@ -116,6 +116,12 @@ export const api = {
   setPackageActive: (id, active) => patch(`/admin/packages/${id}`, { active }),
   updatePackage: (id, b) => patch(`/admin/packages/${id}`, b),
 
+  // Canales manuales (Tigo Sport y otros que iptv-org no trae)
+  manualChannels: () => get('/admin/manual-channels'),
+  createManualChannel: (b) => post('/admin/manual-channels', b),
+  updateManualChannel: (id, b) => patch(`/admin/manual-channels/${id}`, b),
+  deleteManualChannel: (id) => del(`/admin/manual-channels/${id}`),
+
   // Reseller
   resellerMe: () => get('/reseller/me'),
   clients: () => get('/reseller/clients'),

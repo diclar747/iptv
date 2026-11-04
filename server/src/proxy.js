@@ -71,6 +71,12 @@ export function streamHandler() {
 
     const controller = new AbortController();
     req.on('close', () => controller.abort());
+    // Timeout de conexión/primer byte: si el origen cuelga sin responder, se
+    // aborta en vez de dejar al cliente esperando para siempre (así el
+    // reproductor recibe el error enseguida y reintenta). Se limpia al llegar
+    // la respuesta; el streaming del cuerpo ya no tiene tope (TV en vivo).
+    const CONNECT_TIMEOUT_MS = 15000;
+    const connectTimer = setTimeout(() => controller.abort(), CONNECT_TIMEOUT_MS);
 
     try {
       const headers = { 'User-Agent': ua };
@@ -86,6 +92,7 @@ export function streamHandler() {
         redirect: 'follow',
         signal: controller.signal,
       });
+      clearTimeout(connectTimer); // ya respondió: el cuerpo puede fluir sin tope
 
       const contentType = upstream.headers.get('content-type') || '';
       const baseUrl = upstream.url || target; // URL final tras redirects
@@ -132,7 +139,8 @@ export function streamHandler() {
         res.end();
       }
     } catch (err) {
-      if (err.name === 'AbortError') return; // cliente cerró la conexión
+      clearTimeout(connectTimer);
+      if (err.name === 'AbortError') return; // cliente cerró o timeout de conexión
       if (!res.headersSent) {
         res.status(502).json({ error: 'Proxy error', detail: err.message });
       } else if (!res.writableEnded) {

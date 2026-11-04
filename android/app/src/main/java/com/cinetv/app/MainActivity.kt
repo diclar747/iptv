@@ -1,6 +1,8 @@
 package com.cinetv.app
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +35,13 @@ import com.cinetv.app.ui.SplashLoading
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Permiso de notificaciones (Android 13+): para la notificación de
+        // reproducción. Si se niega, la app sigue igual, solo sin notificación.
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            runCatching { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001) }
+        }
         setContent {
             CineTheme {
                 val vm: AppViewModel = viewModel()

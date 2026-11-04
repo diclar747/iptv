@@ -40,7 +40,15 @@ function pickBestLogo(logos) {
   const pool = inUse.length ? inUse : logos;
   const area = (l) => (l.width || 0) * (l.height || 0);
   const best = pool.slice().sort((a, b) => area(b) - area(a))[0];
-  return best.url;
+  return httpsLogo(best.url);
+}
+
+// Muchos logos de iptv-org vienen por http:// (dominios que igual sirven por
+// https). Android bloquea http por defecto; subir a https donde se pueda evita
+// que el logo quede en blanco. Solo cambia el esquema, no el host.
+function httpsLogo(url) {
+  if (!url) return null;
+  return url.startsWith('http://') ? 'https://' + url.slice(7) : url;
 }
 
 async function load() {
@@ -131,7 +139,9 @@ function toDTO(ch) {
     isNsfw: ch.is_nsfw,
     website: ch.website,
     closed: ch.closed,
-    logo: state.logoByChannel.get(ch.id) || null,
+    // Logo: primero el mejor de logos.json; si no hay, el campo logo del
+    // propio channels.json (subido a https). Evita canales sin imagen.
+    logo: state.logoByChannel.get(ch.id) || httpsLogo(ch.logo) || null,
     streamCount: streams.length,
   };
 }

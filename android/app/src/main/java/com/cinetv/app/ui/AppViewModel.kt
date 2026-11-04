@@ -18,6 +18,8 @@ data class PlayTarget(
     val url: String, val mime: String, val title: String,
     // Datos crudos para generar la URL firmada de cast (proyección a TV).
     val rawUrl: String, val ua: String? = null, val ref: String? = null,
+    // En vivo (canal): reintentar/reanudar indefinidamente. Película: no.
+    val isLive: Boolean = false,
 )
 
 // Detalle abierto (ficha de película o serie).
@@ -125,7 +127,7 @@ class AppViewModel : ViewModel() {
             busy = true; error = null
             try {
                 val s = api.channelStreams(card.id).streams?.firstOrNull { !it.url.isNullOrBlank() }
-                if (s?.url != null) startPlay(s.url!!, card.displayTitle, s.userAgent, s.referrer)
+                if (s?.url != null) startPlay(s.url!!, card.displayTitle, s.userAgent, s.referrer, isLive = true)
                 else error = "Canal sin señal disponible"
             } catch (e: Exception) {
                 error = humanize(e)
@@ -137,10 +139,10 @@ class AppViewModel : ViewModel() {
     fun playMovie(d: MovieDetail) {
         val s = d.streams?.firstOrNull { !it.url.isNullOrBlank() }
         val url = s?.url ?: d.streamUrl
-        if (url != null) startPlay(url, d.title ?: "Película", s?.userAgent, s?.referrer)
+        if (url != null) startPlay(url, d.title ?: "Película", s?.userAgent, s?.referrer, isLive = false)
     }
 
-    fun playEpisodeUrl(url: String, title: String) = startPlay(url, title, null, null)
+    fun playEpisodeUrl(url: String, title: String) = startPlay(url, title, null, null, isLive = false)
 
     fun addFavorite(kind: String, id: Long) {
         viewModelScope.launch {
@@ -148,10 +150,10 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    private fun startPlay(rawUrl: String, title: String, ua: String?, ref: String?) {
+    private fun startPlay(rawUrl: String, title: String, ua: String?, ref: String?, isLive: Boolean) {
         val proxied = Net.proxied(rawUrl, ua, ref)
         val mime = if (Net.isHls(rawUrl)) "application/x-mpegURL" else "video/mp4"
-        play = PlayTarget(proxied, mime, title, rawUrl, ua, ref)
+        play = PlayTarget(proxied, mime, title, rawUrl, ua, ref, isLive)
     }
 
     fun closePlayer() { play = null }

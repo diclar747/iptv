@@ -307,3 +307,21 @@ CREATE TABLE IF NOT EXISTS sync_cursors (
   done     BOOLEAN NOT NULL DEFAULT false,
   PRIMARY KEY (provider, kind)
 );
+
+-- Canales manuales: los que el admin carga a mano (p. ej. Tigo Sport y otros
+-- deportes de Paraguay que iptv-org no trae con señal). Se inyectan en los
+-- listados junto a los de iptv-org y se reproducen por el mismo proxy.
+CREATE TABLE IF NOT EXISTS manual_channels (
+  id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name       TEXT NOT NULL,
+  logo_url   TEXT,
+  stream_url TEXT NOT NULL,
+  user_agent TEXT,
+  referrer   TEXT,
+  country    TEXT NOT NULL DEFAULT 'PY',
+  category   TEXT NOT NULL DEFAULT 'sports',
+  enabled    BOOLEAN NOT NULL DEFAULT true,
+  sort       INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_manual_channels_cc ON manual_channels(country, category) WHERE enabled;

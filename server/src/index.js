@@ -19,6 +19,7 @@ import { attachUser, requireAuth, requireActiveViewer } from './auth.js';
 import accountsRouter, { ensureSeed } from './accounts.js';
 import catalogRouter from './catalog.js';
 import catalogAdminRouter from './catalog-admin.js';
+import manualChannelsRouter, { manualCards, manualStreams, isManualId } from './manualChannels.js';
 import { ensureVodSeed } from './vod.js';
 import { retireMetadataOnlyMovies } from './catalog/cleanup.js';
 
@@ -44,7 +45,7 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 14, versionName: '1.13', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 15, versionName: '1.14', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
@@ -52,6 +53,8 @@ app.use('/api', accountsRouter);
 // Catálogo de películas y series (metadatos TheTVDB) + panel admin.
 app.use('/api', catalogRouter);
 app.use('/api', catalogAdminRouter);
+// Canales manuales cargados por el admin (CRUD admin).
+app.use('/api', manualChannelsRouter);
 
 // Carga/refresca el cache de iptv-org antes de responder consultas de datos.
 async function withData(req, res, next) {
@@ -106,14 +109,21 @@ app.get('/api/geo', requireActiveViewer, (req, res) => {
 
 // Inicio en UN solo pedido: según el país del visitante (por IP), sus canales
 // van primero; luego deportes, noticias, un par de países más y documentales.
-app.get('/api/home', requireActiveViewer, withData, (req, res) => {
+app.get('/api/home', requireActiveViewer, withData, async (req, res) => {
   const names = new Map(getMeta().countries.map((c) => [c.code, c.name]));
   let country = geoCountry(req);
   if (chRow({ country }).length === 0) country = 'PY'; // sin canales -> PY
 
+  // Canales manuales del admin: los del país del visitante van a su fila; los
+  // deportivos (Tigo Sport, etc.) van primero en Deportes.
+  const [manPais, manSports] = await Promise.all([
+    manualCards({ country }).catch(() => []),
+    manualCards({ category: 'sports' }).catch(() => []),
+  ]);
+
   const rows = [
-    { key: 'pais', title: `TV en Vivo · ${names.get(country) || country}`, nav: 'tv', items: chRow({ country }) },
-    { key: 'sports', title: 'Deportes', nav: 'deportes', items: chRow({ category: 'sports', prefer: country }) },
+    { key: 'pais', title: `TV en Vivo · ${names.get(country) || country}`, nav: 'tv', items: [...manPais, ...chRow({ country })] },
+    { key: 'sports', title: 'Deportes', nav: 'deportes', items: [...manSports, ...chRow({ category: 'sports', prefer: country })] },
     { key: 'news', title: 'Noticias', items: chRow({ category: 'news', prefer: country }) },
   ];
   let extras = 0;
@@ -130,7 +140,7 @@ app.get('/api/home', requireActiveViewer, withData, (req, res) => {
 
 // Listado de canales con filtros y paginación.
 //   ?country=PY&category=sports&search=espn&page=1&pageSize=40
-app.get('/api/channels', requireActiveViewer, withData, (req, res) => {
+app.get('/api/channels', requireActiveViewer, withData, async (req, res) => {
   const {
     country,
     category,
@@ -140,26 +150,45 @@ app.get('/api/channels', requireActiveViewer, withData, (req, res) => {
     includeNsfw = 'false',
     onlyWithStreams = 'true',
   } = req.query;
+  const pageN = Math.max(1, parseInt(page, 10) || 1);
+  const result = queryChannels({
+    country: country || undefined,
+    category: category || undefined,
+    search: search || undefined,
+    prefer: req.query.prefer || geoCountry(req),
+    page: pageN,
+    pageSize: Math.min(100, Math.max(1, parseInt(pageSize, 10) || 40)),
+    includeNsfw: includeNsfw === 'true',
+    onlyWithStreams: onlyWithStreams !== 'false',
+  });
+
+  // Canales manuales: se anteponen en la primera página cuando coinciden con el
+  // filtro de país/categoría (y con el texto buscado, si lo hay).
+  if (pageN === 1 && (country || category)) {
+    let man = await manualCards({ country: country || undefined, category: category || undefined }).catch(() => []);
+    const q = (search || '').trim().toLowerCase();
+    if (q) man = man.filter((c) => c.name.toLowerCase().includes(q));
+    if (man.length) {
+      result.items = [...man, ...result.items];
+      result.total += man.length;
+    }
+  }
+
   res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
-  res.json(
-    queryChannels({
-      country: country || undefined,
-      category: category || undefined,
-      search: search || undefined,
-      prefer: req.query.prefer || geoCountry(req),
-      page: Math.max(1, parseInt(page, 10) || 1),
-      pageSize: Math.min(100, Math.max(1, parseInt(pageSize, 10) || 40)),
-      includeNsfw: includeNsfw === 'true',
-      onlyWithStreams: onlyWithStreams !== 'false',
-    })
-  );
+  res.json(result);
 });
 
 // Streams de un canal concreto.
-app.get('/api/channels/:id/streams', requireActiveViewer, withData, (req, res) => {
-  const data = getChannelStreams(req.params.id);
-  if (!data) return res.status(404).json({ error: 'Canal no encontrado' });
-  res.json(data);
+app.get('/api/channels/:id/streams', requireActiveViewer, withData, async (req, res) => {
+  try {
+    const data = isManualId(req.params.id)
+      ? await manualStreams(req.params.id)
+      : getChannelStreams(req.params.id);
+    if (!data) return res.status(404).json({ error: 'Canal no encontrado' });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'No se pudo obtener el canal', detail: err.message });
+  }
 });
 
 // Proxy de reproducción: reenvía el stream con cabeceras y resuelve CORS.
