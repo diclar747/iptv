@@ -90,17 +90,20 @@ export default function AdminPanel() {
   // --- Canales manuales ---
   const emptyMc = { name: '', streamUrl: '', logoUrl: '', userAgent: '', referrer: '', country: 'PY', category: 'sports' };
   const [nmc, setNmc] = useState(emptyMc);
-  // Accesos rápidos: deportivos de Paraguay precargados (nombre + logo). Solo
-  // falta pegarles la URL .m3u8 y guardar.
-  const presetsDeportes = [
-    { name: 'GEN', logoUrl: 'https://i.imgur.com/vEMnZF4.png' },
-    { name: 'Tigo Sports', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Tigo_Sports_2025.png/960px-Tigo_Sports_2025.png' },
-    { name: 'Conmebol TV 1', logoUrl: 'https://i.imgur.com/0MnTzFK.png' },
-    { name: 'Conmebol TV 2', logoUrl: 'https://i.imgur.com/AeQ1IRU.png' },
-    { name: 'Conmebol TV 3', logoUrl: 'https://i.imgur.com/i7czXKt.png' },
-    { name: 'Conmebol TV 4', logoUrl: 'https://i.imgur.com/GLX8MhD.png' },
+  // Accesos rápidos: canales de Paraguay precargados (nombre + logo + categoría).
+  // Solo falta pegarles la URL .m3u8 oficial y guardar.
+  const presetsPY = [
+    { name: 'GEN', logoUrl: 'https://i.imgur.com/vEMnZF4.png', category: 'sports' },
+    { name: 'Tigo Sports', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Tigo_Sports_2025.png/960px-Tigo_Sports_2025.png', category: 'sports' },
+    { name: 'Conmebol TV 1', logoUrl: 'https://i.imgur.com/0MnTzFK.png', category: 'sports' },
+    { name: 'Conmebol TV 2', logoUrl: 'https://i.imgur.com/AeQ1IRU.png', category: 'sports' },
+    { name: 'Conmebol TV 3', logoUrl: 'https://i.imgur.com/i7czXKt.png', category: 'sports' },
+    { name: 'Conmebol TV 4', logoUrl: 'https://i.imgur.com/GLX8MhD.png', category: 'sports' },
+    { name: 'A24 Paraguay', logoUrl: 'https://i.imgur.com/XWBmjBk.png', category: 'news' },
+    { name: 'TVS Encarnación', logoUrl: 'https://i.ibb.co/s14qLnR/TVS.png', category: 'general' },
+    { name: 'Telequince', logoUrl: 'https://i.imgur.com/og7xuqe.png', category: 'general' },
   ];
-  const usePreset = (p) => setNmc({ ...emptyMc, ...p, country: 'PY', category: 'sports' });
+  const usePreset = (p) => setNmc({ ...emptyMc, name: p.name, logoUrl: p.logoUrl, country: 'PY', category: p.category || 'general' });
   async function createManual(e) {
     e.preventDefault(); setError(null);
     try { await api.createManualChannel(nmc); setNmc(emptyMc); loadManual(); }
@@ -273,7 +276,7 @@ export default function AdminPanel() {
           </p>
           <div className="row-form wrap" style={{ marginBottom: 10, alignItems: 'center' }}>
             <span className="muted small" style={{ marginRight: 4 }}>Rápido:</span>
-            {presetsDeportes.map((p) => (
+            {presetsPY.map((p) => (
               <button key={p.name} type="button" onClick={() => usePreset(p)}>+ {p.name}</button>
             ))}
           </div>
