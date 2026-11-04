@@ -19,7 +19,7 @@ import { attachUser, requireAuth, requireActiveViewer } from './auth.js';
 import accountsRouter, { ensureSeed } from './accounts.js';
 import catalogRouter from './catalog.js';
 import catalogAdminRouter from './catalog-admin.js';
-import manualChannelsRouter, { manualCards, manualStreams, isManualId } from './manualChannels.js';
+import manualChannelsRouter, { manualCards, manualStreams, isManualId, ensureManualSeed } from './manualChannels.js';
 import { ensureVodSeed } from './vod.js';
 import { retireMetadataOnlyMovies } from './catalog/cleanup.js';
 
@@ -256,6 +256,7 @@ async function start() {
     await ensureSeed();
     await ensureVodSeed(); // contenido de dominio público (catálogo base reproducible)
     await retireMetadataOnlyMovies();
+    await ensureManualSeed(); // canales manuales conocidos (p. ej. TVS por su Twitch)
     console.log('[api] PostgreSQL conectado y listo');
   } catch (e) {
     console.error('[api] ERROR conectando a PostgreSQL:', e.message);

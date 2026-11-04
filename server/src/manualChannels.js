@@ -48,6 +48,30 @@ export async function manualCards({ country, category } = {}) {
   return rows.map(toCard);
 }
 
+// Siembra canales manuales conocidos (con su link oficial de plataforma) para
+// que aparezcan solos al desplegar, sin cargarlos a mano. Idempotente por
+// nombre: si ya existe (o el admin lo agregó/editó), no lo toca.
+const SEED = [
+  {
+    name: 'TVS Encarnación',
+    logo_url: 'https://i.ibb.co/s14qLnR/TVS.png',
+    stream_url: 'https://twitch.tv/tvs_encarnacion', // lo resuelve el backend
+    country: 'PY',
+    category: 'general',
+  },
+];
+export async function ensureManualSeed() {
+  for (const c of SEED) {
+    const exists = await one(`SELECT id FROM manual_channels WHERE lower(name) = lower($1)`, [c.name]);
+    if (exists) continue;
+    await query(
+      `INSERT INTO manual_channels (name, logo_url, stream_url, country, category, enabled, sort)
+       VALUES ($1,$2,$3,$4,$5,true,0)`,
+      [c.name, c.logo_url, c.stream_url, c.country, c.category]
+    );
+  }
+}
+
 // Streams de un canal manual ("man:<n>") con la forma de getChannelStreams.
 export async function manualStreams(publicId) {
   const n = parseInt(String(publicId).slice(PREFIX.length), 10);
