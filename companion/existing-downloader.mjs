@@ -3,6 +3,10 @@ import {readdir} from 'node:fs/promises';
 import path from 'node:path';
 const wait=(ms,signal)=>new Promise((resolve,reject)=>{signal.throwIfAborted();const abort=()=>{clearTimeout(t);reject(signal.reason);};const t=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},ms);signal.addEventListener('abort',abort,{once:true});});
 function videoId(value){try{const u=new URL(value);return u.hostname==='youtu.be'?u.pathname.slice(1):u.searchParams.get('v')||u.pathname.match(/^\/(?:shorts|live)\/([^/]+)/)?.[1];}catch{return null;}}
+export async function existingVideoFile(folder,id){
+ if(typeof folder!=='string'||!/^[-\w]{11}$/.test(id))return null;
+ try{const suffix=' ['+id+']';const file=(await readdir(folder,{withFileTypes:true})).find(e=>e.isFile()&&['.mp4','.mkv','.webm'].includes(path.extname(e.name).toLowerCase())&&path.basename(e.name,path.extname(e.name)).endsWith(suffix));return file?{file:path.join(folder,file.name),title:path.basename(file.name,path.extname(file.name)).slice(0,-suffix.length)}:null;}catch{return null;}
+}
 export async function findExistingDownloader(){
  for(const port of [4317,4318])try{
   const base='http://127.0.0.1:'+port,r=await fetch(base+'/',{signal:AbortSignal.timeout(1200),redirect:'error'}),html=await r.text();
@@ -20,17 +24,15 @@ export async function downloadWithExisting(job,signal,onState,readMetadata){
  const matches=j=>videoId(j.url)===job.sourceId&&j.quality!=='audio';
  let local=app.state.jobs.find(j=>matches(j)&&j.status==='done'&&j.file&&existsSync(j.file))||app.state.jobs.find(j=>matches(j)&&['queued','downloading'].includes(j.status));
  // The existing downloader keeps its queue in memory. Recover completed files after a restart.
- if(!local&&typeof app.state.folder==='string')try{
-  const suffix=' ['+job.sourceId+']';const found=(await readdir(app.state.folder,{withFileTypes:true})).find(e=>e.isFile()&&['.mp4','.mkv','.webm'].includes(path.extname(e.name).toLowerCase())&&path.basename(e.name,path.extname(e.name)).endsWith(suffix));
-  if(found)local={id:null,status:'done',file:path.join(app.state.folder,found.name),title:path.basename(found.name,path.extname(found.name)).slice(0,-suffix.length)};
- }catch{}
+ if(!local){const found=await existingVideoFile(app.state.folder,job.sourceId);if(found)local={...found,id:null,status:'done'};}
  if(!local){const q=await post('batch',{urls:[job.url],quality:String(Math.min(1080,job.quality||720))});const state=await get();local=state.jobs.find(j=>q.ids?.includes(j.id))||state.jobs.find(j=>matches(j)&&['queued','downloading'].includes(j.status));if(!local)throw Error('No se encontró el trabajo en el descargador local');}
  const id=local.id;
  while(['queued','downloading'].includes(local.status)){
   onState({phase:'downloading',message:local.status==='queued'?'En cola en Downloader YouTuber':'Descargando con Downloader YouTuber',progress:Number(local.progress)||0});
   await wait(1500,signal);local=(await get()).jobs.find(j=>j.id===id);if(!local)throw Error('El descargador local se reinició. Volvé a abrirlo y reintentá el trabajo.');
  }
- signal.throwIfAborted();if(local.status!=='done'||!local.file||!existsSync(local.file))throw Error(local.error||'La descarga local no terminó correctamente');
+ signal.throwIfAborted();if(local.status==='done'&&(!local.file||!existsSync(local.file))){const found=await existingVideoFile(local.folder||app.state.folder,job.sourceId);if(found)local={...local,...found};}
+ if(local.status!=='done'||!local.file||!existsSync(local.file))throw Error(local.error||'No se encontró el archivo terminado. Revisá la carpeta del descargador.');
  onState({phase:'uploading',message:'Reutilizando el archivo de Downloader YouTuber',progress:0});
  if(readMetadata)try{const metadata=await readMetadata();if(metadata.id===job.sourceId)return {file:local.file,metadata};}catch(e){if(signal.aborted)throw e;}
  let info={};if(!readMetadata)try{info=await post('info',{url:job.url});}catch(e){if(signal.aborted)throw e;}

@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {ImportPipeline,SerialUploads} from './pipeline.mjs';
+import {existingVideoFile} from './existing-downloader.mjs';import {mkdtemp,writeFile,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(check){for(let i=0;i<100;i++){if(check())return;await delay(5);}assert.fail('No se alcanzó el estado esperado');}
 test('downloads overlap while ready files upload serially; publishing does not lock uploads',async()=>{
@@ -16,3 +17,4 @@ test('pause aborts running and waiting work and releases the upload slot',async(
 test('same job cannot start twice and pending files remain bounded',async()=>{
  let finish;const p=new ImportPipeline({maxPending:1,claim:async()=>({jobs:[{id:'same'},{id:'same'}]}),run:async()=>new Promise(r=>finish=r)});await p.poll();await until(()=>!!finish);assert.equal(p.tasks.size,1);p.pause();finish();await until(()=>p.tasks.size===0);assert.equal(p.paused,true);
 });
+test('finds the real Unicode filename by video ID instead of trusting a damaged console path',async()=>{const dir=await mkdtemp(path.join(os.tmpdir(),'livetv-name-'));try{const filename='Una desaparición en un avión [kGe-yt-Cb1o].mkv';await writeFile(path.join(dir,filename),'fixture');const found=await existingVideoFile(dir,'kGe-yt-Cb1o');assert.equal(found.file,path.join(dir,filename));assert.equal(found.title,'Una desaparición en un avión');assert.equal(await existingVideoFile(dir,'../invalid'),null);}finally{await rm(dir,{recursive:true,force:true});}});
