@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
+import {useVisibleSignals} from '../useVisibleSignals.js';
 
 // Grilla de canales en vivo para TV en Vivo / Deportes / Documentales.
 export default function Channels({ title, fixedCategory, defaultCountry = 'PY', onOpen, onAuthError }) {
@@ -12,6 +13,7 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
   const [page, setPage] = useState(1);
   const [error, setError] = useState(null);
 
+  const root=useVisibleSignals(data?.items||[],api.channelStatuses,states=>{const map=new Map(states.map(s=>[s.id,s]));setData(old=>old?{...old,items:old.items.filter(c=>!['blocked','deleted'].includes(map.get(c.id)?.status)).map(c=>({...c,...map.get(c.id)}))}:old);});
   function handleErr(e) {
     if (e.status === 401 || (e.status === 403 && e.data?.reason)) return onAuthError?.(e);
     setError(e.message);
@@ -27,7 +29,7 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
   }, [country, category, search, status, page, fixedCategory]);
 
   return (
-    <div className="view">
+    <div className="view" ref={root}>
       <div className="view-head">
         <h2>{title} <span className="live-tag sm">● EN VIVO</span></h2>
         <div className="view-filters">
@@ -52,7 +54,7 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
         <>
           <div className="chan-grid">
             {data.items.map((c) => (
-              <button key={c.id} className="chan-card" onClick={() => onOpen({ type: 'channel', ...c })}>
+              <button key={c.id} data-signal-id={c.id} className="chan-card" onClick={() => onOpen({ type: 'channel', ...c })}>
                 <div className="chan-logo">
                   {c.logo ? <img src={c.logo} alt="" loading="lazy"
                     onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} /> : <span>{c.name[0]}</span>}

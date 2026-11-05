@@ -1,4 +1,4 @@
-import { managedCard, managedStreams, channelSettings, channelVisible, channelStatus } from './channelState.js';
+import { managedCard, managedStreams, channelSettings, channelVisible, channelStatus, channelSettingsVersion } from './channelState.js';
 // Capa de datos de iptv-org: descarga, cachea en memoria y une
 // canales + streams. Fuente: https://iptv-org.github.io/api/
 //
@@ -166,6 +166,7 @@ function matchScore(c, q) {
   return 6;
 }
 
+const candidateCache=new Map();
 // Consulta/filtrado paginado de canales.
 export function queryChannels({
   country,
@@ -178,9 +179,13 @@ export function queryChannels({
   includeNsfw = false,
   page = 1,
   pageSize = 40,
+  offset,
 } = {}) {
   const q = (search || '').trim().toLowerCase();
-  let list = state.channels.map(c => {const s=channelSettings(c.id);return {...c,name:s.name||c.name,country:s.country||c.country,categories:s.category?[s.category]:c.categories};});
+  const cacheKey=JSON.stringify([state.loadedAt,state.channels.length,channelSettingsVersion(),country,category,q,prefer,onlyWithStreams,includeHidden,includeNsfw]);
+  let list=candidateCache.get(cacheKey)?.list;
+  if(!list||Date.now()-candidateCache.get(cacheKey).at>30000){
+  list = state.channels.map(c => {const s=channelSettings(c.id);return {...c,name:s.name||c.name,country:s.country||c.country,categories:s.category?[s.category]:c.categories};});
   if(!includeHidden) list=list.filter(c=>channelVisible(c.id));
 
   if (!includeNsfw) list = list.filter((c) => !c.is_nsfw);
@@ -214,9 +219,12 @@ export function queryChannels({
     return a.name.localeCompare(b.name);
   });
 
+  if(candidateCache.size>=32)candidateCache.delete(candidateCache.keys().next().value);
+  candidateCache.set(cacheKey,{list,at:Date.now()});
+  }
   if(status) list=list.filter(c=>channelStatus(c.id,normalizedStreams(c.id)).status===status);
   const total = list.length;
-  const start = (page - 1) * pageSize;
+  const start = offset ?? (page - 1) * pageSize;
   const items = list.slice(start, start + pageSize).map(toDTO);
   return { total, page, pageSize, pages: Math.ceil(total / pageSize), items };
 }

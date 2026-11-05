@@ -119,8 +119,9 @@ fun LoginScreen(vm: AppViewModel) { StudioLoginScreen(vm) }
 
 @Composable
 fun MainScreen(vm: AppViewModel) {
-    LaunchedEffect(Unit) { while(true) { delay(30000); vm.refreshSignalStates() } }
     var tab by remember { mutableStateOf(0) }
+    val foreground=rememberForeground()
+    LaunchedEffect(tab,foreground) { if(tab==0&&foreground)while(true) { delay(30000); vm.refreshSignalStates() } }
     var searchOpen by remember { mutableStateOf(false) }
     var panelOpen by remember { mutableStateOf(false) }
     val tabs = listOf(
@@ -155,7 +156,7 @@ fun MainScreen(vm: AppViewModel) {
             when (tab) {
                 0 -> HomeTab(vm) { tab = it }
                 1 -> MoviesTab(vm)
-                2 -> GridTab(vm) { Net.api.seriesList() }
+                2 -> GridTab(vm) { page -> Net.api.seriesList(page=page) }
                 3 -> LiveTab(vm)
                 4 -> RadiosTab(vm)
                 else -> ProfileScreen(vm, onOpenPanel = { panelOpen = true })
@@ -326,7 +327,7 @@ private fun MoviesTab(vm: AppViewModel) {
                 }
             }
         }
-    }) { Net.api.movies(category = cat) }
+    }) { page -> Net.api.movies(category = cat,page=page) }
 }
 
 @Composable
@@ -345,26 +346,42 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
 private fun LiveTab(vm: AppViewModel) { StudioLiveTab(vm) }
 
 @Composable
-private fun GridTab(vm: AppViewModel, key: Any? = Unit, minCell: Dp = 112.dp, header: (@Composable () -> Unit)? = null, loader: suspend () -> List<Card>) {
-    var items by remember(key) { mutableStateOf<List<Card>?>(null) }
-    LaunchedEffect(key) { items = try { loader() } catch (_: Exception) { emptyList() } }
-    val list = items
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minCell), contentPadding = PaddingValues(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        header?.let { h -> item(span = { GridItemSpan(maxLineSpan) }) { h() } }
-        if (list == null) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Red) }
-            }
-        } else {
-            items(list) { card ->
-                // En grilla la tarjeta ocupa toda la celda (uniforme y responsive).
-                if (card.kind == "channel") ChannelCard(card, Modifier.fillMaxWidth()) { vm.openCard(card) }
-                else PosterCard(card, Modifier.fillMaxWidth()) { vm.openCard(card) }
-            }
+private fun GridTab(vm: AppViewModel, key: Any? = Unit, minCell: Dp = 112.dp, header: (@Composable () -> Unit)? = null, loader: suspend (Int) -> List<Card>) {
+
+    var cards by remember(key) { mutableStateOf<List<Card>>(emptyList()) }
+    var loading by remember(key) { mutableStateOf(true) }
+    var loadingMore by remember(key) { mutableStateOf(false) }
+    var hasMore by remember(key) { mutableStateOf(false) }
+    var page by remember(key) { mutableIntStateOf(1) }
+    var error by remember(key) { mutableStateOf<String?>(null) }
+    var generation by remember { mutableIntStateOf(0) }
+    val scope=rememberCoroutineScope()
+    LaunchedEffect(key) {
+        generation++;loading=true
+        try{val r=loader(1);cards=r;hasMore=r.size==10;page=1}
+        catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="No se pudo cargar la lista"}
+        finally{loading=false}
+    }
+    fun more(){
+        if(loading||loadingMore||!hasMore)return
+        val epoch=generation;val fetch=loader;val next=page+1
+        loadingMore=true;error=null
+        scope.launch{try{val r=fetch(next);if(epoch==generation){cards=(cards+r).distinctBy{it.id};page=next;hasMore=r.size==10}}
+        catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){if(epoch==generation)error="No se pudo cargar más. Reintentá."}
+        finally{if(epoch==generation)loadingMore=false}}
+    }
+    LazyVerticalGrid(columns=GridCells.Adaptive(minCell),contentPadding=PaddingValues(12.dp),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        header?.let { h -> item(span={GridItemSpan(maxLineSpan)}){h()} }
+        items(cards,key={it.id}) { card ->
+            if(card.kind=="channel")ChannelCard(card,Modifier.fillMaxWidth()){vm.openCard(card)}
+            else PosterCard(card,Modifier.fillMaxWidth()){vm.openCard(card)}
         }
+        if(loading)item(span={GridItemSpan(maxLineSpan)}){Box(Modifier.fillMaxWidth().padding(30.dp),contentAlignment=Alignment.Center){CircularProgressIndicator(color=Red)}}
+        if(!loading&&hasMore)item(key="more-$page",span={GridItemSpan(maxLineSpan)}){
+            LaunchedEffect(page){if(error==null)more()}
+            TextButton(onClick={more()},enabled=!loadingMore){Text(if(loadingMore)"Cargando…" else error?:"Cargar más")}
+        }
+        if(error!=null&&!hasMore)item(span={GridItemSpan(maxLineSpan)}){Text(error!!,color=Muted)}
     }
 }
 

@@ -1,7 +1,4 @@
-const TTL = 3 * 60 * 1000;
-const health = new Map();
-let scanning = false;
-
+import { resolveDesdeStream } from './desdeparaguay.js';
 export async function probeRadio(station, request = fetch) {
   const controller = new AbortController();
   try {
@@ -26,27 +23,19 @@ export async function probeRadio(station, request = fetch) {
   finally { controller.abort(); }
 }
 
-export function radioStatuses(stations) {
-  if (!scanning) {
-    const due = stations.filter(s => !health.has(s.id) || Date.now() - health.get(s.id).at > TTL);
-    if (due.length) {
-      scanning = true;
-      let index = 0;
-      // Se revisan primero las señales que funcionaron en el último chequeo.
-      due.sort((a,b) => Number(b.available !== false) - Number(a.available !== false));
-      void Promise.all(Array.from({ length: 6 }, async () => {
-        while (index < due.length) {
-          const station = due[index++];
-          const online = await probeRadio(station);
-          health.set(station.id, { online, at: Date.now(), url: station.url });
-        }
-      })).finally(() => { scanning = false; });
-    }
-  }
-  return stations.map(s => {
-    const result = health.get(s.id);
-    const current = result && result.url === s.url && Date.now() - result.at <= TTL;
-    return { ...s, status: current ? (result.online ? 'online' : 'offline') : 'checking', checkedAt: result ? new Date(result.at).toISOString() : null };
-  });
+
+// Shared bounded queue: concurrent viewers reuse one probe and its cached result.
+export function createRadioHealth({probe=probeRadio,now=Date.now,ttl=180000,concurrency=4,maxQueue=100}={}) {
+ const health=new Map(), queued=new Map();let active=0;
+ function drain(){while(active<concurrency&&queued.size){const [id,station]=queued.entries().next().value;queued.delete(id);active++;health.set(id,{...(health.get(id)?.url===station.url?health.get(id):{}),pending:true,url:station.url});
+  Promise.resolve().then(()=>probe(station)).then(online=>health.set(id,{online,at:now(),url:station.url,pending:false})).catch(()=>health.set(id,{online:false,at:now(),url:station.url,pending:false})).finally(()=>{active--;drain();});
+ }}
+ function statuses(stations,{verify=true}={}) {
+  if(verify)for(const s of stations){const r=health.get(s.id);if(!r?.pending&&(!r||r.url!==s.url||now()-r.at>ttl)&&!queued.has(s.id)&&queued.size<maxQueue)queued.set(s.id,s);}
+  drain();
+  return stations.map(s=>{const r=health.get(s.id),fresh=r&&r.url===s.url&&r.at!==undefined&&now()-r.at<=ttl;return {...s,status:fresh?(r.online?'online':'offline'):'checking',checkedAt:r?.at?new Date(r.at).toISOString():null};});
+ }
+ return {statuses,stats:()=>({active,queued:queued.size})};
 }
-import { resolveDesdeStream } from './desdeparaguay.js';
+const shared=createRadioHealth();
+export const radioStatuses=(stations,options)=>shared.statuses(stations,options);

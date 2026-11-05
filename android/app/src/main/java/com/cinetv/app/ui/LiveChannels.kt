@@ -31,6 +31,8 @@ import com.cinetv.app.data.Net
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 val StudioAccent = Color(0xFF54E3BA)
 val StudioSurface = Color(0xFF0D1624)
@@ -151,19 +153,23 @@ fun StudioLiveTab(vm: AppViewModel) {
     val scope = rememberCoroutineScope()
     val countries = vm.meta?.countries.orEmpty()
     val selected = countries.firstOrNull { it.code == country }
-    LaunchedEffect(channels.map { it.id }.joinToString(",")) {
-        if(channels.isEmpty()) return@LaunchedEffect
-        while(true) {
-            delay(15000)
-            try {
-                val states=Net.api.channelStatuses(channels.take(100).joinToString(","){it.id}).associateBy{it.id}
-                channels=channels.filter { states[it.id]?.status !in listOf("blocked","deleted") }.map{c->states[c.id]?.let{c.copy(status=it.status,checkedAt=it.checkedAt)}?:c}
-            } catch(e: CancellationException){throw e} catch(_:Exception) { }
-        }
+    val gridState=rememberLazyGridState()
+    val foreground=rememberForeground()
+    LaunchedEffect(gridState,foreground) {
+        if(!foreground)return@LaunchedEffect
+        snapshotFlow { val known=channels.map{it.id}.toSet();gridState.layoutInfo.visibleItemsInfo.mapNotNull{it.key as? String}.filter{it in known}.take(20) }
+          .distinctUntilChanged().collectLatest { ids ->
+            if(ids.isNotEmpty())while(true){
+                try {val states=Net.api.channelStatuses(ids.joinToString(",")).associateBy{it.id}
+                    channels=channels.filter{states[it.id]?.status !in listOf("blocked","deleted")}.map{c->states[c.id]?.let{c.copy(status=it.status,checkedAt=it.checkedAt)}?:c}
+                }catch(e:CancellationException){throw e}catch(_:Exception){}
+                delay(10000)
+            }
+          }
     }
     suspend fun fetchPage(number: Int) = Net.api.channels(country = if(category == null) country else null, category = category, search = search, prefer = if(category != null) country else null, page = number, status = signalFilter)
     LaunchedEffect(country,category,search,retry,signalFilter) {
-        generation++; loading = true; error = null
+        generation++; loading = true; loadingMore = false; channels=emptyList(); error = null
         delay(300)
         try { val result = fetchPage(1); channels = result.items.orEmpty(); total = result.total; page = 1 }
         catch(e: CancellationException) { throw e }
@@ -171,6 +177,7 @@ fun StudioLiveTab(vm: AppViewModel) {
         finally { loading = false }
     }
     fun more() {
+        if(loading||loadingMore||channels.size>=total)return
         val current = generation
         loadingMore = true
         scope.launch {
@@ -179,10 +186,10 @@ fun StudioLiveTab(vm: AppViewModel) {
                 if(current == generation) { channels = (channels + result.items.orEmpty()).distinctBy { it.id }; page++; total = result.total }
             } catch(e: CancellationException) { throw e }
             catch(_: Exception) { error = "No se pudo cargar la siguiente página" }
-            finally { loadingMore = false }
+            finally { if(current==generation)loadingMore = false }
         }
     }
-    LazyVerticalGrid(columns = if(list) GridCells.Fixed(1) else GridCells.Adaptive(156.dp), modifier = Modifier.fillMaxSize().background(Bg), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyVerticalGrid(state=gridState,columns = if(list) GridCells.Fixed(1) else GridCells.Adaptive(156.dp), modifier = Modifier.fillMaxSize().background(Bg), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -233,7 +240,8 @@ fun StudioLiveTab(vm: AppViewModel) {
         }
         if(!loading) items(channels,key = { it.id }) { channel -> StudioChannelCard(channel,Modifier.fillMaxWidth(),list,onDetails = { vm.openCard(channel) }) { vm.playChannel(channel) } }
         if(!loading && channels.isEmpty() && error == null) item(span = { GridItemSpan(maxLineSpan) }) { Text("No encontramos canales con esos filtros.",color = Muted,modifier = Modifier.padding(24.dp)) }
-        if(!loading && channels.size < total && channels.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
+        if(!loading && channels.size < total && channels.isNotEmpty()) item(key="more-$page",span = { GridItemSpan(maxLineSpan) }) {
+            LaunchedEffect(page) { if(error==null)more() }
             OutlinedButton(onClick = { more() },enabled = !loadingMore,modifier = Modifier.fillMaxWidth(),shape = RoundedCornerShape(16.dp)) { Text(if(loadingMore) "Cargando…" else "Cargar más canales",color = StudioAccent) }
         }
     }

@@ -124,13 +124,15 @@ router.get('/catalog/movies', async (req, res) => {
 });
 
 router.get('/catalog/series', async (req, res) => {
-  const { search } = req.query;
+  const { search, page='1', pageSize='40' } = req.query;
   const where = ['NOT s.hidden', SERIES_AVAIL];
   const params = [];
   if (search) { params.push(`%${search}%`); where.push(`s.title ILIKE $${params.length}`); }
+  const size=Math.min(80,Math.max(1,parseInt(pageSize)||40));
+  params.push(size,(Math.max(1,parseInt(page)||1)-1)*size);
   const rows = await many(
     `SELECT s.*, (SELECT count(*)::int FROM episodes e WHERE e.series_id=s.id) AS episode_count
-     FROM series s WHERE ${where.join(' AND ')} ORDER BY s.popularity DESC, s.title`,
+     FROM series s WHERE ${where.join(' AND ')} ORDER BY s.popularity DESC, s.title, s.id LIMIT $${params.length-1} OFFSET $${params.length}`,
     params
   );
   res.json(rows.map((s) => ({ ...seriesCard(s), episodeCount: s.episode_count })));
@@ -343,7 +345,7 @@ router.delete('/catalog/comments/:id', async (req, res) => {
 
 router.post('/catalog/comments/:id/reaction', async (req,res) => {
  const id=String(req.params.id), emoji=req.body?.emoji;
- if(!/^\d{1,18}$/.test(id)||!['👍','❤️','😂','🎉','🙏'].includes(emoji))return res.status(400).json({error:'Reacción inválida'});
+ if(!/^\d{1,18}$/.test(id)||!['👍','👎','❤️','😂','🎉','🙏'].includes(emoji))return res.status(400).json({error:'Reacción inválida'});
  const result=await tx(async client=>{
   const comment=await client.query('SELECT id FROM comments WHERE id=$1 AND NOT hidden FOR UPDATE',[id]);
   if(!comment.rowCount)return null;

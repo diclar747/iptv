@@ -1,6 +1,7 @@
+import {queryPublicChannels} from './channelCatalog.js';
 import { applyOfficialChannelRepairs } from './officialChannelRepairs.js';
 import movieAdminRouter from './movieAdmin.js';
-import channelAdminRouter, { verifyChannel, startChannelChecks } from './channelAdmin.js';
+import channelAdminRouter, { verifyChannel } from './channelAdmin.js';
 import { initChannelState } from './channelState.js';
 import './env.js'; // carga .env antes que nada (debe ir primero)
 import { exec } from 'node:child_process';
@@ -50,7 +51,7 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 23, versionName: '1.22', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 24, versionName: '1.23', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
@@ -159,32 +160,9 @@ app.get('/api/channels', requireActiveViewer, withData, async (req, res) => {
     onlyWithStreams = 'true',
   } = req.query;
   const pageN = Math.max(1, parseInt(page, 10) || 1);
-  const result = queryChannels({
-    country: country || undefined,
-    category: category || undefined,
-    search: search || undefined,
-    prefer: req.query.prefer || geoCountry(req),
-    status: req.query.status || undefined,
-    page: pageN,
-    pageSize: Math.min(100, Math.max(1, parseInt(pageSize, 10) || 40)),
-    includeNsfw: includeNsfw === 'true',
-    onlyWithStreams: onlyWithStreams !== 'false',
-  });
 
-  // Canales manuales: se anteponen en la primera página cuando coinciden con el
-  // filtro de país/categoría (y con el texto buscado, si lo hay).
-  if (country || category) {
-    let man = await manualCards({ country: country || undefined, category: category || undefined }).catch(() => []);
-    const q = (search || '').trim().toLowerCase();
-    if (q) man = man.filter((c) => c.name.toLowerCase().includes(q));
-    if(req.query.status)man=man.filter(c=>c.status===req.query.status);
-    if (man.length) {
-      if (pageN === 1) result.items = [...man, ...result.items];
-      result.total += man.length;
-    }
-  }
-
-  res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
+  const result=await queryPublicChannels({country:country||undefined,category:category||undefined,search:search||undefined,prefer:req.query.prefer||geoCountry(req),status:req.query.status||undefined,page:pageN,pageSize,includeNsfw:includeNsfw==='true',onlyWithStreams:onlyWithStreams!=='false'});
+  res.set('Cache-Control','private, no-store');
   res.json(result);
 });
 
@@ -281,10 +259,9 @@ async function start() {
     console.log(`[api] escuchando en http://localhost:${PORT}`);
     // Precarga en segundo plano para que la primera consulta sea rápida.
     ensureLoaded()
-      .then(async () => {console.log('[api] datos de iptv-org cargados');await applyOfficialChannelRepairs();startChannelChecks({country:'PY'}).catch(console.error);})
+      .then(async () => {console.log('[api] datos de iptv-org cargados');await applyOfficialChannelRepairs();})
       .catch((e) => console.error('[api] error precargando:', e.message));
-    const healthTimer=setInterval(()=>startChannelChecks({country:'PY'}).catch(console.error),10*60*1000);
-    healthTimer.unref();
+
     // Sincronización incremental del catálogo (solo si hay API Key de TheTVDB).
 
   });

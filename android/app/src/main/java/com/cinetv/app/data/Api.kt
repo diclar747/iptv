@@ -14,7 +14,10 @@ interface Api {
     suspend fun channelStatuses(@Query("ids") ids: String): List<ChannelHealth>
 
     @GET("api/radios")
-    suspend fun radios(): RadiosResp
+    suspend fun radios(@Query("page") page: Int = 1, @Query("pageSize") pageSize: Int = 10, @Query("search") search: String? = null, @Query("status") status: String? = null, @Query("catalog") catalog: String? = null): RadiosResp
+
+    @GET("api/radios/status")
+    suspend fun radioStatuses(@Query("ids") ids: String): List<RadioStation>
 
     @POST("api/auth/login")
     suspend fun login(@Body body: LoginReq): UserResp
@@ -56,11 +59,12 @@ interface Api {
     suspend fun movies(
         @Query("search") search: String? = null,
         @Query("category") category: String? = null,
-        @Query("pageSize") pageSize: Int = 60,
+        @Query("pageSize") pageSize: Int = 10,
+        @Query("page") page: Int = 1,
     ): List<Card>
 
     @GET("api/catalog/series")
-    suspend fun seriesList(@Query("search") search: String? = null): List<Card>
+    suspend fun seriesList(@Query("search") search: String? = null, @Query("page") page: Int = 1, @Query("pageSize") pageSize: Int = 10): List<Card>
 
     @GET("api/catalog/movies/{id}")
     suspend fun movie(@Path("id") id: Long): MovieDetail
@@ -74,7 +78,7 @@ interface Api {
         @Query("category") category: String? = null,
         @Query("search") search: String? = null,
         @Query("prefer") prefer: String? = null,
-        @Query("pageSize") pageSize: Int = 80,
+        @Query("pageSize") pageSize: Int = 10,
         @Query("page") page: Int = 1,
         @Query("status") status: String? = null,
     ): ChannelList
@@ -235,6 +239,6 @@ data class ReactionsResp(
 )
 
 data class RadioStation(val id: String, val name: String, val url: String, val city: String = "", val tags: String = "", val codec: String = "", val source: String? = null, val logo: String? = null, val status: String = "checking", val checkedAt: String? = null)
-data class RadiosResp(val items: List<RadioStation> = emptyList(), val total: Int = 0)
+data class RadiosResp(val items: List<RadioStation> = emptyList(), val total: Int = 0, val hasMore: Boolean = false, val catalog: String? = null)
 
 data class ChannelHealth(val id: String, val status: String = "unchecked", val checkedAt: String? = null)

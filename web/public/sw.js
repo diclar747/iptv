@@ -6,11 +6,11 @@
 //  - Logos/imágenes: cache-first (una vez vistos, quedan al toque), con tope.
 //  - Vídeo (/api/stream) y endpoints sensibles: SIEMPRE red, nunca cachear.
 
-const SHELL_CACHE = 'senal-shell-v2';
-const DATA_CACHE = 'senal-data-v2';
+const SHELL_CACHE = 'livetv-shell-v3';
+const DATA_CACHE = 'livetv-data-v3';
 const IMG_CACHE = 'senal-img-v2';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
-const DATA_API = /^\/api\/(home|meta|channels)(\?|$)/;
+const DATA_API = /^\/api\/(home|meta)(\?|$)/;
 const IMG_MAX = 400;
 
 self.addEventListener('install', (event) => {

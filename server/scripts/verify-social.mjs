@@ -31,6 +31,8 @@ try {
  await req('/comments/'+comment.id+'/reaction',b,'POST',{emoji:'INVALID'},400);
  await req('/comments',a,'POST',{type:'channel',id,body:'  '},400);
  const removed=await req('/comments/'+comment.id+'/reaction',b,'POST',{emoji:'❤️'});assert.equal(removed.reaction,null);assert.equal(removed.reactions['❤️'],1);
+ const down=await req('/comments/'+comment.id+'/reaction',b,'POST',{emoji:'👎'});assert.equal(down.reaction,'👎');assert.equal(down.reactions['👎'],1);
+ const up=await req('/comments/'+comment.id+'/reaction',b,'POST',{emoji:'👍'});assert.equal(up.reactions['👎'],undefined);assert.equal(up.reactions['👍'],1);
  await req('/comments/'+comment.id,a,'DELETE');assert.equal((await req('/reactions?type=radio&id='+id,a)).comments.length,0);
  await req('/comments/'+comment.id+'/reaction',b,'POST',{emoji:'👍'},404);
  assert.equal((await one('SELECT count(*)::int n FROM comment_reactions WHERE comment_id=$1',[comment.id])).n,0);

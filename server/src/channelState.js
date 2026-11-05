@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
 import { many, query } from './pg.js';
 const overrides = new Map(), health = new Map();
+let revision=0;
+export const channelSettingsVersion=()=>revision;
 export async function initChannelState() {
   const [settings, checks] = await Promise.all([many('SELECT * FROM channel_overrides'),many('SELECT * FROM channel_health')]);
-  overrides.clear(); health.clear();
+  overrides.clear(); health.clear();revision++;
   settings.forEach(r=>overrides.set(r.channel_id,r.settings)); checks.forEach(r=>health.set(r.channel_id,r));
 }
 export const channelSettings = id => overrides.get(id) || {};
@@ -34,12 +36,12 @@ export function managedCard(card,streams) {
 export async function saveChannelSettings(id,patch) {
   const settings={...channelSettings(id),...patch};
   await query(`INSERT INTO channel_overrides (channel_id,settings) VALUES ($1,$2) ON CONFLICT(channel_id) DO UPDATE SET settings=EXCLUDED.settings,updated_at=now()`,[id,settings]);
-  overrides.set(id,settings);
+  overrides.set(id,settings);revision++;
   if(patch.streams) {health.delete(id);await query('DELETE FROM channel_health WHERE channel_id=$1',[id]);}
   return settings;
 }
 export async function resetChannelSettings(id) {
-  await query('DELETE FROM channel_overrides WHERE channel_id=$1',[id]); overrides.delete(id);health.delete(id);
+  await query('DELETE FROM channel_overrides WHERE channel_id=$1',[id]); overrides.delete(id);health.delete(id);revision++;
   await query('DELETE FROM channel_health WHERE channel_id=$1',[id]);
 }
 export async function saveChannelCheck(id,streams,results) {

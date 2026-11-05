@@ -10,6 +10,8 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
   const [category, setCategory] = useState(initialCategory || '');
   const [cats, setCats] = useState([]);
   const [error, setError] = useState(null);
+  const [retry,setRetry]=useState(0);
+  const generation=useRef(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   // Refs para el scroll infinito: evitan disparos solapados y páginas
@@ -20,18 +22,16 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
   const hasMoreRef = useRef(false);
 
   async function loadMore() {
-    if (loadingRef.current || !hasMoreRef.current) return;
-    loadingRef.current = true;
-    setLoadingMore(true);
-    try {
-      const nextPage = pageRef.current + 1;
-      const next = await api.movies({ search, category: fixedCategory || category, page: nextPage });
-      setItems((old) => [...old, ...next.filter((x) => !old.some((y) => y.id === x.id))]);
-      pageRef.current = nextPage;
-      const more = next.length === 48;
-      hasMoreRef.current = more; setHasMore(more);
-    } catch (e) { handleErr(e); }
-    finally { loadingRef.current = false; setLoadingMore(false); }
+    if(loadingRef.current||!hasMoreRef.current)return;
+    loadingRef.current=true;setLoadingMore(true);setError(null);
+    const epoch=generation.current,nextPage=pageRef.current+1;
+    try{
+      const rows=await (mode==='series'?api.series({search,page:nextPage,pageSize:10}):api.movies({search,category:fixedCategory||category,page:nextPage,pageSize:10}));
+      if(epoch!==generation.current)return;
+      const next=rows.map(x=>({...x,type:mode==='series'?'serie':'movie'}));
+      setItems(old=>[...old,...next.filter(x=>!old.some(y=>y.id===x.id))]);pageRef.current=nextPage;
+      hasMoreRef.current=rows.length===10;setHasMore(hasMoreRef.current);
+    }catch(e){if(epoch===generation.current)handleErr(e);}finally{if(epoch===generation.current){loadingRef.current=false;setLoadingMore(false);}}
   }
 
   function handleErr(e) {
@@ -39,42 +39,25 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
     setError(e.message);
   }
 
-  // Carga según modo.
-  useEffect(() => {
-    if (mode === 'mylist') {
-      api.favorites().then(setItems).catch(() => setItems(getMyList()));
-      return;
-    }
-    if (mode === 'series') {
-      api.series().then((s) => setItems(s.map((x) => ({ type: 'serie', ...x })))).catch(handleErr);
-      return;
-    }
-    // movies — primera página; reinicia el cursor del scroll infinito.
-    const t = setTimeout(() => {
-      api.movies({ search, category: fixedCategory || category })
-        .then((m) => {
-          setItems(m.map((x) => ({ type: 'movie', ...x })));
-          pageRef.current = 1;
-          const more = m.length === 48;
-          hasMoreRef.current = more; setHasMore(more);
-          setError(null);
-        }).catch(handleErr);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [mode, search, category, fixedCategory]);
+  useEffect(()=>{
+    const epoch=++generation.current;let alive=true;
+    loadingRef.current=true;hasMoreRef.current=false;setHasMore(false);setItems([]);setLoadingMore(true);setError(null);
+    const timer=setTimeout(async()=>{
+      try{
+        const rows=mode==='mylist'?await api.favorites().catch(()=>getMyList()):mode==='series'?await api.series({search,page:1,pageSize:10}):await api.movies({search,category:fixedCategory||category,page:1,pageSize:10});
+        if(!alive)return;
+        setItems(rows.map(x=>mode==='mylist'?x:{...x,type:mode==='series'?'serie':'movie'}));pageRef.current=1;
+        hasMoreRef.current=mode!=='mylist'&&rows.length===10;setHasMore(hasMoreRef.current);
+      }catch(e){if(alive)handleErr(e);}finally{if(alive&&epoch===generation.current){loadingRef.current=false;setLoadingMore(false);}}
+    },300);
+    return()=>{alive=false;clearTimeout(timer);};
+  },[mode,search,category,fixedCategory,retry]);
 
-  // Scroll infinito: observa un centinela al final de la grilla y carga la
-  // siguiente página antes de llegar al fondo (rootMargin). Solo películas.
-  useEffect(() => {
-    if (mode !== 'movies') return;
-    const el = sentinelRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) loadMore();
-    }, { rootMargin: '600px 0px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [mode, search, category, fixedCategory]);
+  useEffect(()=>{
+    if(mode==='mylist'||!hasMore||loadingMore||error)return;
+    const io=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))loadMore();},{rootMargin:'200px'});
+    if(sentinelRef.current)io.observe(sentinelRef.current);return()=>io.disconnect();
+  },[mode,search,category,fixedCategory,hasMore,loadingMore,items.length,error]);
 
   // Categorías (solo películas sin categoría fija).
   useEffect(() => {
@@ -89,7 +72,7 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
     }).catch(() => {});
   }, [mode, fixedCategory]);
 
-  const showFilters = mode === 'movies';
+  const showFilters = mode !== 'mylist';
 
   return (
     <div className="view">
@@ -97,7 +80,7 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
         <h2>{title}</h2>
         {showFilters && (
           <div className="view-filters">
-            {!fixedCategory && (
+            {mode==='movies'&&!fixedCategory && (
               <select className="pill" value={category} onChange={(e) => setCategory(e.target.value)}>
                 <option value="">Todas las categorías</option>
                 {cats.map(([c, n]) => <option key={c} value={c}>{c} ({n})</option>)}
@@ -109,15 +92,15 @@ export default function Catalog({ mode, title, fixedCategory, onOpen, onAuthErro
         )}
       </div>
 
-      {error && <div className="banner error">{error}</div>}
-      {items.length === 0 && !error && <div className="banner">Nada por acá todavía.</div>}
+      {error && <div className="banner error">{error} <button onClick={()=>items.length?loadMore():setRetry(x=>x+1)}>Reintentar</button></div>}
+      {items.length === 0 && !error && !loadingMore && <div className="banner">Nada por acá todavía.</div>}
 
       <div className="vod-grid">
         {items.map((it) => <PosterCard key={it.key || `${it.type}${it.id}`} item={it} onOpen={onOpen} />)}
       </div>
-      {mode === 'movies' && (
-        <div ref={sentinelRef} className="vod-sentinel" aria-hidden="true">
-          {loadingMore && <span className="vod-loading">Cargando películas…</span>}
+      {mode !== 'mylist' && (
+        <div ref={sentinelRef} className="vod-sentinel">
+          {loadingMore && <span className="vod-loading">Cargando…</span>}
         </div>
       )}
     </div>

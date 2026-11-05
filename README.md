@@ -248,3 +248,36 @@ que identifica y enlaza el sitio oficial de la emisora.
 Desplegar backend y web juntos y publicar la APK 1.22. La tabla de reacciones a
 comentarios se crea al iniciar, conservando votos y comentarios anteriores.
 Validación social con PostgreSQL local: node server/scripts/verify-social.mjs.
+
+## LiveTV 1.23 — Carga progresiva y chat compacto
+
+La APK carga radios, canales, películas y series de diez en diez y agrega la
+siguiente página al acercarse al final de la lista. Buscar o cambiar filtros
+reinicia el recorrido; los resultados tardíos de una búsqueda previa se descartan.
+Los canales propios y del proveedor comparten una sola paginación, sin exceder
+el tamaño de página ni saltar elementos en la transición.
+
+Las radios responden desde el catálogo local sin esperar al directorio externo;
+este se actualiza en segundo plano. Cada recorrido conserva una instantánea del
+catálogo para mantener el orden mientras se cargan páginas. Los estados se
+consultan para los elementos visibles, con caché compartida, deduplicación y
+colas acotadas (cuatro radios simultáneas). Se quitó la revisión automática
+completa de canales al iniciar y cada diez minutos: la revisión general sigue
+estando disponible en el administrador. Los filtros online/offline muestran
+señales ya comprobadas; no arrancan una exploración completa. La web también
+carga radios progresivamente y consulta solo las tarjetas visibles.
+
+El chat se abre expandido. El encabezado y la entrada de texto permanecen fuera
+de la lista desplazable; el campo se ajusta al teclado. Las burbujas usan su
+altura natural y las acciones visibles son pulgar arriba/abajo; el selector de
+emojis queda en el campo de escritura y eliminar está en el menú del comentario.
+Las consultas periódicas se pausan al ocultar la app, manteniendo el audio del
+servicio. Las reacciones antiguas se conservan en la base de datos.
+
+Pruebas: radio-queue.test.js y radio-pagination.test.js comprueban deduplicación,
+concurrencia, respuesta inicial sin esperar al directorio y continuidad de las
+páginas; verify-pagination.mjs valida la transición de canales propios/proveedor;
+verify-social.mjs valida publicación, permisos y pulgares. La APK y la web se
+compilan; no se hizo una prueba visual en Android porque el emulador disponible
+requiere aceleración de hardware que no está habilitada en este equipo.
+Desplegar backend, web y APK 1.23 juntos. El inicio aplica la migración SQL.

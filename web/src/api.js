@@ -99,7 +99,9 @@ export const api = {
   reactions: (type, id) => get('/catalog/reactions', { type, id }),
   toggleLike: (type, id, value=1) => post('/catalog/likes', { type, id, value }),
   reactComment: (id, emoji) => post(`/catalog/comments/${id}/reaction`, {emoji}),
-  radios: () => get('/radios'),
+  radios: (params) => get('/radios', params),
+  radioStatuses: (ids) => get('/radios/status',{ids}),
+  channelStatuses: (ids) => get('/channels/status',{ids}),
   addComment: (type, id, body) => post('/catalog/comments', { type, id, body }),
   deleteComment: (id) => del(`/catalog/comments/${id}`),
 

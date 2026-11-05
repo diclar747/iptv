@@ -68,7 +68,7 @@ export default function App() {
     }
   }, [user?.id]);
 
-  useEffect(()=>{if(!user)return;let alive=true;const q=new URLSearchParams(window.location.search),id=q.get('play'),type=q.get('type');if(id&&type==='channel')setModal({type:'channel',id,name:id});if(id&&type==='radio')api.radios().then(r=>{const radio=r.items.find(s=>s.id===id);if(alive&&radio)setModal({...radio,type:'radio'});}).catch(()=>{});return()=>{alive=false;};},[user?.id]);
+  useEffect(()=>{if(!user)return;let alive=true;const q=new URLSearchParams(window.location.search),id=q.get('play'),type=q.get('type');if(id&&type==='channel')setModal({type:'channel',id,name:id});if(id&&type==='radio')api.radioStatuses(id).then(r=>{const radio=r.find(s=>s.id===id);if(alive&&radio)setModal({...radio,type:'radio'});}).catch(()=>{});return()=>{alive=false;};},[user?.id]);
   // Pantalla completa de toda la app.
   useEffect(() => {
     const onFs = () => setFs(Boolean(document.fullscreenElement));

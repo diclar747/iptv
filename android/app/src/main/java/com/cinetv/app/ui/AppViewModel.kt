@@ -110,7 +110,7 @@ class AppViewModel : ViewModel() {
 
     suspend fun refreshSignalStates() {
         try {
-            val ids=channelRows.flatMap { it.items.orEmpty() }.map { it.id }.distinct().take(100)
+            val ids=channelRows.flatMap { it.items.orEmpty() }.map { it.id }.distinct().take(20)
             if(ids.isEmpty())return
             val states=api.channelStatuses(ids.joinToString(",")).associateBy { it.id }
             channelRows=channelRows.map { row -> row.copy(items=row.items?.filter { states[it.id]?.status !in listOf("blocked","deleted") }?.map { c -> states[c.id]?.let { c.copy(status=it.status,checkedAt=it.checkedAt) } ?: c }) }

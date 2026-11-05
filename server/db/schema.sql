@@ -345,3 +345,6 @@ CREATE TABLE IF NOT EXISTS comment_reactions (
  emoji TEXT NOT NULL CHECK (emoji IN ('👍','❤️','😂','🎉','🙏')),
  PRIMARY KEY(comment_id,user_id)
 );
+
+ALTER TABLE comment_reactions DROP CONSTRAINT IF EXISTS comment_reactions_emoji_check;
+ALTER TABLE comment_reactions ADD CONSTRAINT comment_reactions_emoji_check CHECK (emoji IN ('👍','👎','❤️','😂','🎉','🙏'));

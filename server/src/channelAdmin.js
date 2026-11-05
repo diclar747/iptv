@@ -9,9 +9,9 @@ const router=express.Router();
 const h=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(e=>res.status(e.status||500).json({error:e.message}));
 router.use('/admin/channels',requireRole('admin'));
 router.get('/channels/status',requireActiveViewer,h(async(req,res)=>{
- const ids=[...new Set(String(req.query.ids||'').split(',').filter(Boolean))].slice(0,100);
+ const ids=[...new Set(String(req.query.ids||'').split(',').filter(Boolean))].slice(0,20);
  res.set('Cache-Control','private, no-store');
- res.json(await Promise.all(ids.map(async id=>{const record=await channelRecord(id);return {id,...channelStatus(id,record?.streams||[])};})));
+ res.json(await Promise.all(ids.map(async id=>{const record=await channelRecord(id);const status=channelStatus(id,record?.streams||[]);if(record&&status.status==='unchecked')queueVisibleCheck(id);return {id,...status};})));
 }));
 export async function allManagedChannels() {
  await ensureLoaded();
@@ -28,11 +28,25 @@ export async function channelRecord(id) {
  }
  return getChannelStreams(id,{includeHidden:true});
 }
-export async function verifyChannel(id) {
+const checkingChannels=new Map();
+export function verifyChannel(id) {
+ if(checkingChannels.has(id))return checkingChannels.get(id);
+ const task=checkChannel(id).finally(()=>checkingChannels.delete(id));
+ checkingChannels.set(id,task);return task;
+}
+async function checkChannel(id) {
  const record=await channelRecord(id);if(!record)throw Object.assign(Error('Canal no encontrado'),{status:404});
  const results=await checkMany(record.streams,{concurrency:3});
  return saveChannelCheck(id,record.streams,results);
 }
+const visibleQueue=new Set(),visiblePending=new Set();let visibleActive=0;
+function queueVisibleCheck(id){
+ if(visiblePending.has(id)||visibleQueue.size>=80)return;
+ visiblePending.add(id);visibleQueue.add(id);drainVisible();
+}
+function drainVisible(){while(visibleActive<3&&visibleQueue.size){const id=visibleQueue.values().next().value;visibleQueue.delete(id);visibleActive++;
+ void verifyChannel(id).catch(()=>{}).finally(()=>{visibleActive--;visiblePending.delete(id);drainVisible();});
+}}
 const job={running:false,stop:false,total:0,done:0,online:0,offline:0,errors:0,current:null,startedAt:null};
 export const channelJob=()=>({...job});
 export async function startChannelChecks(filters={}) {

@@ -1,10 +1,10 @@
 import React, {useEffect,useState} from 'react';
 import {getReactions,toggleLike,addComment,deleteComment} from './social.js';
 import {api} from './api.js';
-const emojis=['👍','❤️','😂','🎉','🙏'];
+const emojis=['👍','👎'];
 export default function WatchActions({contentId,title,streams=[],activeStream,onSelectStream,onVerify,checking,user}) {
  const [state,setState]=useState({comments:[]}),[open,setOpen]=useState(false),[draft,setDraft]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[sharing,setSharing]=useState(false);
- useEffect(()=>{let alive=true;setState({comments:[]});setDraft('');setError('');const load=()=>getReactions(contentId).then(r=>{if(alive)setState(r);}).catch(()=>{if(alive)setError('No se pudo actualizar la conversación.');});load();const timer=setInterval(load,5000);return()=>{alive=false;clearInterval(timer);};},[contentId]);
+ useEffect(()=>{let alive=true;setState({comments:[]});setDraft('');setError('');const load=()=>{if(document.hidden)return;return getReactions(contentId).then(r=>{if(alive)setState(r);}).catch(()=>{if(alive)setError('No se pudo actualizar la conversación.');});};load();const timer=setInterval(load,8000);return()=>{alive=false;clearInterval(timer);};},[contentId]);
  const raw=String(contentId),colon=raw.indexOf(':'),prefixed=['channel','radio','movie','serie','series'].includes(raw.slice(0,colon));
  const type=prefixed?raw.slice(0,colon):'channel',id=prefixed?raw.slice(colon+1):raw;
  const url=`${window.location.origin}/?type=${encodeURIComponent(type)}&play=${encodeURIComponent(id)}`;

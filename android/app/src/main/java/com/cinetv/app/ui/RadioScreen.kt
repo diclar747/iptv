@@ -21,6 +21,9 @@ import coil.compose.SubcomposeAsyncImage
 import com.cinetv.app.R
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -53,22 +56,52 @@ fun RadiosTab(vm: AppViewModel) {
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("all") }
     var retry by remember { mutableStateOf(0) }
-    LaunchedEffect(retry) {
-        while (true) {
-            try { stations = Net.api.radios().items; error = null }
-            catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (_: Exception) { error = "No pudimos actualizar las señales. Tocá para reintentar." }
-            loading = false
-            delay(8000)
+
+    val listState=rememberLazyListState()
+    val scope=rememberCoroutineScope()
+    var page by remember { mutableIntStateOf(1) }
+    var total by remember { mutableIntStateOf(0) }
+    var catalog by remember { mutableStateOf<String?>(null) }
+    var hasMore by remember { mutableStateOf(false) }
+    var loadingMore by remember { mutableStateOf(false) }
+    var generation by remember { mutableIntStateOf(0) }
+    LaunchedEffect(search,filter,retry) {
+        generation++;loading=true;loadingMore=false;error=null;stations=emptyList();catalog=null;hasMore=false
+        delay(300)
+        try {
+            val r=Net.api.radios(search=search,status=filter.takeUnless{it=="all"})
+            stations=r.items;total=r.total;catalog=r.catalog;hasMore=r.hasMore;page=1
+            listState.scrollToItem(0)
+        } catch(e:kotlinx.coroutines.CancellationException){throw e} catch(_:Exception){error="No pudimos cargar las radios. Tocá para reintentar."}
+        finally{loading=false}
+    }
+    fun more(){
+        if(loading||loadingMore||!hasMore)return
+        val epoch=generation;val query=search;val stateFilter=filter;val token=catalog;val next=page+1
+        loadingMore=true;error=null
+        scope.launch {
+            try{val r=Net.api.radios(page=next,search=query,status=stateFilter.takeUnless{it=="all"},catalog=token)
+                if(epoch==generation){stations=(stations+r.items).distinctBy{it.id};page=next;hasMore=r.hasMore;total=r.total}
+            }catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){if(epoch==generation)error="No se pudo cargar más. Tocá para reintentar."}
+            finally{if(epoch==generation)loadingMore=false}
         }
     }
-    val online = stations.count { it.status == "online" }
-    val checking = stations.count { it.status == "checking" }
-    val filtered = stations.filter {
-        (filter == "all" || it.status == filter) &&
-        (it.name + " " + it.city + " " + it.tags).contains(search, ignoreCase = true)
-    }.sortedBy { when(it.status) { "online" -> 0; "checking" -> 1; else -> 2 } }
-    LazyColumn(Modifier.fillMaxSize().background(Color(0xFF070B13)), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val foreground=rememberForeground()
+    LaunchedEffect(listState,foreground) {
+        if(!foreground)return@LaunchedEffect
+        snapshotFlow { val known=stations.map{it.id}.toSet();listState.layoutInfo.visibleItemsInfo.mapNotNull{it.key as? String}.filter{it in known}.take(20) }
+            .distinctUntilChanged().collectLatest { ids ->
+                if(ids.isNotEmpty())while(true){
+                    try{val states=Net.api.radioStatuses(ids.joinToString(",")).associateBy{it.id};stations=stations.map{states[it.id]?:it}}
+                    catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){}
+                    delay(8000)
+                }
+            }
+    }
+    val online=stations.count{it.status=="online"}
+    val checking=stations.count{it.status=="checking"}
+    val filtered=stations
+    LazyColumn(state=listState,modifier=Modifier.fillMaxSize().background(Color(0xFF070B13)), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -85,7 +118,7 @@ fun RadiosTab(vm: AppViewModel) {
                 Column(Modifier.padding(20.dp).align(Alignment.CenterStart), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("DALE PLAY A TU DÍA", color = RadioMint, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                     Text("Voces que conectan.", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                    Text(if(online > 0) "$online emisoras online ahora" else "Buscando señales en vivo…", color = Color(0xFFB5C4D7), fontSize = 12.sp)
+                    Text(if(online > 0) "$online online entre las emisoras cargadas" else "$total emisoras · Carga progresiva", color = Color(0xFFB5C4D7), fontSize = 12.sp)
                 }
             }
         }
@@ -101,7 +134,7 @@ fun RadiosTab(vm: AppViewModel) {
             }
             if (checking > 0 || loading) {
                 LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp), color = RadioMint, trackColor = RadioInk)
-                Text("Comprobando señal de las emisoras…", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+                Text("Comprobando las radios visibles…", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
             }
             error?.let { TextButton(onClick = { retry++ }) { Text(it, color = Color(0xFFFFCC73), fontSize = 12.sp) } }
         }
@@ -127,7 +160,12 @@ fun RadiosTab(vm: AppViewModel) {
                 }
             }
         }
-        item { Text("Señales verificadas periódicamente · LiveTV", color = Muted, fontSize = 10.sp, modifier = Modifier.padding(vertical = 12.dp)) }
+        if(!loading && hasMore) item(key="more-$page") {
+            LaunchedEffect(page) { if(error==null)more() }
+            if(loadingMore) CircularProgressIndicator(Modifier.size(24.dp),color=RadioMint)
+            else TextButton(onClick={more()}){Text("Cargar más radios",color=RadioMint)}
+        }
+        item { Text("$total emisoras · Señales verificadas al navegar · LiveTV", color = Muted, fontSize = 10.sp, modifier = Modifier.padding(vertical = 12.dp)) }
     }
 }
 
@@ -137,7 +175,9 @@ fun VoteButtons(type: String, id: String) {
     var busy by remember(type, id) { mutableStateOf(false) }
     var error by remember(type, id) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(type, id) {
+    val foreground=rememberForeground()
+    LaunchedEffect(type, id,foreground) {
+        if(!foreground)return@LaunchedEffect
         while (true) {
             try { state = Net.api.reactions(type, id); error = null }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }

@@ -1,6 +1,7 @@
 import express from 'express';
 import { requireActiveViewer } from './auth.js';
 import { readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { radioStatuses } from './radio-health.js';
 
 function curatedRadios() {
@@ -62,20 +63,44 @@ async function loadDirectory() {
   })().finally(() => { pending = null; });
   return pending;
 }
-export async function loadRadios() {
-  const curated = curatedRadios();
-  try { return mergeRadios(curated, await loadDirectory()); }
-  catch (error) { if (curated.length) return curated; throw error; }
+
+let localCatalog, mergedCatalog, mergedSource;
+function currentCatalog(){
+ if(!localCatalog)localCatalog=curatedRadios();
+ // Serve local/stale data immediately; one shared request refreshes the directory.
+ void loadDirectory().catch(()=>{});
+ if(cache?.items&&mergedSource!==cache){mergedCatalog=mergeRadios(localCatalog,cache.items);mergedSource=cache;}
+ return mergedCatalog||localCatalog;
 }
-router.get('/radios', requireActiveViewer, async (req, res) => {
-  try {
-    const all = radioStatuses(await loadRadios());
-    const order = { online: 0, checking: 1, offline: 2 };
-    all.sort((a,b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name, 'es'));
-    const search = String(req.query.search || '').toLocaleLowerCase('es');
-    res.json({ items: all.filter(r => `${r.name} ${r.city} ${r.tags}`.toLocaleLowerCase('es').includes(search)), total: all.length,
-      counts: { online: all.filter(s => s.status === 'online').length, offline: all.filter(s => s.status === 'offline').length, checking: all.filter(s => s.status === 'checking').length },
-      attribution: 'Radio Browser · Paraguay Online · señales oficiales', country: 'PY' });
-  } catch (error) { res.status(502).json({ error: error.message }); }
+export async function loadRadios(){return currentCatalog();}
+const snapshots=new Map();
+function snapshot(token){
+ const now=Date.now();for(const [key,value] of snapshots)if(now-value.at>600000)snapshots.delete(key);
+ if(token&&snapshots.has(token))return {token,...snapshots.get(token)};
+ if(!token&&snapshots.size){const [key,value]=[...snapshots].at(-1);if(now-value.at<300000)return {token:key,...value};}
+ const id=randomUUID(),rows=currentCatalog().slice().sort((a,b)=>a.name.localeCompare(b.name,'es'));
+ if(snapshots.size>=8)snapshots.delete(snapshots.keys().next().value);
+ const result={at:now,rows};snapshots.set(id,result);return {token:id,...result};
+}
+router.get('/radios/status',requireActiveViewer,async(req,res)=>{
+ const ids=new Set(String(req.query.ids||'').split(',').filter(Boolean).slice(0,20));
+ res.set('Cache-Control','private, no-store');
+ res.json(radioStatuses(currentCatalog().filter(r=>ids.has(r.id))));
+});
+router.get('/radios',requireActiveViewer,async(req,res)=>{
+ try {
+  const snap=snapshot(String(req.query.catalog||''));
+  const q=String(req.query.search||'').trim().toLocaleLowerCase('es');
+  let rows=snap.rows.filter(r=>(r.name+' '+r.city+' '+r.tags).toLocaleLowerCase('es').includes(q));
+  if(req.query.status)rows=radioStatuses(rows,{verify:false}).filter(r=>r.status===req.query.status);
+  const paged=req.query.page!==undefined||req.query.pageSize!==undefined;
+  const page=Math.max(1,parseInt(req.query.page)||1),pageSize=Math.min(20,Math.max(1,parseInt(req.query.pageSize)||10));
+  const items=paged?rows.slice((page-1)*pageSize,page*pageSize):rows;
+  // Legacy clients can still read all metadata, but never start a full-catalog scan.
+  const statuses=radioStatuses(items.slice(0,paged?pageSize:10));
+  const byId=new Map(statuses.map(r=>[r.id,r]));
+  res.set('Cache-Control','private, no-store');
+  res.json({items:items.map(r=>byId.get(r.id)||radioStatuses([r],{verify:false})[0]),total:rows.length,page,pageSize,catalog:snap.token,hasMore:paged&&page*pageSize<rows.length,country:'PY'});
+ }catch(e){res.status(502).json({error:e.message});}
 });
 export default router;
