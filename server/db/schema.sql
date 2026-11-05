@@ -395,3 +395,21 @@ CREATE TABLE IF NOT EXISTS media_assets (
  metadata JSONB NOT NULL,
  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Computers may only process their assigned import jobs; pairing codes expire.
+CREATE TABLE IF NOT EXISTS media_devices (
+ id UUID PRIMARY KEY, name TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE,
+ created_by BIGINT REFERENCES users(id) ON DELETE CASCADE,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now(), last_seen TIMESTAMPTZ,
+ revoked_at TIMESTAMPTZ
+);
+CREATE TABLE IF NOT EXISTS media_pairings (
+ code_hash TEXT PRIMARY KEY, created_by BIGINT REFERENCES users(id) ON DELETE CASCADE,
+ expires_at TIMESTAMPTZ NOT NULL
+);
+ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS execution TEXT NOT NULL DEFAULT 'server';
+ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS device_id UUID REFERENCES media_devices(id);
+ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS upload_size BIGINT;
+ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS upload_bytes BIGINT NOT NULL DEFAULT 0;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_media_import_source_active_v2 ON media_import_jobs(source_id)
+ WHERE state IN ('queued','awaiting_device','downloading','uploading','publishing');

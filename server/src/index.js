@@ -1,5 +1,6 @@
 import './env.js'; // carga .env antes que nada (debe ir primero)
 import youtubeAdminRouter from './youtube-admin.js';
+import mediaTransfersRouter,{startTransferMaintenance} from './media-transfers.js';
 import mediaLibraryRouter from './media-library.js';
 import {startYoutubeWorker} from './youtube-import.js';
 import {initRadioCache,startRadioMaintenance} from './radio-cache.js';
@@ -46,7 +47,7 @@ const PORT = process.env.PORT || 4000;
 app.set('trust proxy', true);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({limit:'512kb'}));
 // Adjunta req.user (desde la cookie de sesión) en todas las rutas.
 app.use(attachUser);
 
@@ -68,7 +69,7 @@ app.use('/api', catalogAdminRouter);
 app.use('/api', manualChannelsRouter);
 app.use('/api', channelAdminRouter);
 app.use('/api', movieAdminRouter);
-app.use('/api',youtubeAdminRouter,mediaLibraryRouter);
+app.use('/api',youtubeAdminRouter,mediaTransfersRouter,mediaLibraryRouter);
 
 // Carga/refresca el cache de iptv-org antes de responder consultas de datos.
 async function withData(req, res, next) {
@@ -267,6 +268,7 @@ async function start() {
     console.log(`[api] escuchando en http://localhost:${PORT}`);
     startRadioMaintenance();
     startYoutubeWorker();
+    startTransferMaintenance();
     // Precarga en segundo plano para que la primera consulta sea rápida.
     ensureLoaded()
       .then(async () => {console.log('[api] datos de iptv-org cargados');await applyOfficialChannelRepairs();})

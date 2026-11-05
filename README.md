@@ -393,3 +393,10 @@ metadatos, categorías, orden, Range/seek, bloqueo y cancelación con archivos d
 prueba. También se hizo una consulta y descarga real de Big Buck Bunny (Blender),
 con MP4 de aproximadamente 25 MB, portada y metadatos; se eliminó la copia de
 prueba y no se publicó en el catálogo. La web y APK se compilan correctamente.
+## Asistente de importación y subida de videos
+
+En el panel se pueden enviar enlaces de YouTube a una computadora Windows
+vinculada mediante código temporal, o subir un MP4/MKV ya descargado con título,
+sinopsis y categoría. El envío reanuda por fragmentos y publica solo tras
+verificar el archivo. El ZIP del asistente está disponible desde el mismo panel
+e incluye sus herramientas. Ver requisitos y uso en DEPLOY.md.

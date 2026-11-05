@@ -1,0 +1,30 @@
+LIVETV ASISTENTE PARA WINDOWS
+
+1. Extrae TODO el ZIP en una carpeta de tu computadora.
+2. Abre "Iniciar LiveTV.cmd" con doble clic. Se abre el asistente en el navegador.
+3. En el administrador de LiveTV, entra en Peliculas y Series > Generar codigo.
+4. Copia el codigo al asistente y pulsa Vincular y comenzar.
+5. En LiveTV, elige "Enlace de YouTube - Mi computadora", pega un enlace,
+   elige tu computadora y la categoria, y confirma la importacion.
+6. Deja abierta la ventana del asistente y la computadora encendida.
+
+Para una pelicula YA descargada no necesitas el asistente: en el panel elige
+"Subir una pelicula que ya tengo", selecciona el archivo y completa la ficha.
+
+No necesita privilegios de administrador ni la contrasena del servidor.
+Solo recibe trabajos de la vinculacion que autorices. Puedes revocarla en LiveTV.
+Si se corta internet, conserva el avance y vuelve a intentar. Para un archivo
+subido desde el navegador, elige el mismo archivo para continuar.
+
+Los archivos y la vinculacion local se guardan en %LOCALAPPDATA%\LiveTV Asistente.
+Los temporales del asistente se eliminan tras confirmar la publicacion.
+No compartas el codigo ni el archivo connection.json.
+
+Puede importar contenido propio o autorizado. No usa cookies de YouTube ni
+omite restricciones: algunos videos o conexiones pueden no estar disponibles.
+La seleccion de calidad usa MP4 H.264 con audio incluido, hasta 720p cuando
+el proveedor dispone de ese formato.
+
+Si ya usas Downloader YouTuber en 127.0.0.1:4317 o :4318, dejalo abierto.
+El asistente reutiliza sus descargas terminadas y conserva los originales.
+Los MKV se preparan como MP4 compatibles en el servidor al terminar el envio.

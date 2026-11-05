@@ -16,7 +16,8 @@
     "import:vod": "node server/scripts/import-vod.mjs",
     "import:radios": "node server/scripts/import-radios.mjs && node server/scripts/import-desdeparaguay.mjs && node server/scripts/verify-radios.mjs",
     "import:radios:desdeparaguay": "node server/scripts/import-desdeparaguay.mjs && node server/scripts/verify-radios.mjs",
-    "setup:youtube": "node server/scripts/setup-youtube.mjs"
+    "setup:youtube": "node server/scripts/setup-youtube.mjs",
+    "package:companion": "node server/scripts/package-companion.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

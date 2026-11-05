@@ -29,6 +29,20 @@ const put = (p, body) => req('PUT', p, { body });
 const del = (p, params) => req('DELETE', p, { params });
 
 export const api = {
+  mediaDevices:()=>get('/admin/media-devices'),
+  pairMediaDevice:()=>post('/admin/media-devices/pair',{}),
+  revokeMediaDevice:id=>del('/admin/media-devices/'+encodeURIComponent(id)),
+  createMediaTransfer:body=>post('/admin/media-transfers',body),
+  mediaTransfer:id=>get('/admin/media-transfers/'+encodeURIComponent(id)),
+  finishMediaTransfer:id=>post('/admin/media-transfers/'+encodeURIComponent(id)+'/finish',{}),
+  cancelMediaTransfer:id=>post('/admin/media-transfers/'+encodeURIComponent(id)+'/cancel',{}),
+  retryMediaTransfer:id=>post('/admin/media-transfers/'+encodeURIComponent(id)+'/retry',{}),
+  uploadMediaChunk:async(id,offset,bytes,signal)=>{
+    const sum=await crypto.subtle.digest('SHA-256',bytes);
+    const sha=[...new Uint8Array(sum)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    const r=await fetch('/api/admin/media-transfers/'+encodeURIComponent(id)+'/chunk',{method:'PUT',credentials:'include',headers:{'Content-Type':'application/octet-stream','X-Upload-Offset':String(offset),'X-Chunk-SHA256':sha},body:bytes,signal});
+    const data=await r.json();if(!r.ok)throw Object.assign(Error(data.error||'No se pudo enviar el fragmento'),{status:r.status});return data;
+  },
   adminChannels: p => get('/admin/channels',p),
   adminChannel: id => get('/admin/channels/'+encodeURIComponent(id)),
   editAdminChannel: (id,b) => patch('/admin/channels/'+encodeURIComponent(id),b),

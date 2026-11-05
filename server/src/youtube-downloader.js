@@ -40,7 +40,7 @@ async function fetchPreviewYoutube(url){
  const source=parseYoutubeUrl(url),cap=await importerCapabilities();
  if(!cap.downloader)throw Object.assign(Error('El servidor necesita yt-dlp para importar videos. Consultá DEPLOY.md.'),{status:503});
  try{const {stdout}=await exec(BIN,[...baseArgs,'--dump-single-json','--skip-download','--',source.url],{timeout:60000,maxBuffer:16*1024**2,windowsHide:true});const metadata=sanitizeMetadata(JSON.parse(stdout));if(metadata.id!==source.id)throw Error('El proveedor devolvió un video diferente');return metadata;}
- catch(e){if(e.status)throw e;throw Object.assign(Error('No se pudieron obtener los datos. Verificá que el video sea público y esté disponible; no se usan cuentas ni se eluden restricciones.'),{status:422});}
+ catch(e){if(e.status)throw e;const bot=/confirm you.re not a bot|sign in to confirm/i.test(e.stderr||'');throw Object.assign(Error(bot?'YouTube pide verificar esta conexión. Podés usar el asistente de tu computadora si el video está disponible allí, o subir un MP4 que ya tengas.':'No se pudieron obtener los datos. Verificá que el video sea público y esté disponible.'),{status:422});}
 }
 export async function previewYoutube(url){
  const source=parseYoutubeUrl(url),cached=previewCache.get(source.id);if(cached&&Date.now()-cached.at<300000)return cached.metadata;

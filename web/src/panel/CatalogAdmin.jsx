@@ -1,4 +1,5 @@
 import YoutubeImporter from './YoutubeImporter.jsx';
+import MediaTransferManager from './MediaTransferManager.jsx';
 import MovieManager from './MovieManager.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
@@ -37,7 +38,8 @@ export default function CatalogAdmin() {
 
   return (
     <div className="cat-admin">
-      <YoutubeImporter onPublished={()=>setMediaRevision(v=>v+1)} />
+      <MediaTransferManager onPublished={()=>setMediaRevision(v=>v+1)} />
+      <details className="server-import-details"><summary>Importar directamente desde el servidor</summary><YoutubeImporter onPublished={()=>setMediaRevision(v=>v+1)} /></details>
       <MovieManager refreshToken={mediaRevision} />
       <div className="stat-grid compact">
         <Stat label="Películas" value={stats.movies} />

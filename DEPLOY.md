@@ -152,3 +152,39 @@ de espera apropiados en Nginx/hosting). No es necesario exponer la carpeta como
 un directorio público.
 
 Referencia de la herramienta: https://github.com/yt-dlp/yt-dlp
+
+## Asistente de Windows y archivos MP4
+
+En Panel → Películas y Series se pueden vincular computadoras con un código
+de un solo uso válido diez minutos. El ZIP `livetv-asistente-windows.zip` incluye
+Node y yt-dlp: extraerlo completo y abrir `Iniciar LiveTV.cmd`. No necesita
+privilegios de administrador, acceso SSH ni la contraseña de LiveTV. La
+computadora recibe solo sus trabajos asignados con una credencial revocable.
+
+También se pueden subir MP4 o MKV ya descargados desde el navegador. Ambos
+flujos envían fragmentos de 4 MiB verificados con SHA-256 y posición confirmada
+por el servidor. Para continuar un envío después de cerrar la página, elegir
+el mismo archivo. El servidor requiere FFmpeg y FFprobe para validar el video
+y crear una copia MP4 H.264/AAC y su portada. Las conversiones se procesan de una en una en segundo plano. `MEDIA_MAX_BYTES` conserva el límite de 2 GiB por defecto.
+
+El proxy debe permitir PUT y POST de al menos 4 MiB y solicitudes largas para
+finalizar/verificar. No cachear `/api/admin` ni `/api/companion`. Respaldar tanto
+PostgreSQL como `MEDIA_STORAGE_DIR`. Los archivos incompletos no se publican.
+
+Para regenerar el ZIP desde Windows: `npm run setup:youtube`, luego
+`npm run package:companion` y `npm run build`. No incluir medios ni archivos
+`connection.json` en Git. El asistente guarda su vinculación y temporales en
+`%LOCALAPPDATA%\LiveTV Asistente`; elimina el temporal tras confirmar publicación.
+Escucha únicamente en 127.0.0.1:43827 y protege sus acciones con sesión local,
+comprobación de origen y un código aleatorio por inicio.
+
+El asistente no usa cuentas ni cookies de YouTube y no omite sus verificaciones.
+La disponibilidad depende del video y de la conexión de la computadora.
+
+Pruebas: `node server/scripts/verify-media-transfers.mjs` y
+`node server/scripts/verify-companion.mjs`.
+
+Si Downloader YouTuber está abierto en 127.0.0.1:4317 o :4318, el asistente
+utiliza su cola y recupera archivos terminados por el identificador de YouTube
+en el nombre. No modifica ni elimina los originales. Si no está abierto, usa
+su descargador incluido. Los datos completos se consultan desde la computadora.
