@@ -2,8 +2,9 @@ import '../src/env.js';
 import assert from 'node:assert/strict';import express from 'express';import {randomUUID,createHash} from 'node:crypto';import {readFile,rm,mkdtemp} from 'node:fs/promises';import path from 'node:path';import os from 'node:os';import {execFile} from 'node:child_process';import {promisify} from 'node:util';
 import {initSchema,one,query} from '../src/pg.js';import {attachUser,createSession} from '../src/auth.js';import router,{CHUNK_BYTES} from '../src/media-transfers.js';import {assetDirectory} from '../src/youtube-downloader.js';
 import library from '../src/media-library.js';
+import catalog from '../src/catalog.js';
 await initSchema();const admin=await one("SELECT id FROM users WHERE role='admin' AND status='active' LIMIT 1");assert.ok(admin);
-const app=express();app.use(express.json(),attachUser);app.use('/api',router,library);const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
+const app=express();app.use(express.json(),attachUser);app.use('/api',router,catalog,library);const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
 const auth={cookie:'sid='+createSession(admin.id)},jobs=[],devices=[],sha=b=>createHash('sha256').update(b).digest('hex');let codeHash;
 async function call(route,{method='GET',body,headers=auth,status=200}={}){const raw=Buffer.isBuffer(body);const r=await fetch(base+'/api'+route,{method,headers:{...headers,...(body?{'Content-Type':raw?'application/octet-stream':'application/json'}:{})},body:body===undefined?undefined:raw?body:JSON.stringify(body)});const j=await r.json();assert.equal(r.status,status,JSON.stringify(j));return j;}
 const options={mode:'upload',title:'Fixture transferencia '+Date.now(),category:'Películas',kind:'movie',authorized:true,rightsBasis:'owner',size:CHUNK_BYTES+128};const movieIds=[],temp=await mkdtemp(path.join(os.tmpdir(),'livetv-media-fixture-'));

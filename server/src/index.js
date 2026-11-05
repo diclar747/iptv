@@ -61,6 +61,8 @@ app.get('/api/app/version', (req, res) => {
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
 app.use('/api', accountsRouter);
+// Paired computers authenticate with their own scoped token, before the catalog's session guard.
+app.use('/api', mediaTransfersRouter);
 // Catálogo de películas y series (metadatos TheTVDB) + panel admin.
 app.use('/api', catalogRouter);
 app.use('/api', radioRouter);
@@ -69,7 +71,7 @@ app.use('/api', catalogAdminRouter);
 app.use('/api', manualChannelsRouter);
 app.use('/api', channelAdminRouter);
 app.use('/api', movieAdminRouter);
-app.use('/api',youtubeAdminRouter,mediaTransfersRouter,mediaLibraryRouter);
+app.use('/api',youtubeAdminRouter,mediaLibraryRouter);
 
 // Carga/refresca el cache de iptv-org antes de responder consultas de datos.
 async function withData(req, res, next) {
