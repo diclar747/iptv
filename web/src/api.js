@@ -29,6 +29,7 @@ const put = (p, body) => req('PUT', p, { body });
 const del = (p, params) => req('DELETE', p, { params });
 
 export const api = {
+  resolveLibrary:items=>post('/catalog/resolve',{items}),
   mediaDevices:()=>get('/admin/media-devices'),
   pairMediaDevice:()=>post('/admin/media-devices/pair',{}),
   revokeMediaDevice:id=>del('/admin/media-devices/'+encodeURIComponent(id)),

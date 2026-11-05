@@ -20,8 +20,8 @@ const GENRE_ES = {
 const label = (c) => GENRE_ES[String(c || '').toLowerCase().replace(/\s+/g, '-')] || c;
 
 // ¿Es reproducible? (tiene fuente autorizada o stream de dominio público)
-const MOVIE_AVAIL = `(m.stream_url IS NOT NULL OR EXISTS(
-  SELECT 1 FROM media_sources ms WHERE ms.content_type='movie' AND ms.content_id=m.id AND ms.enabled))`;
+const MOVIE_AVAIL = `(NOT m.deleted AND (m.stream_url IS NOT NULL OR EXISTS(
+  SELECT 1 FROM media_sources ms WHERE ms.content_type='movie' AND ms.content_id=m.id AND ms.enabled)))`;
 // Serie reproducible: tiene al menos un episodio con fuente.
 const SERIES_AVAIL = `EXISTS(SELECT 1 FROM episodes e WHERE e.series_id=s.id AND (
   e.stream_url IS NOT NULL OR EXISTS(SELECT 1 FROM media_sources ms WHERE ms.content_type='episode' AND ms.content_id=e.id AND ms.enabled)))`;
@@ -35,6 +35,17 @@ const seriesCard = (s) => ({
   id: s.id, type: 'serie', title: s.title, year: s.year, poster: s.poster,
   backdrop: s.backdrop, rating: s.rating != null ? Number(s.rating) : null,
   category: s.category, available: true,
+});
+
+// Rehydrate device history from current catalog rows, excluding hidden/deleted entries.
+router.post('/catalog/resolve',async(req,res)=>{
+ try{
+  if(!Array.isArray(req.body?.items)||req.body.items.length>100)return res.status(400).json({error:'Lista inválida (máximo 100 elementos)'});
+  const ids=type=>[...new Set(req.body.items.filter(i=>i?.type===type&&/^[1-9]\d{0,17}$/.test(String(i.id))).map(i=>String(i.id)))];
+  const movieIds=ids('movie'),serieIds=ids('serie');
+  const [movies,series]=await Promise.all([movieIds.length?many(`SELECT m.*,${MOVIE_AVAIL} available FROM movies m WHERE id=ANY($1::bigint[]) AND NOT hidden AND NOT deleted`,[movieIds]):[],serieIds.length?many('SELECT * FROM series WHERE id=ANY($1::bigint[]) AND NOT hidden',[serieIds]):[]]);
+  res.set('Cache-Control','private, no-store').json([...movies.map(movieCard),...series.map(seriesCard)]);
+ }catch{res.status(500).json({error:'No se pudo actualizar la biblioteca'});}
 });
 
 // Solo películas REPRODUCIBLES (se ocultan las que están sin fuente / "Próximamente").
@@ -171,7 +182,7 @@ async function genresOf(type, id) {
 
 // Ficha de película (incluye fuente de reproducción solo si está autorizada).
 router.get('/catalog/movies/:id', async (req, res) => {
-  const m = await one(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m WHERE m.id=$1 AND NOT m.hidden`, [req.params.id]);
+  const m = await one(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m WHERE m.id=$1 AND NOT m.hidden AND NOT m.deleted`, [req.params.id]);
   if (!m) return res.status(404).json({ error: 'Película no encontrada' });
   const src = await one(
     `SELECT url, user_agent, referrer FROM media_sources
@@ -231,7 +242,7 @@ router.get('/catalog/favorites', async (req, res) => {
   const movieIds = rows.filter((r) => r.content_type === 'movie').map((r) => r.content_id);
   const serieIds = rows.filter((r) => r.content_type === 'series').map((r) => r.content_id);
   const [mv, sr] = await Promise.all([
-    movieIds.length ? many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m WHERE m.id = ANY($1) AND NOT m.hidden`, [movieIds]) : [],
+    movieIds.length ? many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m WHERE m.id = ANY($1) AND NOT m.hidden AND NOT m.deleted`, [movieIds]) : [],
     serieIds.length ? many(`SELECT * FROM series WHERE id = ANY($1) AND NOT hidden`, [serieIds]) : [],
   ]);
   res.json([...mv.map(movieCard), ...sr.map(seriesCard)]);
@@ -254,7 +265,10 @@ router.delete('/catalog/favorites', async (req, res) => {
 // --- Progreso de reproducción ---
 router.get('/catalog/progress', async (req, res) => {
   res.json(await many(
-    `SELECT content_type, content_id, position, duration FROM watch_progress WHERE user_id=$1 ORDER BY updated_at DESC LIMIT 40`,
+    `SELECT content_type, content_id, position, duration FROM watch_progress p WHERE user_id=$1
+     AND (p.content_type<>'movie' OR EXISTS(SELECT 1 FROM movies m WHERE m.id=p.content_id AND NOT m.hidden AND NOT m.deleted))
+     AND (p.content_type<>'serie' OR EXISTS(SELECT 1 FROM series s WHERE s.id=p.content_id AND NOT s.hidden))
+     ORDER BY updated_at DESC LIMIT 40`,
     [req.user.id]));
 });
 router.put('/catalog/progress', async (req, res) => {

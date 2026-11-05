@@ -11,6 +11,7 @@ import {assetDirectory,MAX_BYTES,sanitizeMetadata,MEDIA_ROOT} from './youtube-do
 import {createYoutubeJob,publishYoutubeJob,cancelYoutubeJob} from './youtube-import.js';
 import {prepareVideo} from './media-preparation.js';
 import {originalMediaPlan} from './media-format.js';
+import {createMediaCover} from './media-cover.js';
 
 const router=express.Router(),exec=promisify(execFile);
 export const CHUNK_BYTES=4*1024*1024;
@@ -67,7 +68,7 @@ async function finalizeTransfer(j,{file,probe,checksum}){
   const output=await probeFile(target),video=output.streams.find(s=>s.codec_type==='video');
   const duration=Number(output.format?.duration)||null;if(Number(probe.format?.duration)>2&&duration<Number(probe.format.duration)-2)throw fail('La preparación del video quedó incompleta',422);
   const meta={...j.metadata,height:Number(video.height)||null,duration,sourceSha256:checksum,videoCodec:video.codec_name,audioCodec:output.streams.find(s=>s.codec_type==='audio')?.codec_name||null,preservedCodecs:true};let cover=null;
-  try{await exec(process.env.FFMPEG_BIN||'ffmpeg',['-y','-i',target,'-frames:v','1','-vf','scale=640:-2',path.join(dir,'cover.jpg')],{timeout:30000,maxBuffer:1024**2});cover='cover.jpg';}catch{}
+  cover=await createMediaCover({file:target,dir,duration,metadata:j.metadata,title:j.options.title});
   if(target!==path.join(dir,plan.file))await rename(target,path.join(dir,plan.file));
   await publishYoutubeJob(j,{video:plan.file,cover,size,metadata:meta});
   if(path.basename(file)==='upload.part')await rm(file,{force:true}).catch(()=>{});

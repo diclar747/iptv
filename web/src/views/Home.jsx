@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import Row from '../ui/Row.jsx';
 import LiveRow from '../ui/LiveRow.jsx';
 import Banner from '../ui/Banner.jsx';
-import { getContinue, getMostWatched } from '../library.js';
+import { getContinue, getMostWatched, reconcileStoredCatalog } from '../library.js';
 
 // Adapta un ítem de canal guardado al formato de LiveRow.
 const toChannel = (it) => ({ ...it, name: it.title, logo: it.poster });
@@ -14,12 +14,13 @@ export default function Home({ onOpen, onNavigate, onAuthError }) {
   const [cine, setCine] = useState({ featured: [], rows: [] });
   const [live, setLive] = useState([]);
   const [fav, setFav] = useState([]);
-  const [most] = useState(getMostWatched());
-  const [cont] = useState(getContinue());
+  const [most,setMost] = useState([]);
+  const [cont,setCont] = useState([]);
 
   const onErr = (e) => { if (e.status === 401 || (e.status === 403 && e.data?.reason)) onAuthError?.(e); };
 
   useEffect(() => {
+    reconcileStoredCatalog(api.resolveLibrary).catch(()=>{}).finally(()=>{setCont(getContinue());setMost(getMostWatched());});
     api.catalogHome().then(setCine).catch(onErr);
     api.home().then((r) => setLive(r.rows || [])).catch(onErr);
     api.favorites().then(setFav).catch(() => {});

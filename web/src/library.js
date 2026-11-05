@@ -23,6 +23,15 @@ export function toggleMyList(item) {
 }
 
 export function getContinue() { return read(CONT); }
+export async function reconcileStoredCatalog(resolve){
+ const counts=readMap(MOST),all=[...read(CONT),...read(LIST),...Object.values(counts).map(x=>x.item)];
+ const refs=[...new Map(all.filter(x=>x&&['movie','serie'].includes(x.type)).map(x=>[keyOf(x.type,x.id),{type:x.type,id:x.id}])).values()].slice(0,100);
+ if(!refs.length)return;
+ const cards=await resolve(refs),requested=new Set(refs.map(x=>keyOf(x.type,x.id))),current=new Map(cards.map(x=>[keyOf(x.type,x.id),x]));
+ const update=item=>{if(!item)return null;const key=keyOf(item.type,item.id);if(!requested.has(key))return item;const fresh=current.get(key);return fresh?{...item,...fresh,key,meta:[fresh.year,fresh.category].filter(Boolean).join(' · ')}:null;};
+ for(const storage of [CONT,LIST])write(storage,read(storage).map(update).filter(Boolean));
+ for(const [key,value] of Object.entries(counts)){const item=update(value.item);if(item)counts[key]={...value,item};else delete counts[key];}write(MOST,counts);
+}
 export function pushContinue(item) {
   const key = keyOf(item.type, item.id);
   const compact = { ...item, key };

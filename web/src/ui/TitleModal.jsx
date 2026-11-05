@@ -32,6 +32,8 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
   const [limit, setLimit] = useState(null);
   const [inList, setInList] = useState(inMyList(item.type, item.id));
   const [error, setError] = useState(null);
+  const [overviewExpanded,setOverviewExpanded]=useState(false);
+  useEffect(()=>setOverviewExpanded(false),[item.id]);
 
   function handleErr(e) {
     if (e.status === 401 || (e.status === 403 && e.data?.reason)) return onAuthError?.(e);
@@ -39,6 +41,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
   }
 
   useEffect(() => {
+    if(isMovie||isSerie)return;
     pushContinue({
       type: item.type, id: item.id, title: item.title || item.name,
       poster: item.poster || item.logo,
@@ -51,11 +54,13 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
     if (isRadio) { api.radioPlayback(item.id).then(r=>{const stream={url:r.url,referrer:r.source,format:r.codec==='HLS'?'hls':'audio'};setStreams([stream]);setActiveStream(stream);}).catch(handleErr); } else if (isMovie) {
       api.movie(item.id).then((m) => {
         setDetail(m);
+        pushContinue({type:'movie',id:m.id,title:m.title,poster:m.poster,meta:[m.year,m.category].filter(Boolean).join(' · ')});
         if (m.available && m.streams?.length) { setStreams(m.streams); setActiveStream(m.streams[0]); }
       }).catch(handleErr);
     } else if (isSerie) {
       api.serie(item.id).then((s) => {
         setDetail(s);
+        pushContinue({type:'serie',id:s.id,title:s.title,poster:s.poster,meta:[s.year,s.category].filter(Boolean).join(' · ')});
         setEpisodes(s.episodes || []);
         const firstPlayable = (s.episodes || []).find((e) => e.available);
         if (firstPlayable) { setEp(firstPlayable); setSeason(firstPlayable.season); setActiveStream({ url: firstPlayable.streamUrl }); }
@@ -130,13 +135,13 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
   }
 
   const d = detail || {};
-  const title = detail?.name || item.title || item.name;
-  const genres = (d.genres || []).join(' · ');
+  const title = detail?.title || detail?.name || item.title || item.name;
+  const genres = (d.genres?.length?d.genres:[d.category||item.category]).filter(Boolean).join(' · ');
   const meta = isMovie ? [d.year || item.year, d.runtime ? `${d.runtime} min` : null, d.rating ? `★ ${d.rating}` : null].filter(Boolean).join('  ·  ')
     : isSerie ? [`${episodes.length} episodios`, d.year || item.year, d.status].filter(Boolean).join('  ·  ')
     : `${item.country || ''}${(item.categories || []).length ? ' · ' + item.categories.join(' · ') : ''}`;
   const overview = d.overview || item.description || '';
-  const backdrop = d.backdrop || item.poster || item.logo;
+  const backdrop = d.backdrop || d.poster || item.poster || item.logo;
   const canPlay = isChannel || (activeStream && (isChannel || d.available || item.available));
   const notAvailable = (isMovie || isSerie) && detail && !activeStream;
   // Estrenos: sin fuente completa pero con tráiler oficial de YouTube.
@@ -155,7 +160,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
 
         <div className="modal-body">
           <div className="modal-head">
-            <h2>{title}</h2>
+            <h2 title={title}>{title}</h2>
             <div className="modal-meta">
               {isChannel && <span className="live-tag">● EN VIVO</span>}
               {showTrailer && <span className="live-tag">▶ TRÁILER</span>}
@@ -196,7 +201,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
             </button>
           </div>
 
-          {overview && !/^https?:\/\//i.test(overview.trim()) && <p className="vod-desc">{overview}</p>}
+          {overview && !/^https?:\/\//i.test(overview.trim()) && <div className="synopsis"><p className={`vod-desc ${overviewExpanded?'':'is-collapsed'}`}>{overview}</p>{overview.length>280&&<button className="synopsis-toggle" aria-expanded={overviewExpanded} onClick={()=>setOverviewExpanded(v=>!v)}>{overviewExpanded?'Ver menos':'Leer sinopsis completa'}</button>}</div>}
 
           {d.originUrl&&<p className="vod-credit"><b>{d.creator||'Autor'}</b> · <a href={d.originUrl} target="_blank" rel="noreferrer">Fuente original en YouTube ↗</a>{d.license?' · '+d.license:''}</p>}
           {d.director?.length > 0 && <p className="vod-credit"><b>Dirección:</b> {d.director.join(', ')}</p>}
