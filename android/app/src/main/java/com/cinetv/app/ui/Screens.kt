@@ -260,7 +260,26 @@ private fun HomeTab(vm: AppViewModel) {
             }
         }
         if (vm.channelRows.isEmpty()) {
-            item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Red) } }
+            item {
+                Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                    val err = vm.error
+                    if (err != null) {
+                        // Antes quedaba el spinner girando para siempre sin indicio
+                        // de la causa; ahora se ve el error y se puede reintentar.
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("No se pudo cargar", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(6.dp))
+                            Text(err, color = Red, fontSize = 13.sp, textAlign = TextAlign.Center)
+                            Spacer(Modifier.height(14.dp))
+                            Button(onClick = { vm.refreshHome() }, colors = ButtonDefaults.buttonColors(containerColor = Red)) {
+                                Text("Reintentar")
+                            }
+                        }
+                    } else {
+                        CircularProgressIndicator(color = Red)
+                    }
+                }
+            }
         }
     }
 }

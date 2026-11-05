@@ -87,19 +87,23 @@ class AppViewModel : ViewModel() {
     }
 
     private suspend fun loadHome() {
+        var err: String? = null
         // Canales primero (prioridad del inicio).
         try {
             val live = api.channelsHome()
             channelRows = live.rows ?: emptyList()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { err = "Canales: " + humanize(e) }
         // Películas: para la pestaña Pelis (banner + filas).
         try {
             val cat = api.catalogHome()
             featured = cat.featured ?: emptyList()
             movieRows = cat.rows ?: emptyList()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { if (err == null) err = "Pelis: " + humanize(e) }
         try { meta = api.meta() } catch (_: Exception) { /* opcional */ }
         try { api.geo().country?.let { geoCountry = it } } catch (_: Exception) { /* queda PY */ }
+        // Si algo falló, lo mostramos (antes quedaba girando el spinner para
+        // siempre, sin indicio de la causa).
+        error = err
     }
 
     fun refreshHome() { viewModelScope.launch { loadHome() } }
