@@ -35,6 +35,14 @@ try{
  await call('/companion/jobs/'+queued.id+'/prepare',{method:'POST',body:{size:64,metadata:{id:'wrong'}},headers:token,status:400});
  await call('/companion/jobs/'+queued.id+'/prepare',{method:'POST',body:{size:64,metadata:{id:source,title:'Original',uploader:'Autor',description:'Sinopsis',thumbnail:'https://example.test/cover.jpg'}},headers:token});
  await call('/companion/jobs/'+queued.id+'/progress',{method:'POST',body:{progress:20},headers:token});
+ const concurrent=[];
+ for(let i=0;i<3;i++){const linkSource=randomUUID().replaceAll('-','').slice(0,11);const j=await call('/admin/media-transfers',{method:'POST',body:{...link,url:'https://youtu.be/'+linkSource},status:201});jobs.push(j.id);concurrent.push(j.id);}
+ const claim=await call('/companion/claim',{method:'POST',body:{worker:'a'.repeat(32),exclude:[],limit:3},headers:token});assert.equal(claim.jobs.length,3);assert.deepEqual(new Set(claim.jobs.map(j=>j.id)),new Set(concurrent));
+ assert.equal((await call('/companion/claim',{method:'POST',body:{worker:'b'.repeat(32),exclude:[],limit:3},headers:token})).jobs.length,0,'Another instance must not steal jobs with a live lease');
+ assert.equal((await call('/companion/claim',{method:'POST',body:{worker:'a'.repeat(32),exclude:concurrent,limit:3},headers:token})).jobs.length,0);
+ await query("UPDATE media_import_jobs SET claim_until=now()-interval '1 second' WHERE id=$1",[concurrent[0]]);
+ assert.equal((await call('/companion/claim',{method:'POST',body:{worker:'b'.repeat(32),exclude:[],limit:3},headers:token})).jobs[0].id,concurrent[0]);
+ await call('/companion/claim',{method:'POST',body:{worker:'a'.repeat(32),limit:99},headers:token,status:400});
  await call('/admin/media-devices/'+d.id,{method:'DELETE'});
  await call('/companion/next',{headers:token,status:401});assert.equal((await one('SELECT state FROM media_import_jobs WHERE id=$1',[queued.id])).state,'cancelled');
  if(process.env.FFMPEG_BIN&&process.env.FFPROBE_BIN){

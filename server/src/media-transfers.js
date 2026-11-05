@@ -98,14 +98,31 @@ router.post('/companion/pair',h(async(req,res)=>{
  res.json({id,token,chunkBytes:CHUNK_BYTES,maxBytes:MAX_BYTES});
 }));
 router.use('/companion',h(deviceAuth));
+router.post('/companion/claim',h(async(req,res)=>{
+ const {worker,exclude=[],limit=3}=req.body||{};
+ if(!/^[a-f0-9]{32}$/.test(worker||'')||!Array.isArray(exclude)||exclude.length>10||exclude.some(id=>!ID.test(id))||!Number.isInteger(limit)||limit<1||limit>3)throw fail('Solicitud de cola inválida');
+ const jobs=await tx(async c=>{
+  await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',['device:'+req.mediaDevice.id]);
+  const claimed=(await c.query(`SELECT * FROM media_import_jobs WHERE device_id=$1 AND state IN ('downloading','uploading') AND NOT(id=ANY($2::uuid[]))
+   AND (claim_id=$3 OR claim_until<now() OR (claim_id IS NULL AND updated_at<now()-interval '30 seconds'))
+   ORDER BY CASE WHEN state='uploading' THEN 0 ELSE 1 END,created_at LIMIT $4 FOR UPDATE`,[req.mediaDevice.id,exclude,worker,limit])).rows;
+  const active=(await c.query("SELECT count(*)::int n FROM media_import_jobs WHERE device_id=$1 AND state IN ('downloading','uploading','publishing')",[req.mediaDevice.id])).rows[0].n;
+  const room=Math.min(limit-claimed.length,Math.max(0,6-active));
+  if(room>0)claimed.push(...(await c.query("SELECT * FROM media_import_jobs WHERE device_id=$1 AND state='awaiting_device' ORDER BY created_at LIMIT $2 FOR UPDATE SKIP LOCKED",[req.mediaDevice.id,room])).rows);
+  for(const j of claimed)await c.query("UPDATE media_import_jobs SET state=CASE WHEN state='awaiting_device' THEN 'downloading' ELSE state END,claim_id=$2,claim_until=now()+interval '90 seconds',updated_at=now() WHERE id=$1",[j.id,worker]);
+  return claimed;
+ });
+ res.json({jobs:jobs.map(j=>({id:j.id,url:j.source_url,sourceId:j.source_id,title:j.options.title,quality:j.options.quality||720,state:j.state}))});
+}));
 router.get('/companion/next',h(async(req,res)=>{
  const j=await tx(async c=>{await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',['device:'+req.mediaDevice.id]);
- let j=(await c.query("SELECT * FROM media_import_jobs WHERE device_id=$1 AND state IN ('downloading','uploading') ORDER BY created_at LIMIT 1 FOR UPDATE",[req.mediaDevice.id])).rows[0];
+ let j=(await c.query("SELECT * FROM media_import_jobs WHERE device_id=$1 AND state IN ('downloading','uploading') AND (claim_id IS NULL OR claim_until<now()) ORDER BY created_at LIMIT 1 FOR UPDATE",[req.mediaDevice.id])).rows[0];
+ if(j?.claim_id)await c.query('UPDATE media_import_jobs SET claim_id=NULL,claim_until=NULL WHERE id=$1',[j.id]);
  if(!j)j=(await c.query("UPDATE media_import_jobs SET state='downloading',error=NULL,updated_at=now() WHERE id=(SELECT id FROM media_import_jobs WHERE device_id=$1 AND state='awaiting_device' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *",[req.mediaDevice.id])).rows[0];
  return j;});res.json({job:j?{id:j.id,url:j.source_url,sourceId:j.source_id,title:j.options.title,quality:j.options.quality||720,state:j.state}:null});
 }));
 router.post('/companion/jobs/:id/progress',h(async(req,res)=>{
- await tx(async c=>{const j=await access(req,req.params.id,c);if(!['downloading','uploading','publishing','done'].includes(j.state))throw fail('El trabajo fue cancelado o ya terminó',409);await c.query("UPDATE media_import_jobs SET progress=CASE WHEN state='downloading' THEN GREATEST(progress,$2) ELSE progress END,updated_at=now() WHERE id=$1 AND state<>'done'",[j.id,Math.min(49,Math.max(0,Number(req.body.progress)||0))]);});res.json({ok:true});
+ await tx(async c=>{const j=await access(req,req.params.id,c);if(!['downloading','uploading','publishing','done'].includes(j.state))throw fail('El trabajo fue cancelado o ya terminó',409);await c.query("UPDATE media_import_jobs SET progress=CASE WHEN state='downloading' THEN GREATEST(progress,$2) ELSE progress END,processing=CASE WHEN state='downloading' AND $3::text IS NOT NULL THEN jsonb_build_object('phase',$3::text) ELSE processing END,claim_until=now()+interval '90 seconds',updated_at=now() WHERE id=$1 AND state<>'done'",[j.id,Math.min(49,Math.max(0,Number(req.body.progress)||0)),['downloading','metadata','waiting_upload'].includes(req.body.phase)?req.body.phase:null]);});res.json({ok:true});
 }));
 router.post('/companion/jobs/:id/error',h(async(req,res)=>{
  const j=await access(req,req.params.id);const message=String(req.body.message||'La computadora no pudo completar el trabajo').slice(0,600);

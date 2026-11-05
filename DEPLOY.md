@@ -194,3 +194,10 @@ Si Downloader YouTuber está abierto en 127.0.0.1:4317 o :4318, el asistente
 utiliza su cola y recupera archivos terminados por el identificador de YouTube
 en el nombre. No modifica ni elimina los originales. Si no está abierto, usa
 su descargador incluido. Los datos completos se consultan desde la computadora.
+
+El asistente 1.1 toma hasta tres descargas en paralelo, conserva como máximo seis
+trabajos en curso y envía un archivo por vez. Libera el turno de subida al recibir
+la confirmación del servidor, sin esperar la publicación de la película.
+Las asignaciones tienen una concesión renovable para evitar que dos instancias
+se apropien del mismo trabajo; al cerrar el asistente, el avance se conserva.
+

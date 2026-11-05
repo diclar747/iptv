@@ -28,3 +28,8 @@ el proveedor dispone de ese formato.
 Si ya usas Downloader YouTuber en 127.0.0.1:4317 o :4318, dejalo abierto.
 El asistente reutiliza sus descargas terminadas y conserva los originales.
 Los MKV se preparan como MP4 compatibles en el servidor al terminar el envio.
+
+VERSION 1.1: hasta 3 descargas en paralelo, maximo 6 trabajos pendientes
+y 1 envio al servidor a la vez. Cuando un archivo termina, pasa al envio
+sin esperar a las demas descargas. La publicacion no bloquea el proximo envio.
+El panel del asistente muestra cada trabajo por separado.
