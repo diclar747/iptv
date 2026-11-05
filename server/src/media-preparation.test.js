@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {preparationProgress} from './media-preparation.js';
+test('conversion uses encoded time in microseconds, not bytes uploaded',()=>{const p=preparationProgress({out_time_us:'60000000',speed:'2.0x'},240);assert.equal(p.percent,25);assert.equal(p.secondsProcessed,60);assert.equal(p.etaSeconds,90);});
+test('unknown speed has no invented ETA; completion remains below publication',()=>{assert.equal(preparationProgress({out_time_us:'1000000',speed:'N/A'},120).etaSeconds,null);assert.equal(preparationProgress({out_time_us:'999999999',speed:'1x'},100).percent,99);});

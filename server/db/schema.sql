@@ -411,5 +411,6 @@ ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS execution TEXT NOT NULL D
 ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS device_id UUID REFERENCES media_devices(id);
 ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS upload_size BIGINT;
 ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS upload_bytes BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS processing JSONB NOT NULL DEFAULT '{}';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_media_import_source_active_v2 ON media_import_jobs(source_id)
  WHERE state IN ('queued','awaiting_device','downloading','uploading','publishing');

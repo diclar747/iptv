@@ -9,6 +9,7 @@ import {one,many,query,tx} from './pg.js';
 import {requireRole} from './auth.js';
 import {assetDirectory,MAX_BYTES,sanitizeMetadata,MEDIA_ROOT} from './youtube-downloader.js';
 import {createYoutubeJob,publishYoutubeJob,cancelYoutubeJob} from './youtube-import.js';
+import {prepareVideo} from './media-preparation.js';
 
 const router=express.Router(),exec=promisify(execFile);
 export const CHUNK_BYTES=4*1024*1024;
@@ -50,11 +51,13 @@ async function finalizeTransfer(j,{file,probe,checksum}){
   const dir=assetDirectory(j.id),v=probe.streams.find(s=>s.codec_type==='video'),a=probe.streams.find(s=>s.codec_type==='audio');
   const copyVideo=v.codec_name==='h264'&&['yuv420p','yuvj420p'].includes(v.pix_fmt),copyAudio=!a||['aac','mp3'].includes(a.codec_name);
   await freeSpace(MAX_BYTES);
-  const target=path.join(dir,'encoded.mp4'),args=['-v','error','-y','-i',file,'-map','0:v:0','-map','0:a:0?','-c:v',copyVideo?'copy':'libx264'];
-  if(!copyVideo)args.push('-preset','fast','-crf','22','-pix_fmt','yuv420p','-threads','2','-vf',"scale=w='min(1920,iw)':h='min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2");
+  const target=path.join(dir,'encoded.mp4'),args=['-v','error','-y','-threads','2','-i',file,'-map','0:v:0','-map','0:a:0?','-c:v',copyVideo?'copy':'libx264'];
+  if(!copyVideo)args.push('-preset','veryfast','-crf','22','-pix_fmt','yuv420p','-threads','2','-vf',"scale=w='min(1920,iw)':h='min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2");
   args.push('-c:a',copyAudio?'copy':'aac');if(!copyAudio)args.push('-b:a','160k');
   args.push('-movflags','+faststart','-fs',String(MAX_BYTES+1),target);
-  await exec(process.env.FFMPEG_BIN||'ffmpeg',args,{timeout:2*60*60*1000,maxBuffer:1024**2});
+  let savedAt=0;
+  await prepareVideo(process.env.FFMPEG_BIN||'ffmpeg',args,{duration:Number(probe.format?.duration)||0,onProgress:processing=>{if(Date.now()-savedAt<2000)return;savedAt=Date.now();void query("UPDATE media_import_jobs SET progress=$2,processing=$3,updated_at=now() WHERE id=$1 AND state='publishing'",[j.id,processing.percent,processing]).catch(()=>{});}});
+  await query("UPDATE media_import_jobs SET processing=$2,progress=99,updated_at=now() WHERE id=$1",[j.id,{phase:'cover',percent:99}]);
   const size=(await stat(target)).size;if(size>MAX_BYTES)throw fail('La copia compatible supera el límite de almacenamiento por video',422);
   const output=await probeFile(target),video=output.streams.find(s=>s.codec_type==='video');
   const duration=Number(output.format?.duration)||null;if(Number(probe.format?.duration)>2&&duration<Number(probe.format.duration)-2)throw fail('La preparación del video quedó incompleta',422);
@@ -125,7 +128,7 @@ router.post('/admin/media-transfers/:id/retry',admin,h(async(req,res)=>{
 // Same resumable protocol for the browser (admin session) and paired computers.
 for(const prefix of ['/admin/media-transfers','/companion/jobs']){
  if(prefix.startsWith('/admin'))router.use(prefix,admin);
- router.get(prefix+'/:id',h(async(req,res)=>{const j=await access(req,req.params.id);res.json({id:j.id,state:j.state,offset:await fileSize(j.id),size:Number(j.upload_size),chunkBytes:CHUNK_BYTES,movieId:j.movie_id,error:j.error});}));
+ router.get(prefix+'/:id',h(async(req,res)=>{const j=await access(req,req.params.id);res.json({id:j.id,state:j.state,processing:j.processing,progress:j.progress,offset:await fileSize(j.id),size:Number(j.upload_size),chunkBytes:CHUNK_BYTES,movieId:j.movie_id,error:j.error});}));
  router.post(prefix+'/:id/prepare',h(async(req,res)=>{
   await tx(async c=>{const j=await access(req,req.params.id,c);if(j.state==='done')return;if(!['downloading','uploading','error'].includes(j.state))throw fail('Trabajo no disponible',409);
    const size=req.body.size;if(!validUploadSize(size))throw fail('Tamaño de archivo no permitido');if(j.upload_size&&Number(j.upload_size)!==size)throw fail('El archivo cambió. Cancelá y creá otra importación.',409);
@@ -152,7 +155,7 @@ for(const prefix of ['/admin/media-transfers','/companion/jobs']){
    const fd=await open(file,'r');const head=Buffer.alloc(16);try{await fd.read(head,0,16,0);}finally{await fd.close();}if(head.toString('ascii',4,8)!=='ftyp'&&head.readUInt32BE(0)!==0x1a45dfa3)throw fail('El archivo debe ser un video MP4 o MKV válido');
    const hash=createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);const checksum=hash.digest('hex');if(req.body.sha256&&req.body.sha256!==checksum)throw fail('El archivo recibido no coincide con el original');
    const probe=await probeFile(file);if(!probe.streams?.some(s=>s.codec_type==='video'&&s.width>0&&s.height>0))throw fail('El archivo no contiene un video válido',422);
-   input={file,probe,checksum};await c.query("UPDATE media_import_jobs SET state='publishing',progress=99,error=NULL,updated_at=now() WHERE id=$1",[j.id]);return j;
+   input={file,probe,checksum};await c.query("UPDATE media_import_jobs SET state='publishing',progress=0,processing=$2,error=NULL,updated_at=now() WHERE id=$1",[j.id,{phase:'queued',percent:0,totalSeconds:Number(probe.format?.duration)||null}]);return j;
   });
   if(j.state==='done')return res.json({id:j.movie_id,state:'done'});
   if(input)void finalizeTransfer(j,input);res.status(202).json({state:'publishing'});
