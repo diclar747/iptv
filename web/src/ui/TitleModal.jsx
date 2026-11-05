@@ -48,7 +48,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
 
   // Cargar contenido según tipo.
   useEffect(() => {
-    if (isRadio) { const stream={url:item.url,referrer:item.source}; setStreams([stream]);setActiveStream(stream); } else if (isMovie) {
+    if (isRadio) { api.radioPlayback(item.id).then(r=>{const stream={url:r.url,referrer:r.source,format:r.codec==='HLS'?'hls':'audio'};setStreams([stream]);setActiveStream(stream);}).catch(handleErr); } else if (isMovie) {
       api.movie(item.id).then((m) => {
         setDetail(m);
         if (m.available && m.streams?.length) { setStreams(m.streams); setActiveStream(m.streams[0]); }

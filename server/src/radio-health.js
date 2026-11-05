@@ -1,41 +1,67 @@
-import { resolveDesdeStream } from './desdeparaguay.js';
-export async function probeRadio(station, request = fetch) {
-  const controller = new AbortController();
-  try {
-    const url = await resolveDesdeStream(station.url, request);
-    const response = await request(url, {
-      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(6500)]),
-      headers: { 'User-Agent': 'Mozilla/5.0 LiveTV/1.19', ...(station.source ? { Referer: station.source } : {}) },
-    });
-    if (!response.ok) return false;
-    const type = response.headers.get('content-type') || '';
-    if (!/audio|ogg|mpegurl|octet-stream/i.test(type)) return false;
-    const reader = response.body?.getReader();
-    if (!reader) return false;
-    try {
-      const { value } = await reader.read();
-      if (!value?.length) return false;
-      if (/mpegurl/i.test(type)) return new TextDecoder().decode(value).trimStart().startsWith('#EXTM3U');
-      if (/octet-stream/i.test(type)) return (value[0] === 255 && (value[1] & 224) === 224) || /^(ID3|OggS|fLaC)/.test(new TextDecoder().decode(value.slice(0,4)));
-      return true;
-    } finally { await reader.cancel().catch(() => {}); }
-  } catch { return false; }
-  finally { controller.abort(); }
-}
+import {resolveDesdeStreams,preferDesdeStream} from './desdeparaguay.js';
+import {checkStream} from './checker.js';
+import {radioSources,radioReferrer,RADIO_USER_AGENT} from './radio-sources.js';
 
-
-// Shared bounded queue: concurrent viewers reuse one probe and its cached result.
-export function createRadioHealth({probe=probeRadio,now=Date.now,ttl=180000,concurrency=4,maxQueue=100}={}) {
- const health=new Map(), queued=new Map();let active=0;
- function drain(){while(active<concurrency&&queued.size){const [id,station]=queued.entries().next().value;queued.delete(id);active++;health.set(id,{...(health.get(id)?.url===station.url?health.get(id):{}),pending:true,url:station.url});
-  Promise.resolve().then(()=>probe(station)).then(online=>health.set(id,{online,at:now(),url:station.url,pending:false})).catch(()=>health.set(id,{online:false,at:now(),url:station.url,pending:false})).finally(()=>{active--;drain();});
- }}
- function statuses(stations,{verify=true}={}) {
-  if(verify)for(const s of stations){const r=health.get(s.id);if(!r?.pending&&(!r||r.url!==s.url||now()-r.at>ttl)&&!queued.has(s.id)&&queued.size<maxQueue)queued.set(s.id,s);}
-  drain();
-  return stations.map(s=>{const r=health.get(s.id),fresh=r&&r.url===s.url&&r.at!==undefined&&now()-r.at<=ttl;return {...s,status:fresh?(r.online?'online':'offline'):'checking',checkedAt:r?.at?new Date(r.at).toISOString():null};});
+export async function inspectRadio(station,request=fetch){
+ const attempts=[],started=Date.now(),deadline=AbortSignal.timeout(24000);
+ for(const source of radioSources(station)){
+  if(deadline.aborted)break;
+  const at=Date.now();let stage='resolve';
+  try{
+   const limited=(url,options={})=>request(url,{...options,signal:AbortSignal.any([deadline,AbortSignal.timeout(10000),...(options.signal?[options.signal]:[])])});
+   const urls=await resolveDesdeStreams(source,limited),controllers=urls.map(()=>new AbortController());
+   stage='media';
+   try{
+    const winner=await Promise.any(urls.map(async(url,index)=>{
+     const variantRequest=(target,options={})=>limited(target,{...options,signal:AbortSignal.any([controllers[index].signal,...(options.signal?[options.signal]:[])])});
+     const result=await checkStream({url,userAgent:RADIO_USER_AGENT,referrer:radioReferrer(station,source)},variantRequest);
+     attempts.push({host:new URL(url).host,stage,httpStatus:result.status||null,code:result.code||null,error:result.ok?null:result.error,ms:Date.now()-at});
+     if(!result.ok)throw result;
+     return {url,index,contentType:result.contentType};
+    }));
+    preferDesdeStream(source,winner.url);
+    return {ok:true,status:'online',source,contentType:winner.contentType,attempts:attempts.slice(),ms:Date.now()-started};
+   }catch(error){if(!(error instanceof AggregateError))throw error;}
+   finally{controllers.forEach(c=>c.abort());}
+  }catch(e){attempts.push({host:new URL(source).host,stage,httpStatus:e.status||null,code:e.code||e.cause?.code||null,error:e.name==='TimeoutError'?'Tiempo de espera agotado':e.message,ms:Date.now()-at});}
  }
- return {statuses,stats:()=>({active,queued:queued.size})};
+ const offline=attempts.length>0&&attempts.every(a=>[404,410].includes(a.httpStatus)||a.code==='RADIO_PAGE_MISSING');
+ return {ok:false,status:offline?'offline':'error',reason:offline?'Las fuentes consultadas no tienen una señal disponible':'No se pudo comprobar la señal desde el servidor',attempts,ms:Date.now()-started};
+}
+export async function probeRadio(station,request=fetch){return (await inspectRadio(station,request)).ok;}
+
+// Refresh quickly without erasing the last confirmed status when the TTL expires.
+export function createRadioHealth({probe=inspectRadio,now=Date.now,ttl=180000,retention=1800000,errorTtl=60000,concurrency=4,maxQueue=100}={}){
+ const health=new Map(),queued=new Map(),waiters=new Map();let active=0;
+ const signature=s=>JSON.stringify([s.url,...(s.alternativeSources||[])]);
+ function drain(){while(active<concurrency&&queued.size){const [id,station]=queued.entries().next().value;queued.delete(id);active++;
+  const previous=health.get(id);health.set(id,{...(previous?.signature===signature(station)?previous:{}),pending:true,signature:signature(station)});
+  Promise.resolve().then(()=>probe({...station,preferredSource:previous?.source})).then(result=>{
+   const r=typeof result==='boolean'?{ok:result,status:result?'online':'offline'}:result;
+   health.set(id,{...r,at:now(),pending:false,signature:signature(station),firstOnlineAt:r.ok?(previous?.firstOnlineAt??now()):previous?.firstOnlineAt,lastOnlineAt:r.ok?now():previous?.lastOnlineAt});
+   waiters.get(id)?.resolve(r);
+  }).catch(e=>{const failed={status:'error',reason:'No se pudo comprobar la señal',at:now(),pending:false,signature:signature(station),lastOnlineAt:previous?.lastOnlineAt};health.set(id,failed);waiters.get(id)?.resolve(failed);}).finally(()=>{waiters.delete(id);active--;drain();});
+ }}
+ function statuses(stations,{verify=true}={}){
+  if(verify)for(const s of stations){const r=health.get(s.id),age=r?.at===undefined?Infinity:now()-r.at;const due=age>(r?.status==='error'?errorTtl:ttl);
+   if(!r?.pending&&(!r||r.signature!==signature(s)||due)&&!queued.has(s.id)&&queued.size<maxQueue)queued.set(s.id,s);
+  }
+  drain();
+  return stations.map(s=>{const r=health.get(s.id),age=r?.at===undefined?Infinity:now()-r.at,known=r?.signature===signature(s)&&age<=retention;
+   const status=known?r.status:'checking';return {...s,status,reason:known?r.reason||null:null,stale:known&&age>ttl,checking:!!r?.pending||queued.has(s.id),checkedAt:r?.at!==undefined?new Date(r.at).toISOString():null,firstOnlineAt:r?.firstOnlineAt!==undefined?new Date(r.firstOnlineAt).toISOString():null,lastOnlineAt:r?.lastOnlineAt!==undefined?new Date(r.lastOnlineAt).toISOString():null};
+  });
+ }
+ function ensure(station){
+  const r=health.get(station.id);if(r?.signature===signature(station)&&r.status==='online'&&now()-r.at<=ttl)return Promise.resolve(r);
+  if(waiters.has(station.id))return waiters.get(station.id).promise;
+  if(!r?.pending&&!queued.has(station.id)){if(queued.size>=maxQueue)return Promise.resolve({status:'error',reason:'Hay muchas comprobaciones. Intentá nuevamente.'});queued.set(station.id,station);}
+  let resolve;const promise=new Promise(done=>{resolve=done;});waiters.set(station.id,{promise,resolve});drain();return promise;
+ }
+ return {statuses,ensure,stats:()=>({active,queued:queued.size}),preferred:id=>health.get(id)?.source};
 }
 const shared=createRadioHealth();
 export const radioStatuses=(stations,options)=>shared.statuses(stations,options);
+export const radioHealthStats=()=>shared.stats();
+export const preferredRadioSource=id=>shared.preferred(id);
+
+export const resolveRadioPlayback=station=>shared.ensure(station);

@@ -14,8 +14,15 @@ test('radio pages return without waiting for the directory; snapshots stay stabl
  const base='http://127.0.0.1:'+server.address().port;
  const get=async(path)=>{const r=await original(base+path);assert.equal(r.status,200);return r.json();};
  try{
+  const cold=await get('/radios?page=1&pageSize=10&search=Yvy%20Pyt&status=online');assert.equal(cold.discovering,true);
+  await new Promise(r=>setImmediate(r));
+  const warm=await get('/radios?page=1&pageSize=10&search=Yvy%20Pyt&status=online&catalog='+cold.catalog);assert.ok(warm.items.some(r=>r.id==='yvypyta-941'));
+  const playback=await get('/radios/yvypyta-941/playback');assert.equal(playback.status,'online');assert.equal(playback.codec,'MP3');
+  const expandable=await get('/radios?page=1&pageSize=1&search=Yvy&status=online');assert.equal(expandable.hasMore,true,'A full online page must still allow discovering unchecked radios');
+  const beforeFirst=probes;
   const first=await get('/radios?page=1&pageSize=10');assert.equal(first.items.length,10);assert.equal(first.hasMore,true);assert.ok(finishDirectory,'Directory is still pending while the page was delivered');
-  const initial=probes;assert.ok(initial<=10,'Only the first ten radios may be probed');
+  await new Promise(r=>setImmediate(r));
+  const initial=probes,budget=first.items.reduce((n,s)=>n+1+(s.alternativeSources?.length||0),0);assert.ok(initial-beforeFirst<=budget,'Only the first ten radios and their registered alternatives may be probed');
   await Promise.all(Array.from({length:30},()=>get('/radios?page=1&pageSize=10&catalog='+first.catalog)));
   assert.equal(probes,initial,'Viewers reuse the cached probes');
   finishDirectory();await new Promise(r=>setImmediate(r));
@@ -25,6 +32,6 @@ test('radio pages return without waiting for the directory; snapshots stay stabl
   const search=await get('/radios?page=1&pageSize=10&search=Yvy%20Pyt');assert.ok(search.items.some(r=>/Yvy Pyt/i.test(r.name)));
   const clamped=await get('/radios?page=1&pageSize=999');assert.equal(clamped.items.length,20);
   const statuses=await get('/radios/status?ids='+encodeURIComponent(first.items.map(r=>r.id).join(',')));assert.equal(statuses.length,10);
-  assert.ok(statuses.every(s=>['checking','online','offline'].includes(s.status)));
+  assert.ok(statuses.every(s=>['checking','online','offline','error'].includes(s.status)));
  }finally{globalThis.fetch=original;server.closeAllConnections();await new Promise(r=>server.close(r));}
 });

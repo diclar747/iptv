@@ -1,8 +1,10 @@
 import express from 'express';
-import { requireActiveViewer } from './auth.js';
+import { requireActiveViewer, requireRole } from './auth.js';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { radioStatuses } from './radio-health.js';
+import {radioStatuses,radioHealthStats,inspectRadio,resolveRadioPlayback} from './radio-health.js';
+import {isDesdeParaguay} from './desdeparaguay.js';
+import {radioSources,radioReferrer} from './radio-sources.js';
 
 function curatedRadios() {
   try { return JSON.parse(readFileSync(new URL('./radios-py.json', import.meta.url), 'utf8')); }
@@ -25,7 +27,11 @@ export function mergeRadios(curated, directory) {
   for(const station of [...curated,...directory]) {
     const index = result.findIndex(r => urlKey(r.url) === urlKey(station.url) || sameRadio(r,station));
     if(index < 0) result.push({...station});
-    else if(result[index].available === false && station.available === true) result[index] = {...station,id:result[index].id};
+    else {
+      const old=result[index],replace=old.available===false&&station.available===true;
+      const primary=replace?station:old;
+      result[index]={...primary,id:old.id,alternativeSources:[...new Set([...radioSources(old),...radioSources(station)])].filter(u=>u!==primary.url)};
+    }
   }
   return result.sort((a,b) => a.name.localeCompare(b.name, 'es'));
 }
@@ -73,6 +79,7 @@ function currentCatalog(){
  return mergedCatalog||localCatalog;
 }
 export async function loadRadios(){return currentCatalog();}
+export function getRadioByUrl(url){return currentCatalog().find(s=>radioSources(s).includes(url));}
 const snapshots=new Map();
 function snapshot(token){
  const now=Date.now();for(const [key,value] of snapshots)if(now-value.at>600000)snapshots.delete(key);
@@ -82,25 +89,48 @@ function snapshot(token){
  if(snapshots.size>=8)snapshots.delete(snapshots.keys().next().value);
  const result={at:now,rows};snapshots.set(id,result);return {token:id,...result};
 }
+router.get('/radios/:id/playback',requireActiveViewer,async(req,res)=>{
+ try{
+  const station=currentCatalog().find(s=>s.id===req.params.id);if(!station)return res.status(404).json({error:'Radio no encontrada'});
+  let timeout;const result=await Promise.race([resolveRadioPlayback(station),new Promise(resolve=>{timeout=setTimeout(()=>resolve({ok:false,status:'error',reason:'La comprobación sigue en curso. Volvé a intentar en unos segundos.'}),26000);})]).finally(()=>clearTimeout(timeout));
+  res.set('Cache-Control','private, no-store');
+  if(!result.ok)return res.status(503).json({error:result.reason||'La radio no respondió. Volvé a intentar.',status:result.status});
+  const url=result.source||station.url,codec=isDesdeParaguay(url)||/\.m3u8(?:\?|$)/i.test(url)?'HLS':/aac/i.test(result.contentType||'')?'AAC':/ogg/i.test(result.contentType||'')?'OGG':'MP3';
+  res.json({...station,url,source:radioReferrer(station,url),codec,status:'online'});
+ }catch(e){res.status(503).json({error:'No se pudo conectar con la radio. Volvé a intentar.'});}
+});
 router.get('/radios/status',requireActiveViewer,async(req,res)=>{
  const ids=new Set(String(req.query.ids||'').split(',').filter(Boolean).slice(0,20));
  res.set('Cache-Control','private, no-store');
  res.json(radioStatuses(currentCatalog().filter(r=>ids.has(r.id))));
 });
+router.post('/admin/radios/diagnostics',requireRole('admin'),async(req,res)=>{
+ const ids=Array.isArray(req.body?.ids)?req.body.ids.slice(0,3):[];
+ const stations=currentCatalog().filter(s=>ids.includes(s.id));
+ const results=[];for(const s of stations){const r=await inspectRadio(s);results.push({id:s.id,name:s.name,...r,source:undefined});}
+ res.set('Cache-Control','private, no-store').json({results});
+});
 router.get('/radios',requireActiveViewer,async(req,res)=>{
- try {
-  const snap=snapshot(String(req.query.catalog||''));
-  const q=String(req.query.search||'').trim().toLocaleLowerCase('es');
-  let rows=snap.rows.filter(r=>(r.name+' '+r.city+' '+r.tags).toLocaleLowerCase('es').includes(q));
-  if(req.query.status)rows=radioStatuses(rows,{verify:false}).filter(r=>r.status===req.query.status);
-  const paged=req.query.page!==undefined||req.query.pageSize!==undefined;
+ try{
+  const snap=snapshot(String(req.query.catalog||'')),q=String(req.query.search||'').trim().toLocaleLowerCase('es');
+  const base=snap.rows.filter(r=>(r.name+' '+r.city+' '+r.tags).toLocaleLowerCase('es').includes(q));
   const page=Math.max(1,parseInt(req.query.page)||1),pageSize=Math.min(20,Math.max(1,parseInt(req.query.pageSize)||10));
+  const paged=req.query.page!==undefined||req.query.pageSize!==undefined,filter=String(req.query.status||'');
+  let states=radioStatuses(base,{verify:false}),rows=filter?states.filter(r=>r.status===filter):states;
+  if(filter==='online')rows.sort((a,b)=>new Date(a.firstOnlineAt||a.checkedAt)-new Date(b.firstOnlineAt||b.checkedAt)||a.id.localeCompare(b.id));
+  const hasUnverified=filter==='online'&&states.some(s=>s.status==='checking'||s.status==='error'&&(!s.checkedAt||Date.now()-new Date(s.checkedAt).getTime()>60000));
+  let discovering=false;
+  if(filter==='online'&&rows.length<page*pageSize){
+   const unknown=states.filter(s=>s.status==='checking'||s.status==='error'&&(!s.checkedAt||Date.now()-new Date(s.checkedAt).getTime()>60000));
+   unknown.sort((a,b)=>Number(!!a.checkedAt)-Number(!!b.checkedAt)||(new Date(a.checkedAt||0)-new Date(b.checkedAt||0)));
+   const next=unknown.slice(0,10);radioStatuses(next);
+   discovering=next.length>0||states.some(s=>s.checking);
+  }
   const items=paged?rows.slice((page-1)*pageSize,page*pageSize):rows;
-  // Legacy clients can still read all metadata, but never start a full-catalog scan.
-  const statuses=radioStatuses(items.slice(0,paged?pageSize:10));
-  const byId=new Map(statuses.map(r=>[r.id,r]));
-  res.set('Cache-Control','private, no-store');
-  res.json({items:items.map(r=>byId.get(r.id)||radioStatuses([r],{verify:false})[0]),total:rows.length,page,pageSize,catalog:snap.token,hasMore:paged&&page*pageSize<rows.length,country:'PY'});
+  const checked=radioStatuses(items.slice(0,paged?pageSize:10)),map=new Map(checked.map(r=>[r.id,r]));
+  res.set('Cache-Control','private, no-store').json({items:items.map(r=>map.get(r.id)||r),total:rows.length,page,pageSize,catalog:snap.token,
+   hasMore:paged&&(page*pageSize<rows.length||discovering||hasUnverified),discovering,verified:states.filter(s=>s.checkedAt).length,catalogTotal:base.length,
+   counts:states.reduce((out,s)=>(out[s.status]=(out[s.status]||0)+1,out),{}),country:'PY'});
  }catch(e){res.status(502).json({error:e.message});}
 });
 export default router;

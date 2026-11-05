@@ -7,10 +7,12 @@
 // El navegador siempre habla con nuestro backend (mismo origen), así que no
 // hay bloqueo CORS y el reproductor no necesita conocer las cabeceras reales.
 
+import {radioSources,radioReferrer,RADIO_USER_AGENT} from './radio-sources.js';
+import {preferredRadioSource} from './radio-health.js';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { streamToken } from './streamToken.js';
-import { isDesdeParaguay, resolveDesdeStream } from './desdeparaguay.js';
+import { isDesdeParaguay, resolveDesdeStreams, preferDesdeStream } from './desdeparaguay.js';
 import { isResolvable, resolvePlatform } from './resolver.js';
 
 // UA de navegador por defecto: algunos orígenes rechazan UA vacío o de Node.
@@ -59,108 +61,75 @@ function rewriteManifest(text, baseUrl, ua, ref, tokenMode) {
   return out.join('\n');
 }
 
-export function streamHandler() {
-  return async (req, res) => {
-    let target = req.query.url;
-    if (!target || !/^https?:\/\//i.test(target)) {
-      return res.status(400).json({ error: 'Parámetro url inválido' });
-    }
-    if (isDesdeParaguay(target)) {
-      try { target = await resolveDesdeStream(target); }
-      catch (error) { return res.status(502).json({ error: 'La radio no tiene señal disponible', detail: error.message }); }
-    }
-    // Link de plataforma (Twitch/YouTube/Facebook): resolver a su HLS actual
-    // antes de proxear. Se hace tras la autorización (token/cookie) y con cache.
-    if (isResolvable(target)) {
-      try {
-        target = await resolvePlatform(target);
-      } catch (e) {
-        return res.status(502).json({ error: 'No se pudo resolver la señal', detail: e.message });
-      }
-    }
-    const ua = req.query.ua || DEFAULT_UA;
-    const ref = req.query.ref || undefined;
-    // Si la petición llegó con token (cast), propagar el token a los recursos
-    // reescritos del manifiesto para que el dispositivo los pueda pedir.
-    const tokenMode = Boolean(req.query.t);
-
-    const controller = new AbortController();
-    req.on('close', () => controller.abort());
-    // Timeout de conexión/primer byte: si el origen cuelga sin responder, se
-    // aborta en vez de dejar al cliente esperando para siempre (así el
-    // reproductor recibe el error enseguida y reintenta). Se limpia al llegar
-    // la respuesta; el streaming del cuerpo ya no tiene tope (TV en vivo).
-    const CONNECT_TIMEOUT_MS = 15000;
-    const connectTimer = setTimeout(() => controller.abort(), CONNECT_TIMEOUT_MS);
-
-    try {
-      const headers = { 'User-Agent': ua };
-      if (ref) headers['Referer'] = ref;
-      // Reenviar Range del cliente para seeking de segmentos, pero NUNCA para
-      // manifiestos .m3u8: un CDN puede devolverlos truncados (206) y romper
-      // el parseo del reproductor.
-      const looksManifest = /\.m3u8(\?|$)/i.test(target);
-      if (req.headers.range && !looksManifest) headers['Range'] = req.headers.range;
-
-      const upstream = await fetch(target, {
-        headers,
-        redirect: 'follow',
-        signal: controller.signal,
-      });
-      clearTimeout(connectTimer); // ya respondió: el cuerpo puede fluir sin tope
-
-      const contentType = upstream.headers.get('content-type') || '';
-      const baseUrl = upstream.url || target; // URL final tras redirects
-
-      // Manifiesto HLS -> reescribir y devolver como texto.
-      // Solo si el cuerpo es realmente un manifiesto (#EXTM3U); muchos
-      // orígenes caídos devuelven HTML/error con URL .m3u8.
-      if (isManifest(baseUrl, contentType)) {
-        const body = await upstream.text();
-        if (body.trimStart().startsWith('#EXTM3U')) {
-          const rewritten = rewriteManifest(body, baseUrl, req.query.ua, ref, tokenMode);
-          // Siempre 200: enviamos el manifiesto completo reescrito.
-          res.status(200);
-          res.set('Content-Type', 'application/vnd.apple.mpegurl');
-          res.set('Cache-Control', 'no-cache');
-          return res.send(rewritten);
-        }
-        // No es un manifiesto válido: devolver tal cual (el reproductor fallará
-        // limpiamente en vez de intentar reproducir basura).
-        res.status(upstream.status);
-        res.set('Content-Type', contentType || 'text/plain');
-        return res.send(body);
-      }
-
-      // Cualquier otro recurso (segmentos, claves, audio): pasar bytes.
-      res.status(upstream.status);
-      const passthrough = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
-      for (const h of passthrough) {
-        const v = upstream.headers.get(h);
-        if (v) res.set(h, v);
-      }
-      res.set('Cache-Control', 'no-cache');
-
-      if (upstream.body) {
-        // pipeline() propaga y limpia errores sin dejar un 'error' sin manejar
-        // (un segmento que corta con ECONNRESET no debe tumbar el servidor).
-        try {
-          await pipeline(Readable.fromWeb(upstream.body), res);
-        } catch {
-          // El cliente cerró o el origen cortó la conexión: nada que hacer.
-          if (!res.writableEnded) res.destroy();
-        }
-      } else {
-        res.end();
-      }
-    } catch (err) {
-      clearTimeout(connectTimer);
-      if (err.name === 'AbortError') return; // cliente cerró o timeout de conexión
-      if (!res.headersSent) {
-        res.status(502).json({ error: 'Proxy error', detail: err.message });
-      } else if (!res.writableEnded) {
-        res.destroy();
-      }
-    }
-  };
+async function findRadio(url){const {getRadioByUrl}=await import('./radio.js');return getRadioByUrl(url);}
+export function streamHandler({request=fetch,lookupRadio=findRadio,connectTimeoutMs=12000,totalTimeoutMs=30000}={}) {
+ return async(req,res)=>{
+  const original=req.query.url;
+  if(!original||!/^https?:\/\//i.test(original))return res.status(400).json({error:'Parámetro url inválido'});
+  const controller=new AbortController(),total=setTimeout(()=>controller.abort(),totalTimeoutMs);
+  const close=()=>{if(!res.writableEnded)controller.abort();};
+  // IncomingMessage.close can fire after the request has been read; only a
+  // response disconnect means the viewer has actually stopped streaming.
+  res.on('close',close);
+  const attempts=[];let station;
+  try{
+   station=await lookupRadio(original);
+   const candidates=station?radioSources({...station,preferredSource:preferredRadioSource(station.id)}):[original];
+   for(const source of candidates){
+    if(controller.signal.aborted)break;
+    const attempt=new AbortController(),timer=setTimeout(()=>attempt.abort(),connectTimeoutMs);
+    const signal=AbortSignal.any([controller.signal,attempt.signal]);let upstream,stage='resolve';
+    try{
+     const scoped=(url,options={})=>request(url,{...options,signal:AbortSignal.any([signal,...(options.signal?[options.signal]:[])])});
+     let targets=isDesdeParaguay(source)?await resolveDesdeStreams(source,scoped):[source];
+     if(isResolvable(targets[0]))targets=[await resolvePlatform(targets[0])];
+     const ua=req.query.ua||RADIO_USER_AGENT,ref=station?radioReferrer(station,source):req.query.ref||undefined;
+     const headers={'User-Agent':ua,...(ref?{Referer:ref}:{})};
+     if(req.headers.range&&!targets.some(target=>/\.m3u8(\?|$)/i.test(target)))headers.Range=req.headers.range;
+     const variants=targets.slice(0,2),controllers=variants.map(()=>new AbortController());
+     stage='connect';let opened;
+     try{
+      opened=await Promise.any(variants.map(async(target,index)=>{
+       const response=await scoped(target,{headers,redirect:'follow',signal:controllers[index].signal});
+       if(!response.ok){await response.body?.cancel();throw Object.assign(Error('HTTP '+response.status),{status:response.status,host:new URL(target).host});}
+       const contentType=response.headers.get('content-type')||'',baseUrl=response.url||target;
+       let body;
+       if(isManifest(baseUrl,contentType)){body=await response.text();if(!body.trimStart().startsWith('#EXTM3U'))throw Object.assign(Error('Manifiesto inválido'),{code:'INVALID_MANIFEST',host:new URL(target).host});}
+       return {response,contentType,baseUrl,body,index,target};
+      }));
+      controllers.forEach((c,i)=>{if(i!==opened.index)c.abort();});
+     }catch(error){controllers.forEach(c=>c.abort());if(error instanceof AggregateError){for(const e of error.errors)attempts.push({host:e.host||new URL(source).host,stage,status:e.status||null,code:signal.aborted?'TIMEOUT':e.code||e.cause?.code||'UPSTREAM_ERROR'});continue;}throw error;}
+     upstream=opened.response;const {contentType,baseUrl}=opened;
+     if(isDesdeParaguay(source))preferDesdeStream(source,opened.target);
+     stage='body';
+     if(isManifest(baseUrl,contentType)){
+      const body=opened.body;
+      if(!body.trimStart().startsWith('#EXTM3U')){attempts.push({host:new URL(source).host,stage,status:upstream.status,code:'INVALID_MANIFEST'});continue;}
+      clearTimeout(timer);clearTimeout(total);
+      res.status(200).set('Content-Type','application/vnd.apple.mpegurl').set('Cache-Control','no-cache');
+      return res.send(rewriteManifest(body,baseUrl,req.query.ua,ref,Boolean(req.query.t)));
+     }
+     if(/text\/html|application\/json/i.test(contentType)){await upstream.body?.cancel();attempts.push({host:new URL(source).host,stage,status:upstream.status,code:'NOT_MEDIA'});continue;}
+     const reader=upstream.body?.getReader();if(!reader){attempts.push({host:new URL(source).host,stage,code:'EMPTY_BODY'});continue;}
+     const first=await reader.read();if(!first.value?.length){await reader.cancel();attempts.push({host:new URL(source).host,stage,code:'EMPTY_BODY'});continue;}
+     clearTimeout(timer);clearTimeout(total);
+     res.status(upstream.status);
+     for(const header of ['content-type','content-length','content-range','accept-ranges']){const value=upstream.headers.get(header);if(value)res.set(header,value);}
+     res.set('Cache-Control','no-cache');
+     async function* chunks(){try{yield first.value;while(true){const next=await reader.read();if(next.done)break;yield next.value;}}finally{await reader.cancel().catch(()=>{});}}
+     try{await pipeline(Readable.from(chunks()),res);}catch{if(!res.writableEnded)res.destroy();}
+     return;
+    }catch(error){
+     attempts.push({host:new URL(source).host,stage,code:signal.aborted?'TIMEOUT':error.cause?.code||error.code||'UPSTREAM_ERROR'});
+     if(upstream?.body&&!upstream.body.locked)await upstream.body.cancel().catch(()=>{});
+    }finally{clearTimeout(timer);}
+   }
+   if(!res.destroyed&&!res.headersSent){
+    console.warn('[stream] Fuentes no disponibles',JSON.stringify({radio:station?.id||null,attempts}));
+    const timeout=controller.signal.aborted||attempts.some(a=>a.code==='TIMEOUT');
+    res.status(timeout?504:502).json({error:'No se pudo conectar con la señal. Volvé a intentar.',code:timeout?'UPSTREAM_TIMEOUT':'UPSTREAM_UNAVAILABLE',attempts});
+   }
+  }catch(error){if(!res.destroyed&&!res.headersSent)res.status(502).json({error:'No se pudo preparar la reproducción',code:'STREAM_SETUP_ERROR'});}
+  finally{clearTimeout(total);res.off('close',close);}
+ };
 }

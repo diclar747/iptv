@@ -24,10 +24,10 @@ test('compara variantes de nombre sin juntar frecuencias diferentes', () => {
   assert.equal(merged.length,1); assert.equal(merged[0].id,'old'); assert.equal(merged[0].url,'https://new.example');
 });
 
-test('marca online solamente si recibe audio o un manifiesto HLS válido', async () => {
+test('marca online solamente si recibe audio; una lista vacía no basta', async () => {
   const station = { url: 'https://radio.example/stream' };
   assert.equal(await probeRadio(station, async () => new Response(new Uint8Array([255,251,1,2]), { headers: { 'content-type': 'audio/mpeg' } })), true);
-  assert.equal(await probeRadio(station, async () => new Response('#EXTM3U\n#EXT-X-TARGETDURATION:5\n', { headers: { 'content-type': 'application/vnd.apple.mpegurl' } })), true);
+  assert.equal(await probeRadio(station, async () => new Response('#EXTM3U\n#EXT-X-TARGETDURATION:5\n', { headers: { 'content-type': 'application/vnd.apple.mpegurl' } })), false);
   assert.equal(await probeRadio(station, async () => new Response('<html>Error</html>', { headers: { 'content-type': 'text/html' } })), false);
   assert.equal(await probeRadio(station, async () => new Response('Not found', { status: 404 })), false);
   assert.equal(await probeRadio(station, async () => new Response('', { headers: { 'content-type': 'audio/aac' } })), false);

@@ -22,6 +22,8 @@ object Net {
         private set
     lateinit var okHttpMedia: OkHttpClient
         private set
+    lateinit var playbackApi: Api
+        private set
     lateinit var api: Api
         private set
 
@@ -40,6 +42,7 @@ object Net {
             .pingInterval(20, TimeUnit.SECONDS)    // mantiene viva la conexión HLS
             .retryOnConnectionFailure(true)
             .build()
+        playbackApi = Retrofit.Builder().baseUrl(BASE).client(okHttp.newBuilder().readTimeout(35,TimeUnit.SECONDS).callTimeout(40,TimeUnit.SECONDS).build()).addConverterFactory(GsonConverterFactory.create()).build().create(Api::class.java)
         api = Retrofit.Builder()
             .baseUrl(BASE)
             .client(okHttp)

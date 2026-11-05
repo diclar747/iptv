@@ -26,7 +26,7 @@ export async function checkStream({url,userAgent,referrer}={}, request=fetch) {
    return {ok,status:response.status,contentType,ms:Date.now()-started,...(!ok?{error:'La URL no entregó video/audio válido'}:{})};
   }
   return {ok:false,error:'Demasiadas listas anidadas'};
- } catch(error) {return {ok:false,error:controller.signal.aborted?'Tiempo de espera agotado':error.message,ms:Date.now()-started};}
+ } catch(error) {return {ok:false,error:controller.signal.aborted?'Tiempo de espera agotado':error.message,code:error.cause?.code||error.code||error.name,ms:Date.now()-started};}
  finally {clearTimeout(timer);controller.abort();}
 }
 export async function checkMany(streams,{concurrency=4}={}) {

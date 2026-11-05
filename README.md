@@ -281,3 +281,42 @@ verify-social.mjs valida publicación, permisos y pulgares. La APK y la web se
 compilan; no se hizo una prueba visual en Android porque el emulador disponible
 requiere aceleración de hardware que no está habilitada en este equipo.
 Desplegar backend, web y APK 1.23 juntos. El inicio aplica la migración SQL.
+
+## LiveTV 1.24 — Fiabilidad de radios y plan mensual
+
+Precio publicado del plan: Gs. 27.500 mensuales.
+
+El verificador comprueba medios reales, incluyendo segmentos HLS. Un fallo de
+red, permiso, timeout o respuesta temporal se identifica como error de
+comprobación, no como emisora offline. La ausencia de señal se confirma solo
+ante fuentes eliminadas o respuestas 404/410. El resultado online se conserva
+hasta treinta minutos con indicador de actualización; se renueva desde los tres
+minutos. Los errores pueden reintentarse después de un minuto.
+
+Desde Paraguay: se extraen ambas señales que publica cada página. El verificador
+y el proxy prueban las dos, cancelan la que pierde y prefieren la que responde.
+Las firmas temporales permanecen solo en memoria durante treinta segundos y
+nunca se guardan en el catálogo. También se conservan las alternativas del
+directorio externo al unir emisoras duplicadas. Centenario usa una fuente AAC
+independiente comprobada localmente y por el servidor publicado; Cardinal 730
+prioriza su página de transmisión sobre el enlace directo que fallaba.
+
+El filtro online descubre emisoras en lotes limitados cuando faltan resultados,
+responde inmediatamente y muestra progreso en la APK. Permite seguir buscando
+más allá de las primeras diez; las señales ya confirmadas se ordenan por su
+primera comprobación para evitar movimientos al descubrir nuevas. Abrir una
+radio utiliza GET /api/radios/:id/playback: comparte la verificación existente y
+entrega la fuente y el formato correctos para HLS/AAC/MP3 en la web y APK.
+
+El proxy aborta al desconectarse la respuesta, no al completarse la petición
+HTTP. La espera inicial está acotada y devuelve errores JSON, mientras que una
+transmisión ya iniciada continúa sin ese límite. Los fallos registran etapa,
+host y código de error, sin firmas ni URL completas. Diagnóstico de administrador:
+POST /api/admin/radios/diagnostics con {"ids":["desde-abc","desde-centenario"]}.
+
+Desplegar backend y web, reiniciar el servicio y publicar la APK 1.24 incluida.
+No hay migración de base de datos nueva. Los estados se reconstruyen al reiniciar;
+no se debe confundir una señal pendiente de comprobar con una emisora apagada.
+Se comprobaron respuestas de audio y las pruebas automatizadas; queda pendiente
+confirmar en producción la estabilidad de ABC después del despliegue, pues el
+servidor anterior mostró respuestas intermitentes incluso en su segundo CDN.

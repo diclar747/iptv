@@ -16,6 +16,9 @@ interface Api {
     @GET("api/radios")
     suspend fun radios(@Query("page") page: Int = 1, @Query("pageSize") pageSize: Int = 10, @Query("search") search: String? = null, @Query("status") status: String? = null, @Query("catalog") catalog: String? = null): RadiosResp
 
+    @GET("api/radios/{id}/playback")
+    suspend fun radioPlayback(@Path("id") id: String): RadioStation
+
     @GET("api/radios/status")
     suspend fun radioStatuses(@Query("ids") ids: String): List<RadioStation>
 
@@ -238,7 +241,7 @@ data class ReactionsResp(
     val comments: List<Comment> = emptyList(),
 )
 
-data class RadioStation(val id: String, val name: String, val url: String, val city: String = "", val tags: String = "", val codec: String = "", val source: String? = null, val logo: String? = null, val status: String = "checking", val checkedAt: String? = null)
-data class RadiosResp(val items: List<RadioStation> = emptyList(), val total: Int = 0, val hasMore: Boolean = false, val catalog: String? = null)
+data class RadioStation(val id: String, val name: String, val url: String, val city: String = "", val tags: String = "", val codec: String = "", val source: String? = null, val logo: String? = null, val status: String = "checking", val checkedAt: String? = null, val reason: String? = null, val stale: Boolean = false)
+data class RadiosResp(val items: List<RadioStation> = emptyList(), val total: Int = 0, val hasMore: Boolean = false, val catalog: String? = null, val discovering: Boolean = false, val verified: Int = 0, val catalogTotal: Int = 0)
 
 data class ChannelHealth(val id: String, val status: String = "unchecked", val checkedAt: String? = null)

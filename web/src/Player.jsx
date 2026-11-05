@@ -60,7 +60,7 @@ export default function Player({ url, stream, title, poster, onFail }) {
 
     let realUrl = url;
     try { realUrl = new URLSearchParams(url.split('?')[1]).get('url') || url; } catch { /* noop */ }
-    const isHls = /\.m3u8(\?|$)/i.test(realUrl);
+    const isHls = stream?.format === 'hls' || /\.m3u8(\?|$)/i.test(realUrl);
 
     if (!isHls) {
       video.src = url;

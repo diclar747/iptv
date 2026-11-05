@@ -55,6 +55,8 @@ class AppViewModel : ViewModel() {
         private set
 
     var detail by mutableStateOf<Detail?>(null)
+    private var radioJob: kotlinx.coroutines.Job? = null
+    private var radioGeneration = 0
     var play by mutableStateOf<PlayTarget?>(null)
 
     private val api get() = Net.api
@@ -138,6 +140,7 @@ class AppViewModel : ViewModel() {
 
     // Reproduce un canal en vivo: busca su primera señal con URL y la lanza.
     fun playChannel(card: Card) {
+        radioGeneration++;radioJob?.cancel()
         viewModelScope.launch {
             busy = true; error = null
             try {
@@ -172,11 +175,20 @@ class AppViewModel : ViewModel() {
     }
 
     fun playRadio(station: com.cinetv.app.data.RadioStation) {
-        val mime = if (Net.isHls(station.url) || station.codec.equals("HLS", true)) "application/x-mpegURL" else if (station.codec.contains("AAC", true)) "audio/aac" else if (station.codec.contains("OGG", true) || station.codec.contains("OPUS", true)) "audio/ogg" else "audio/mpeg"
-        play = PlayTarget(Net.proxied(station.url, ref = station.source), mime, station.name, station.url, ref = station.source, isLive = true, reactionType = "radio", reactionId = station.id, isAudio = true, subtitle = station.city.ifBlank { "Paraguay · Transmisión en directo" })
+        val generation=++radioGeneration;radioJob?.cancel();busy=true;error=null
+        radioJob=viewModelScope.launch {
+            try{
+                val ready=Net.playbackApi.radioPlayback(station.id)
+                if(generation!=radioGeneration)return@launch
+                val mime=if(Net.isHls(ready.url)||ready.codec.equals("HLS",true))"application/x-mpegURL" else if(ready.codec.contains("AAC",true))"audio/aac" else if(ready.codec.contains("OGG",true))"audio/ogg" else "audio/mpeg"
+                play=PlayTarget(Net.proxied(ready.url,ref=ready.source),mime,ready.name,ready.url,ref=ready.source,isLive=true,reactionType="radio",reactionId=ready.id,isAudio=true,subtitle=ready.city.ifBlank{"Paraguay · Transmisión en directo"})
+            }catch(e:kotlinx.coroutines.CancellationException){throw e}
+            catch(_:Exception){if(generation==radioGeneration)error="No pudimos conectar con la radio. Volvé a intentar en unos segundos."}
+            finally{if(generation==radioGeneration)busy=false}
+        }
     }
 
-    fun closePlayer() { play = null }
+    fun closePlayer() { radioGeneration++; radioJob?.cancel();busy=false;play = null }
     fun closeDetail() { detail = null }
 
     private fun humanize(e: Exception): String =

@@ -100,6 +100,7 @@ export const api = {
   toggleLike: (type, id, value=1) => post('/catalog/likes', { type, id, value }),
   reactComment: (id, emoji) => post(`/catalog/comments/${id}/reaction`, {emoji}),
   radios: (params) => get('/radios', params),
+  radioPlayback: (id) => get(`/radios/${encodeURIComponent(id)}/playback`),
   radioStatuses: (ids) => get('/radios/status',{ids}),
   channelStatuses: (ids) => get('/channels/status',{ids}),
   addComment: (type, id, body) => post('/catalog/comments', { type, id, body }),

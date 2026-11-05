@@ -73,16 +73,16 @@
   {
     "id": "py-8a1cfecdfc0815e8",
     "name": "ABC Cardinal 730AM",
-    "url": "https://ny1.radio.primcast.com/8342/stream",
-    "source": "https://www.radio-browser.info/history/ba57bbe9-1f75-439a-8eb1-226449f10381",
+    "url": "https://www.desdeparaguay.com/730",
+    "source": "https://www.desdeparaguay.com/730",
     "city": "",
     "tags": "",
-    "codec": "AAC",
+    "codec": "HLS",
     "logo": "",
     "checkedAt": "2026-11-05T12:09:16.781Z",
     "available": true,
     "alternativeSources": [
-      "https://www.desdeparaguay.com/730"
+      "https://ny1.radio.primcast.com/8342/stream"
     ]
   },
   {
@@ -487,14 +487,14 @@
   {
     "id": "desde-centenario",
     "name": "Centenario 99.5 FM",
-    "url": "https://www.desdeparaguay.com/centenario",
-    "source": "https://www.desdeparaguay.com/centenario",
+    "url": "https://stream.radiosenpy.net/8028/;",
+    "source": "https://www.radiosenparaguay.com/centenario",
     "city": "CAAGUAZU",
     "tags": "Paraguay",
-    "codec": "HLS",
+    "codec": "AAC",
     "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/centenario.png?4",
     "available": true,
-    "checkedAt": "2026-11-05T12:09:23.235Z",
+    "checkedAt": "2026-11-05T16:55:04.168Z",
     "alternativeSources": [
       "https://www.desdeparaguay.com/centenario"
     ]
