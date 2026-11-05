@@ -56,7 +56,17 @@ object Net {
         return sb.toString()
     }
 
-    fun isHls(rawUrl: String?): Boolean = rawUrl?.contains(".m3u8", true) == true
+    // ¿La señal es HLS? Sí si la URL es .m3u8, o si es un link de plataforma
+    // (Twitch/YouTube/Facebook/Kick) que el backend RESUELVE a HLS. Sin esto, un
+    // link de Twitch (sin ".m3u8") se trataba como MP4 y ExoPlayer no reproducía.
+    private val PLATFORMS = Regex(
+        "//([a-z0-9-]+\\.)*(twitch\\.tv|youtube\\.com|youtu\\.be|facebook\\.com|fb\\.watch|kick\\.com|dailymotion\\.com)(/|$)",
+        RegexOption.IGNORE_CASE
+    )
+    fun isHls(rawUrl: String?): Boolean {
+        if (rawUrl.isNullOrBlank()) return false
+        return rawUrl.contains(".m3u8", true) || PLATFORMS.containsMatchIn(rawUrl)
+    }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 }
