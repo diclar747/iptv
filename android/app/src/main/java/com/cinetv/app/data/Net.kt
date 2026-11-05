@@ -60,7 +60,7 @@ object Net {
     // (Twitch/YouTube/Facebook/Kick) que el backend RESUELVE a HLS. Sin esto, un
     // link de Twitch (sin ".m3u8") se trataba como MP4 y ExoPlayer no reproducía.
     private val PLATFORMS = Regex(
-        "//([a-z0-9-]+\\.)*(twitch\\.tv|youtube\\.com|youtu\\.be|facebook\\.com|fb\\.watch|kick\\.com|dailymotion\\.com)(/|$)",
+        "//([a-z0-9-]+\\.)*(twitch\\.tv|youtube\\.com|youtu\\.be|facebook\\.com|fb\\.watch|kick\\.com|dailymotion\\.com|desdeparaguay\\.com)(/|$)",
         RegexOption.IGNORE_CASE
     )
     fun isHls(rawUrl: String?): Boolean {

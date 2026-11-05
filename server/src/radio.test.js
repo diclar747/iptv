@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mergeRadios } from './radio.js';
+import { mergeRadios, sameRadio } from './radio.js';
 import { probeRadio } from './radio-health.js';
 
 test('conserva la identidad oficial y evita duplicados entre directorios', () => {
@@ -14,6 +14,14 @@ test('conserva la identidad oficial y evita duplicados entre directorios', () =>
   assert.equal(merged.length, 2);
   assert.ok(merged.some(r => r.id === 'sanfernando'));
   assert.ok(merged.some(r => r.id === 'new'));
+});
+
+test('compara variantes de nombre sin juntar frecuencias diferentes', () => {
+  assert.equal(sameRadio({name:'ABC Cardinal 730AM'},{name:'Radio ABC Cardinal 730 AM'}),true);
+  assert.equal(sameRadio({name:'Radio Aspen Paraguay'},{name:'Aspen FM 102.7'}),true);
+  assert.equal(sameRadio({name:'Radio Amistad 102.5 FM'},{name:'Radio Amistad 103.1 FM'}),false);
+  const merged=mergeRadios([{id:'old',name:'Radio Aspen',url:'https://old.example',available:false}],[{id:'new',name:'Aspen 102.7 FM',url:'https://new.example',available:true}]);
+  assert.equal(merged.length,1); assert.equal(merged[0].id,'old'); assert.equal(merged[0].url,'https://new.example');
 });
 
 test('marca online solamente si recibe audio o un manifiesto HLS válido', async () => {

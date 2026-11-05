@@ -14,7 +14,8 @@
     "start": "npm run start --workspace server",
     "build": "npm run build --workspace web",
     "import:vod": "node server/scripts/import-vod.mjs",
-    "import:radios": "node server/scripts/import-radios.mjs && node server/scripts/verify-radios.mjs"
+    "import:radios": "node server/scripts/import-radios.mjs && node server/scripts/import-desdeparaguay.mjs && node server/scripts/verify-radios.mjs",
+    "import:radios:desdeparaguay": "node server/scripts/import-desdeparaguay.mjs && node server/scripts/verify-radios.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

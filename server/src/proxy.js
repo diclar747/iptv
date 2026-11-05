@@ -10,6 +10,7 @@
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { streamToken } from './streamToken.js';
+import { isDesdeParaguay, resolveDesdeStream } from './desdeparaguay.js';
 import { isResolvable, resolvePlatform } from './resolver.js';
 
 // UA de navegador por defecto: algunos orígenes rechazan UA vacío o de Node.
@@ -63,6 +64,10 @@ export function streamHandler() {
     let target = req.query.url;
     if (!target || !/^https?:\/\//i.test(target)) {
       return res.status(400).json({ error: 'Parámetro url inválido' });
+    }
+    if (isDesdeParaguay(target)) {
+      try { target = await resolveDesdeStream(target); }
+      catch (error) { return res.status(502).json({ error: 'La radio no tiene señal disponible', detail: error.message }); }
     }
     // Link de plataforma (Twitch/YouTube/Facebook): resolver a su HLS actual
     // antes de proxear. Se hace tras la autorización (token/cookie) y con cache.

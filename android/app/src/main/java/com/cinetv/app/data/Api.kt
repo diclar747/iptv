@@ -72,6 +72,7 @@ interface Api {
         @Query("search") search: String? = null,
         @Query("prefer") prefer: String? = null,
         @Query("pageSize") pageSize: Int = 80,
+        @Query("page") page: Int = 1,
     ): ChannelList
 
     @GET("api/channels/{id}/streams")

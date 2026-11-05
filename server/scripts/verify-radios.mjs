@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { resolveDesdeStream } from '../src/desdeparaguay.js';
 const file = new URL('../src/radios-py.json', import.meta.url);
 const entries = JSON.parse(readFileSync(file, 'utf8'));
 let next = 0;
@@ -11,7 +12,8 @@ await Promise.all(Array.from({ length: 5 }, async () => {
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]),
         headers: { 'User-Agent': 'Mozilla/5.0 LiveTV/1.18', Referer: entry.source },
       };
-      let response = await fetch(entry.url, options);
+      const resolved = await resolveDesdeStream(entry.url);
+      let response = await fetch(resolved, options);
       // Algunos micrositios todavía publican /; del reproductor anterior.
       // El mismo servidor ofrece públicamente su audio en /stream.
       if (response.status === 404 && new URL(entry.url).pathname === '/;') {

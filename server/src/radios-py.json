@@ -1,5 +1,50 @@
 [
   {
+    "id": "desde-780",
+    "name": "1º de Marzo 780 AM",
+    "url": "https://www.desdeparaguay.com/780",
+    "source": "https://www.desdeparaguay.com/780",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/780.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:15.159Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/780"
+    ]
+  },
+  {
+    "id": "desde-4dmasnoticias",
+    "name": "4Dmás Noticias 104.7 FM",
+    "url": "https://www.desdeparaguay.com/4dmasnoticias",
+    "source": "https://www.desdeparaguay.com/4dmasnoticias",
+    "city": "SANTA ROSA DEL AGUARAY",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/4dmasnoticias.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:15.208Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/4dmasnoticias"
+    ]
+  },
+  {
+    "id": "desde-4dmasnoticiastv",
+    "name": "4Dmás Noticias TV",
+    "url": "https://www.desdeparaguay.com/4dmasnoticiastv",
+    "source": "https://www.desdeparaguay.com/4dmasnoticiastv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/4dmasnoticiastv.png?4",
+    "available": false,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/4dmasnoticiastv"
+    ],
+    "lastError": "The operation was aborted due to timeout"
+  },
+  {
     "id": "py-81e11b1ac4ace37a",
     "name": "98 de la Justicia",
     "url": "https://radio.host.com.py:7286/;",
@@ -11,6 +56,21 @@
     "lastError": "HTTP 401 "
   },
   {
+    "id": "desde-abc",
+    "name": "ABC 107.1 FM",
+    "url": "https://www.desdeparaguay.com/abc",
+    "source": "https://www.desdeparaguay.com/abc",
+    "city": "CIUDAD DEL ESTE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/abc.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:15.220Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/abc"
+    ]
+  },
+  {
     "id": "py-8a1cfecdfc0815e8",
     "name": "ABC Cardinal 730AM",
     "url": "https://ny1.radio.primcast.com/8342/stream",
@@ -19,8 +79,26 @@
     "tags": "",
     "codec": "AAC",
     "logo": "",
-    "checkedAt": "2026-11-05T11:23:44.166Z",
-    "available": true
+    "checkedAt": "2026-11-05T12:09:16.781Z",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/730"
+    ]
+  },
+  {
+    "id": "desde-agr",
+    "name": "AGR 101.3 FM",
+    "url": "https://www.desdeparaguay.com/agr",
+    "source": "https://www.desdeparaguay.com/agr",
+    "city": "CURUGUATY",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/agr.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:16.639Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/agr"
+    ]
   },
   {
     "id": "py-86b7e6cb8743300e",
@@ -29,9 +107,9 @@
     "source": "https://paraguayonline.net/agrovision/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 401 "
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:15.410Z"
   },
   {
     "id": "py-f8f51b77ed8cbf76",
@@ -41,7 +119,7 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:23:41.047Z",
+    "checkedAt": "2026-11-05T12:09:15.454Z",
     "available": true
   },
   {
@@ -52,7 +130,7 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:23:41.139Z",
+    "checkedAt": "2026-11-05T12:09:15.615Z",
     "available": true
   },
   {
@@ -64,7 +142,37 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
+  },
+  {
+    "id": "desde-altopy",
+    "name": "Alto Paraguay 99.9 FM",
+    "url": "https://www.desdeparaguay.com/altopy",
+    "source": "https://www.desdeparaguay.com/altopy",
+    "city": "CARMELO PERALTA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/altopy.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:17.071Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/altopy"
+    ]
+  },
+  {
+    "id": "desde-anr",
+    "name": "ANR 89.9 FM",
+    "url": "https://www.desdeparaguay.com/anr",
+    "source": "https://www.desdeparaguay.com/anr",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/anr.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:17.087Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/anr"
+    ]
   },
   {
     "id": "py-1076f137285d8483",
@@ -78,6 +186,66 @@
     "lastError": "HTTP 401 "
   },
   {
+    "id": "desde-aquidaban",
+    "name": "Aquidabán 100.5 FM",
+    "url": "https://www.desdeparaguay.com/aquidaban",
+    "source": "https://www.desdeparaguay.com/aquidaban",
+    "city": "CONCEPCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/aquidaban.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:18.228Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/aquidaban"
+    ]
+  },
+  {
+    "id": "desde-arandu",
+    "name": "Arandú 98.3 FM",
+    "url": "https://www.desdeparaguay.com/arandu",
+    "source": "https://www.desdeparaguay.com/arandu",
+    "city": "SALTO DEL GUAIRá",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/arandu.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:18.313Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/arandu"
+    ]
+  },
+  {
+    "id": "desde-aranduka",
+    "name": "Aranduka 87.9 FM",
+    "url": "https://www.desdeparaguay.com/aranduka",
+    "source": "https://www.desdeparaguay.com/aranduka",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/aranduka.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:18.512Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/aranduka"
+    ]
+  },
+  {
+    "id": "desde-arapy",
+    "name": "Arapy 98.1 FM",
+    "url": "https://www.desdeparaguay.com/arapy",
+    "source": "https://www.desdeparaguay.com/arapy",
+    "city": "PILAR",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/arapy.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:18.521Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/arapy"
+    ]
+  },
+  {
     "id": "py-f4dc3802fa5e3b0f",
     "name": "Aspen FM 102.7 Paraguay",
     "url": "https://copaco.desdeparaguay.net/movaspen/movaspen.stream/playlist.m3u8",
@@ -86,8 +254,56 @@
     "tags": "",
     "codec": "HLS",
     "logo": "null",
-    "checkedAt": "2026-11-05T11:23:41.164Z",
-    "available": true
+    "checkedAt": "2026-11-05T12:09:18.317Z",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/aspen"
+    ]
+  },
+  {
+    "id": "desde-aspentv",
+    "name": "Aspen TV",
+    "url": "https://www.desdeparaguay.com/aspentv",
+    "source": "https://www.desdeparaguay.com/aspentv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/aspentv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:19.764Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/aspentv"
+    ]
+  },
+  {
+    "id": "desde-1250",
+    "name": "Asunción 1250 AM",
+    "url": "https://www.desdeparaguay.com/1250",
+    "source": "https://www.desdeparaguay.com/1250",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1250.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:19.878Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1250"
+    ]
+  },
+  {
+    "id": "desde-atyra",
+    "name": "Atyra 105.7 FM",
+    "url": "https://www.desdeparaguay.com/atyra",
+    "source": "https://www.desdeparaguay.com/atyra",
+    "city": "ATYRA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/atyra.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:20.027Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/atyra"
+    ]
   },
   {
     "id": "py-c64be05344fbdad7",
@@ -96,9 +312,24 @@
     "source": "https://paraguayonline.net/avizorfm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:18.730Z"
+  },
+  {
+    "id": "desde-brunomasitv",
+    "name": "Bruno Masi TV",
+    "url": "https://www.desdeparaguay.com/brunomasitv",
+    "source": "https://www.desdeparaguay.com/brunomasitv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/brunomasitv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:20.293Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/brunomasitv"
+    ]
   },
   {
     "id": "py-37217587baca12e1",
@@ -108,7 +339,7 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:23:41.369Z",
+    "checkedAt": "2026-11-05T12:09:19.974Z",
     "available": true
   },
   {
@@ -120,7 +351,22 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
+  },
+  {
+    "id": "desde-camara",
+    "name": "Cámara 104.1 FM",
+    "url": "https://www.desdeparaguay.com/camara",
+    "source": "https://www.desdeparaguay.com/camara",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/camara.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:21.422Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/camara"
+    ]
   },
   {
     "id": "py-80a91f76478fe9fa",
@@ -129,20 +375,144 @@
     "source": "https://paraguayonline.net/canal18radiotv/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "MP3",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:20.229Z"
+  },
+  {
+    "id": "desde-capital",
+    "name": "Capital 101.7 FM",
+    "url": "https://www.desdeparaguay.com/capital",
+    "source": "https://www.desdeparaguay.com/capital",
+    "city": "CORONEL OVIEDO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/capital.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:21.503Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/capital"
+    ]
+  },
+  {
+    "id": "desde-caraguatay",
+    "name": "Caraguatay 90.3 FM",
+    "url": "https://www.desdeparaguay.com/caraguatay",
+    "source": "https://www.desdeparaguay.com/caraguatay",
+    "city": "CARAGUATAY",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/caraguatay.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:21.693Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/caraguatay"
+    ]
+  },
+  {
+    "id": "desde-cardinalromance",
+    "name": "Cardinal Romance 98.5 FM",
+    "url": "https://www.desdeparaguay.com/cardinalromance",
+    "source": "https://www.desdeparaguay.com/cardinalromance",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/cardinalromance.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:21.769Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/cardinalromance"
+    ]
+  },
+  {
+    "id": "desde-caritasfm",
+    "name": "Cáritas",
+    "url": "https://www.desdeparaguay.com/caritasfm",
+    "source": "https://www.desdeparaguay.com/caritasfm",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/caritasfm.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:23.173Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/680",
+      "https://www.desdeparaguay.com/caritasfm"
+    ]
+  },
+  {
+    "id": "desde-caritastv",
+    "name": "Cáritas TV",
+    "url": "https://www.desdeparaguay.com/caritastv",
+    "source": "https://www.desdeparaguay.com/caritastv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/caritastv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:22.981Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/caritastv"
+    ]
+  },
+  {
+    "id": "desde-700",
+    "name": "Carlos A. López 700 AM",
+    "url": "https://www.desdeparaguay.com/700",
+    "source": "https://www.desdeparaguay.com/700",
+    "city": "PILAR",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/700.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:23.120Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/700"
+    ]
   },
   {
     "id": "py-30fa1033ec381748",
     "name": "CCM Radio",
-    "url": "https://radio.host.com.py:7297/;",
-    "source": "https://paraguayonline.net/ccmradio/",
+    "url": "https://www.desdeparaguay.com/ccm",
+    "source": "https://www.desdeparaguay.com/ccm",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "HLS",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/ccm"
+    ],
+    "checkedAt": "2026-11-05T12:09:23.180Z"
+  },
+  {
+    "id": "desde-centenario",
+    "name": "Centenario 99.5 FM",
+    "url": "https://www.desdeparaguay.com/centenario",
+    "source": "https://www.desdeparaguay.com/centenario",
+    "city": "CAAGUAZU",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/centenario.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:23.235Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/centenario"
+    ]
+  },
+  {
+    "id": "desde-1140",
+    "name": "Central 1140 AM",
+    "url": "https://www.desdeparaguay.com/1140",
+    "source": "https://www.desdeparaguay.com/1140",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1140.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:24.418Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1140"
+    ]
   },
   {
     "id": "py-573b50d682d5715c",
@@ -151,9 +521,84 @@
     "source": "https://paraguayonline.net/centralfm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:23.331Z"
+  },
+  {
+    "id": "desde-centro",
+    "name": "Centro 87.9 FM",
+    "url": "https://www.desdeparaguay.com/centro",
+    "source": "https://www.desdeparaguay.com/centro",
+    "city": "UNIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/centro.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:24.591Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/centro"
+    ]
+  },
+  {
+    "id": "desde-cfa",
+    "name": "CFA 99.5 FM",
+    "url": "https://www.desdeparaguay.com/cfa",
+    "source": "https://www.desdeparaguay.com/cfa",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/cfa.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:24.568Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/cfa"
+    ]
+  },
+  {
+    "id": "desde-1330",
+    "name": "Chaco Boreal 1330 AM",
+    "url": "https://www.desdeparaguay.com/1330",
+    "source": "https://www.desdeparaguay.com/1330",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1330.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:24.651Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1330"
+    ]
+  },
+  {
+    "id": "desde-tvchaquena",
+    "name": "Chaqueña TV",
+    "url": "https://www.desdeparaguay.com/tvchaquena",
+    "source": "https://www.desdeparaguay.com/tvchaquena",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/tvchaquena.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:24.712Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/tvchaquena"
+    ]
+  },
+  {
+    "id": "desde-ciudad",
+    "name": "Ciudad 92.9 FM",
+    "url": "https://www.desdeparaguay.com/ciudad",
+    "source": "https://www.desdeparaguay.com/ciudad",
+    "city": "SAN ESTANISLAO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/ciudad.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:25.831Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/ciudad"
+    ]
   },
   {
     "id": "py-fc77f67c6d85cce3",
@@ -162,9 +607,9 @@
     "source": "https://paraguayonline.net/classicradio/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:24.787Z"
   },
   {
     "id": "py-06a6b29846a47ca1",
@@ -186,7 +631,7 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
   },
   {
     "id": "py-18f6eee770036264",
@@ -200,6 +645,51 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-concepcion",
+    "name": "Concepción 103.7 FM",
+    "url": "https://www.desdeparaguay.com/concepcion",
+    "source": "https://www.desdeparaguay.com/concepcion",
+    "city": "CONCEPCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/concepcion.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:26.165Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/concepcion"
+    ]
+  },
+  {
+    "id": "desde-concert",
+    "name": "Concert",
+    "url": "https://www.desdeparaguay.com/concert",
+    "source": "https://www.desdeparaguay.com/concert",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/concert.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:26.476Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/concert"
+    ]
+  },
+  {
+    "id": "desde-conciertotv",
+    "name": "Concierto TV",
+    "url": "https://www.desdeparaguay.com/conciertotv",
+    "source": "https://www.desdeparaguay.com/conciertotv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/conciertotv.png?4",
+    "available": false,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/conciertotv"
+    ],
+    "lastError": "The operation was aborted due to timeout"
+  },
+  {
     "id": "py-206e3a0195ae66db",
     "name": "Conexión Radio – Ramon Resquin",
     "url": "https://radio.host.com.py/9832/stream",
@@ -207,8 +697,23 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:23:41.584Z",
+    "checkedAt": "2026-11-05T12:09:25.406Z",
     "available": true
+  },
+  {
+    "id": "desde-continental",
+    "name": "Continental 95.3 FM",
+    "url": "https://www.desdeparaguay.com/continental",
+    "source": "https://www.desdeparaguay.com/continental",
+    "city": "HORQUETA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/continental.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:26.795Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/continental"
+    ]
   },
   {
     "id": "py-6430bd296a677d7e",
@@ -217,9 +722,24 @@
     "source": "https://paraguayonline.net/continentalfm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:26.036Z"
+  },
+  {
+    "id": "desde-corazon",
+    "name": "Corazón 99.1 FM",
+    "url": "https://www.desdeparaguay.com/corazon",
+    "source": "https://www.desdeparaguay.com/corazon",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/corazon.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:27.438Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/corazon"
+    ]
   },
   {
     "id": "py-b9ed289445b75d7e",
@@ -228,8 +748,9 @@
     "source": "https://paraguayonline.net/corazondelnorte973/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:24.166Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -239,9 +760,24 @@
     "source": "https://paraguayonline.net/cordilleradelmbaracayu/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:26.677Z"
+  },
+  {
+    "id": "desde-curuguaty",
+    "name": "Curuguaty 98.7 FM",
+    "url": "https://www.desdeparaguay.com/curuguaty",
+    "source": "https://www.desdeparaguay.com/curuguaty",
+    "city": "CURUGUATY",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/curuguaty.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:28.058Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/curuguaty"
+    ]
   },
   {
     "id": "py-4a56891152a9b4e1",
@@ -255,14 +791,30 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-delsol",
+    "name": "Del Sol 93.1 FM",
+    "url": "https://www.desdeparaguay.com/delsol",
+    "source": "https://www.desdeparaguay.com/delsol",
+    "city": "CORONEL OVIEDO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/delsol.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:28.255Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/delsol"
+    ]
+  },
+  {
     "id": "py-bb5e7913fc154e63",
     "name": "Diferente FM",
     "url": "https://radio.host.com.py:7002/;",
     "source": "https://paraguayonline.net/diferentefm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:24.921Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -273,8 +825,53 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:23:41.797Z",
+    "checkedAt": "2026-11-05T12:09:27.549Z",
     "available": true
+  },
+  {
+    "id": "desde-dismar",
+    "name": "Dismar",
+    "url": "https://www.desdeparaguay.com/dismar",
+    "source": "https://www.desdeparaguay.com/dismar",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/dismar.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:28.835Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/dismar"
+    ]
+  },
+  {
+    "id": "desde-dismartv",
+    "name": "Dismar TV",
+    "url": "https://www.desdeparaguay.com/dismartv",
+    "source": "https://www.desdeparaguay.com/dismartv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/dismartv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:29.247Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/dismartv"
+    ]
+  },
+  {
+    "id": "desde-estacion40",
+    "name": "E40 91.1 FM",
+    "url": "https://www.desdeparaguay.com/estacion40",
+    "source": "https://www.desdeparaguay.com/estacion40",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/estacion40.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:29.452Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/estacion40"
+    ]
   },
   {
     "id": "py-7ca992f14859b6e9",
@@ -284,7 +881,7 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:23:41.854Z",
+    "checkedAt": "2026-11-05T12:09:28.468Z",
     "available": true
   },
   {
@@ -294,9 +891,24 @@
     "source": "https://paraguayonline.net/egomradio/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:28.671Z"
+  },
+  {
+    "id": "desde-elangel",
+    "name": "El Angel 94.9 FM",
+    "url": "https://www.desdeparaguay.com/elangel",
+    "source": "https://www.desdeparaguay.com/elangel",
+    "city": "CAPITáN MIRANDA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/elangel.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:30.061Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/elangel"
+    ]
   },
   {
     "id": "py-51797e9f4f9d7f23",
@@ -310,27 +922,45 @@
     "lastError": "HTTP 401 "
   },
   {
+    "id": "desde-elmirador",
+    "name": "El Mirador",
+    "url": "https://www.desdeparaguay.com/elmirador",
+    "source": "https://www.desdeparaguay.com/elmirador",
+    "city": "RADIOS ONLINE (USA)",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/elmirador.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:30.412Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/elmirador"
+    ]
+  },
+  {
     "id": "py-a30edbde4838a1f5",
     "name": "El Observador Radio",
     "url": "https://radio.host.com.py:7244/;",
     "source": "https://paraguayonline.net/elobservador/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:29.449Z"
   },
   {
     "id": "py-cd0b495d29964cf7",
     "name": "Emisoras Paraguay 106.1",
-    "url": "https://rds3.desdeparaguay.net/movemisoras/movemisoras.stream/chunklist_w1882715633.m3u8?k=90ba439d59a58390e5abac95530dd4becd61b4e573b237e6fe0bf9eb4a529caf&exp=1693084452",
-    "source": "https://www.radio-browser.info/history/70abee0b-83d6-4f55-80d0-66b30bd2eae7",
+    "url": "https://www.desdeparaguay.com/emisoras",
+    "source": "https://www.desdeparaguay.com/emisoras",
     "city": "",
     "tags": "",
-    "codec": "UNKNOWN",
+    "codec": "HLS",
     "logo": "null",
-    "available": false,
-    "lastError": "Formato de audio no identificado"
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/emisoras"
+    ],
+    "checkedAt": "2026-11-05T12:09:30.844Z"
   },
   {
     "id": "py-a64834b222a08c76",
@@ -399,15 +1029,105 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-evolucion",
+    "name": "Evolución 89.3 FM",
+    "url": "https://www.desdeparaguay.com/evolucion",
+    "source": "https://www.desdeparaguay.com/evolucion",
+    "city": "EUSEBIO AYALA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/evolucion.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:31.290Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/evolucion"
+    ]
+  },
+  {
+    "id": "desde-exclusiva",
+    "name": "Exclusiva 103.7 FM",
+    "url": "https://www.desdeparaguay.com/exclusiva",
+    "source": "https://www.desdeparaguay.com/exclusiva",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/exclusiva.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:31.438Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/exclusiva"
+    ]
+  },
+  {
     "id": "py-cdd0d95bf5c2d7f4",
     "name": "Fabulosa FM",
     "url": "https://radio.host.com.py:7034/;",
     "source": "https://paraguayonline.net/fabulosafm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:30.783Z"
+  },
+  {
+    "id": "desde-farra",
+    "name": "Farra 101.3 FM",
+    "url": "https://www.desdeparaguay.com/farra",
+    "source": "https://www.desdeparaguay.com/farra",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/farra.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:32.206Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/farra"
+    ]
+  },
+  {
+    "id": "desde-1300",
+    "name": "Fe y Alegría 1300 AM",
+    "url": "https://www.desdeparaguay.com/1300",
+    "source": "https://www.desdeparaguay.com/1300",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1300.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:32.260Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1300"
+    ]
+  },
+  {
+    "id": "desde-fernando",
+    "name": "Fernando de la Mora 100.5 FM",
+    "url": "https://www.desdeparaguay.com/fernando",
+    "source": "https://www.desdeparaguay.com/fernando",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/fernando.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:32.725Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/fernando"
+    ]
+  },
+  {
+    "id": "desde-fiesta",
+    "name": "Fiesta 102.9 FM",
+    "url": "https://www.desdeparaguay.com/fiesta",
+    "source": "https://www.desdeparaguay.com/fiesta",
+    "city": "CORONEL OVIEDO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/fiesta.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:32.880Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/fiesta"
+    ]
   },
   {
     "id": "py-db385e7b74fe3246",
@@ -416,33 +1136,114 @@
     "source": "https://paraguayonline.net/fmazulyoro/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "MP3",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:32.270Z"
   },
   {
     "id": "py-fb22321230023711",
     "name": "FM POPULAR 103.1",
-    "url": "https://rds3.desdeparaguay.net/transpopular/transpopular/playlist.m3u8",
-    "source": "https://www.radio-browser.info/history/b3880ebb-c6e7-4db7-9b19-9245444f6232",
+    "url": "https://www.desdeparaguay.com/popular",
+    "source": "https://www.desdeparaguay.com/popular",
     "city": "",
     "tags": "",
-    "codec": "UNKNOWN",
+    "codec": "HLS",
     "logo": "https://hoypyspace.sfo2.cdn.digitaloceanspaces.com/imagenes/favicon-150x150.png",
-    "available": false,
-    "lastError": "Formato de audio no identificado"
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/popular"
+    ],
+    "checkedAt": "2026-11-05T12:09:33.645Z"
   },
   {
-    "id": "py-a302cd663480c295",
-    "name": "Triunfo FM 93.1",
-    "url": "https://panel.wilhost.com:8078/stream",
-    "source": "https://radiosanfernandofm.com/#FM Triunfo",
-    "city": "",
-    "tags": "",
-    "codec": "AAC",
-    "logo": "https://radiosanfernandofm.com/wp-content/themes/sanfernando/assets/img/logo-triunfo.webp",
-    "checkedAt": "2026-11-05T11:23:43.625Z",
-    "available": true
+    "id": "desde-gen",
+    "name": "Gen TV",
+    "url": "https://www.desdeparaguay.com/gen",
+    "source": "https://www.desdeparaguay.com/gen",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/gen.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:33.649Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/gen"
+    ]
+  },
+  {
+    "id": "desde-go",
+    "name": "Go 92.3 FM",
+    "url": "https://www.desdeparaguay.com/go",
+    "source": "https://www.desdeparaguay.com/go",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/go.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:34.111Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/go"
+    ]
+  },
+  {
+    "id": "desde-gotv",
+    "name": "GO TV",
+    "url": "https://www.desdeparaguay.com/gotv",
+    "source": "https://www.desdeparaguay.com/gotv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/gotv.png?4",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/gotv"
+    ],
+    "checkedAt": "2026-11-05T12:09:34.566Z"
+  },
+  {
+    "id": "desde-1420",
+    "name": "Guyrá Campana 1420 AM",
+    "url": "https://www.desdeparaguay.com/1420",
+    "source": "https://www.desdeparaguay.com/1420",
+    "city": "HORQUETA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1420.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:34.353Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1420"
+    ]
+  },
+  {
+    "id": "desde-hit",
+    "name": "Hit 91.9 FM",
+    "url": "https://www.desdeparaguay.com/hit",
+    "source": "https://www.desdeparaguay.com/hit",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/hit.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:35.041Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/hit"
+    ]
+  },
+  {
+    "id": "desde-ima",
+    "name": "IMA",
+    "url": "https://www.desdeparaguay.com/ima",
+    "source": "https://www.desdeparaguay.com/ima",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/ima.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:35.099Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/ima"
+    ]
   },
   {
     "id": "py-9c65c93c96ff6570",
@@ -451,9 +1252,9 @@
     "source": "https://paraguayonline.net/impacto953/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:34.323Z"
   },
   {
     "id": "py-dc2ea5f435684a2d",
@@ -464,7 +1265,7 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
   },
   {
     "id": "py-570bdbfa41ccb6b9",
@@ -473,9 +1274,39 @@
     "source": "https://paraguayonline.net/interactivafm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:34.713Z"
+  },
+  {
+    "id": "desde-itapora",
+    "name": "Ita Pora 98.9 FM",
+    "url": "https://www.desdeparaguay.com/itapora",
+    "source": "https://www.desdeparaguay.com/itapora",
+    "city": "VALLEMI",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/itapora.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:35.875Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/itapora"
+    ]
+  },
+  {
+    "id": "desde-jardin",
+    "name": "Jardín",
+    "url": "https://www.desdeparaguay.com/jardin",
+    "source": "https://www.desdeparaguay.com/jardin",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/jardin.png?4",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/jardin"
+    ],
+    "lastError": "HTTP 404 "
   },
   {
     "id": "py-93e3ee6b923ccd73",
@@ -484,8 +1315,9 @@
     "source": "https://paraguayonline.net/jasyfm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:32.650Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -500,6 +1332,21 @@
     "lastError": "HTTP 401 "
   },
   {
+    "id": "desde-juandemena",
+    "name": "Juan de Mena",
+    "url": "https://www.desdeparaguay.com/juandemena",
+    "source": "https://www.desdeparaguay.com/juandemena",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/juandemena.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:36.343Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/juandemena"
+    ]
+  },
+  {
     "id": "py-b1f3c36b4c6189ad",
     "name": "Ka’aguy Pytu Piro’y",
     "url": "https://radio.host.com.py:7232/;",
@@ -509,6 +1356,21 @@
     "codec": "",
     "available": false,
     "lastError": "HTTP 404 text/html"
+  },
+  {
+    "id": "desde-kaaguazu",
+    "name": "Kaaguazú 640 AM",
+    "url": "https://www.desdeparaguay.com/kaaguazu",
+    "source": "https://www.desdeparaguay.com/kaaguazu",
+    "city": "CORONEL OVIEDO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/kaaguazu.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:36.471Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/kaaguazu"
+    ]
   },
   {
     "id": "py-56c7960ad2fa3601",
@@ -566,32 +1428,51 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-lacosta",
+    "name": "La Costa 106.1 FM",
+    "url": "https://www.desdeparaguay.com/lacosta",
+    "source": "https://www.desdeparaguay.com/lacosta",
+    "city": "CONCEPCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/lacosta.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:36.917Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/lacosta"
+    ]
+  },
+  {
+    "id": "desde-lacostatv",
+    "name": "La Costa TV",
+    "url": "https://www.desdeparaguay.com/lacostatv",
+    "source": "https://www.desdeparaguay.com/lacostatv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/lacostatv.png?4",
+    "available": false,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/lacostatv"
+    ],
+    "lastError": "The operation was aborted due to timeout"
+  },
+  {
     "id": "py-1ee057651c8e552c",
     "name": "La Locomotora Online",
     "url": "https://radio.host.com.py:7174/;",
     "source": "https://paraguayonline.net/lalocomotora/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:36.166Z"
   },
   {
     "id": "py-ef1cd0b278783dc4",
     "name": "La Nueva 89.3 FM",
     "url": "https://radio.host.com.py:7011/;",
     "source": "https://paraguayonline.net/lanuevafm893/",
-    "city": "",
-    "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
-  },
-  {
-    "id": "py-e92cf6eb75ce5b3d",
-    "name": "La Nueva FM",
-    "url": "https://radio.host.com.py:7085/;",
-    "source": "https://paraguayonline.net/lanuevafm/",
     "city": "",
     "tags": "",
     "codec": "",
@@ -610,14 +1491,45 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-lareddelsol",
+    "name": "La Red del Sol 89.3 FM",
+    "url": "https://www.desdeparaguay.com/lareddelsol",
+    "source": "https://www.desdeparaguay.com/lareddelsol",
+    "city": "CONCEPCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/lareddelsol.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:37.744Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/lareddelsol"
+    ]
+  },
+  {
+    "id": "desde-larockola",
+    "name": "La Rockola",
+    "url": "https://www.desdeparaguay.com/larockola",
+    "source": "https://www.desdeparaguay.com/larockola",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/larockola.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:37.746Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/larockola"
+    ]
+  },
+  {
     "id": "py-c910bca846748d42",
     "name": "La Rosada FM",
     "url": "https://radio.host.com.py:7061/;",
     "source": "https://paraguayonline.net/larosadafm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:36.261Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -633,15 +1545,75 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-lasupremacia",
+    "name": "La Supremacía Internacional",
+    "url": "https://www.desdeparaguay.com/lasupremacia",
+    "source": "https://www.desdeparaguay.com/lasupremacia",
+    "city": "RADIOS ONLINE (USA)",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/lasupremacia.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:37.989Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/lasupremacia"
+    ]
+  },
+  {
+    "id": "desde-650",
+    "name": "La Tribu 650 AM",
+    "url": "https://www.desdeparaguay.com/650",
+    "source": "https://www.desdeparaguay.com/650",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/650.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:38.313Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/650"
+    ]
+  },
+  {
+    "id": "desde-1120",
+    "name": "La Tribu Deport 1120 AM",
+    "url": "https://www.desdeparaguay.com/1120",
+    "source": "https://www.desdeparaguay.com/1120",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1120.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:39.146Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1120"
+    ]
+  },
+  {
+    "id": "desde-800",
+    "name": "La Unión 800 AM",
+    "url": "https://www.desdeparaguay.com/800",
+    "source": "https://www.desdeparaguay.com/800",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/800.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:39.124Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/800"
+    ]
+  },
+  {
     "id": "py-70ecfa13d6cdf257",
     "name": "La Voz 87.5 FM",
     "url": "https://radio.host.com.py:7208/;",
     "source": "https://paraguayonline.net/lavozfm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:38.194Z"
   },
   {
     "id": "py-6c895fa5d6624a4b",
@@ -650,9 +1622,69 @@
     "source": "https://paraguayonline.net/larockola/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:38.397Z"
+  },
+  {
+    "id": "desde-latina",
+    "name": "Latina 97.1 FM",
+    "url": "https://www.desdeparaguay.com/latina",
+    "source": "https://www.desdeparaguay.com/latina",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/latina.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:39.756Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/latina"
+    ]
+  },
+  {
+    "id": "desde-libertadfm",
+    "name": "Libertad 96.3 FM",
+    "url": "https://www.desdeparaguay.com/libertadfm",
+    "source": "https://www.desdeparaguay.com/libertadfm",
+    "city": "SAN IGNACIO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/libertadfm.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:39.790Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/libertadfm"
+    ]
+  },
+  {
+    "id": "desde-1200",
+    "name": "Libre 1200 AM",
+    "url": "https://www.desdeparaguay.com/1200",
+    "source": "https://www.desdeparaguay.com/1200",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1200.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:40.527Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1200"
+    ]
+  },
+  {
+    "id": "desde-losangeles",
+    "name": "Los Angeles 89.9 FM",
+    "url": "https://www.desdeparaguay.com/losangeles",
+    "source": "https://www.desdeparaguay.com/losangeles",
+    "city": "HORQUETA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/losangeles.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:40.542Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/losangeles"
+    ]
   },
   {
     "id": "py-ca8b2becf702ef75",
@@ -661,8 +1693,9 @@
     "source": "https://paraguayonline.net/lucholeivaradio/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "MP3",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:40.289Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -674,7 +1707,7 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
   },
   {
     "id": "py-84ae79890c4aebe0",
@@ -685,7 +1718,7 @@
     "tags": "",
     "codec": "AAC",
     "available": true,
-    "checkedAt": "2026-11-05T11:23:43.797Z"
+    "checkedAt": "2026-11-05T12:09:40.166Z"
   },
   {
     "id": "py-28bf7db21cef80c6",
@@ -694,9 +1727,25 @@
     "source": "https://paraguayonline.net/majestadfm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:40.561Z",
     "lastError": "HTTP 404 text/html"
+  },
+  {
+    "id": "desde-manduvira",
+    "name": "Manduvirá 88.9 FM",
+    "url": "https://www.desdeparaguay.com/manduvira",
+    "source": "https://www.desdeparaguay.com/manduvira",
+    "city": "ARROYOS Y ESTEROS",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/manduvira.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:41.633Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/manduvira"
+    ]
   },
   {
     "id": "py-6288e86d0e131d9a",
@@ -710,6 +1759,21 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-radiomas",
+    "name": "Más 102.3 FM",
+    "url": "https://www.desdeparaguay.com/radiomas",
+    "source": "https://www.desdeparaguay.com/radiomas",
+    "city": "CORONEL OVIEDO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/radiomas.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:41.711Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/radiomas"
+    ]
+  },
+  {
     "id": "py-4afe9430ac46f877",
     "name": "Mbocayaty Radio TV",
     "url": "https://radio.host.com.py:7178/;",
@@ -718,7 +1782,37 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
+  },
+  {
+    "id": "desde-mdq",
+    "name": "MDQ 87.9 FM",
+    "url": "https://www.desdeparaguay.com/mdq",
+    "source": "https://www.desdeparaguay.com/mdq",
+    "city": "EUSEBIO AYALA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/mdq.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:41.931Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/mdq"
+    ]
+  },
+  {
+    "id": "desde-medano",
+    "name": "Medano 99.7 FM",
+    "url": "https://www.desdeparaguay.com/medano",
+    "source": "https://www.desdeparaguay.com/medano",
+    "city": "FILADELFIA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/medano.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:42.095Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/medano"
+    ]
   },
   {
     "id": "py-304ff32212f72fa0",
@@ -727,9 +1821,54 @@
     "source": "https://paraguayonline.net/megafiesta/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:41.995Z"
+  },
+  {
+    "id": "desde-megatv",
+    "name": "Mega TV",
+    "url": "https://www.desdeparaguay.com/megatv",
+    "source": "https://www.desdeparaguay.com/megatv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/megatv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:43.190Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/megatv"
+    ]
+  },
+  {
+    "id": "desde-megaestacion95",
+    "name": "Megaestación 95.9 FM",
+    "url": "https://www.desdeparaguay.com/megaestacion95",
+    "source": "https://www.desdeparaguay.com/megaestacion95",
+    "city": "CONCEPCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/megaestacion95.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:43.323Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/megaestacion95"
+    ]
+  },
+  {
+    "id": "desde-memories",
+    "name": "Memories 97.5 FM",
+    "url": "https://www.desdeparaguay.com/memories",
+    "source": "https://www.desdeparaguay.com/memories",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/memories.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:43.384Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/memories"
+    ]
   },
   {
     "id": "py-010b75e67b5e8787",
@@ -754,15 +1893,45 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-mitv",
+    "name": "Mi TV",
+    "url": "https://www.desdeparaguay.com/mitv",
+    "source": "https://www.desdeparaguay.com/mitv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/mitv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:43.749Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/mitv"
+    ]
+  },
+  {
+    "id": "desde-1000",
+    "name": "Mil 1000 AM",
+    "url": "https://www.desdeparaguay.com/1000",
+    "source": "https://www.desdeparaguay.com/1000",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1000.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:44.592Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1000"
+    ]
+  },
+  {
     "id": "py-63230aa61032c486",
     "name": "Milagros FM 87.5",
     "url": "https://radio.host.com.py:7272/;",
     "source": "https://paraguayonline.net/milagrosfm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:43.534Z"
   },
   {
     "id": "py-25e2233805f224ac",
@@ -771,9 +1940,70 @@
     "source": "https://paraguayonline.net/misionesfm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:43.625Z",
     "lastError": "HTTP 404 text/html"
+  },
+  {
+    "id": "desde-mix",
+    "name": "Mix 90.3 FM",
+    "url": "https://www.desdeparaguay.com/mix",
+    "source": "https://www.desdeparaguay.com/mix",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/mix.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:44.842Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/mix"
+    ]
+  },
+  {
+    "id": "desde-monoglobal",
+    "name": "Monoglobal",
+    "url": "https://www.desdeparaguay.com/monoglobal",
+    "source": "https://www.desdeparaguay.com/monoglobal",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/monoglobal.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:44.968Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/monoglobal"
+    ]
+  },
+  {
+    "id": "desde-monoglobaltv",
+    "name": "Monoglobal TV",
+    "url": "https://www.desdeparaguay.com/monoglobaltv",
+    "source": "https://www.desdeparaguay.com/monoglobaltv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/monoglobaltv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:45.493Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/monoglobaltv"
+    ]
+  },
+  {
+    "id": "desde-montecarlo",
+    "name": "Montecarlo 100.9 FM",
+    "url": "https://www.desdeparaguay.com/montecarlo",
+    "source": "https://www.desdeparaguay.com/montecarlo",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/montecarlo.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:45.256Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/montecarlo"
+    ]
   },
   {
     "id": "py-7b6bf981d09f46c2",
@@ -784,8 +2014,26 @@
     "tags": "",
     "codec": "AAC",
     "logo": "",
-    "checkedAt": "2026-11-05T11:23:45.322Z",
-    "available": true
+    "checkedAt": "2026-11-05T12:09:46.082Z",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1080"
+    ]
+  },
+  {
+    "id": "desde-monumentaltv",
+    "name": "Monumental TV",
+    "url": "https://www.desdeparaguay.com/monumentaltv",
+    "source": "https://www.desdeparaguay.com/monumentaltv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/monumentaltv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:46.262Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/monumentaltv"
+    ]
   },
   {
     "id": "py-004d228e744556a1",
@@ -794,9 +2042,39 @@
     "source": "https://paraguayonline.net/movimientosocial/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:45.170Z"
+  },
+  {
+    "id": "desde-mqv",
+    "name": "MQV",
+    "url": "https://www.desdeparaguay.com/mqv",
+    "source": "https://www.desdeparaguay.com/mqv",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/mqv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:46.581Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/mqv"
+    ]
+  },
+  {
+    "id": "desde-mqvtv",
+    "name": "MQV TV",
+    "url": "https://www.desdeparaguay.com/mqvtv",
+    "source": "https://www.desdeparaguay.com/mqvtv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/mqvtv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:46.662Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/mqvtv"
+    ]
   },
   {
     "id": "py-cb9f6073d2048984",
@@ -806,9 +2084,38 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:22:20.861Z",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "checkedAt": "2026-11-05T12:09:45.773Z",
+    "available": true
+  },
+  {
+    "id": "desde-multiradio",
+    "name": "Multi 104.1 FM",
+    "url": "https://www.desdeparaguay.com/multiradio",
+    "source": "https://www.desdeparaguay.com/multiradio",
+    "city": "PARAGUARí",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/multiradio.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:47.162Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/multiradio"
+    ]
+  },
+  {
+    "id": "desde-saltosdelguaira",
+    "name": "Multi 98.9 FM",
+    "url": "https://www.desdeparaguay.com/saltosdelguaira",
+    "source": "https://www.desdeparaguay.com/saltosdelguaira",
+    "city": "SALTO DEL GUAIRá",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/saltosdelguaira.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:47.463Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/saltosdelguaira"
+    ]
   },
   {
     "id": "py-8373f82165cc7d27",
@@ -817,9 +2124,69 @@
     "source": "https://paraguayonline.net/mundodelfolklore/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:46.476Z"
+  },
+  {
+    "id": "desde-musichits",
+    "name": "Music Hits",
+    "url": "https://www.desdeparaguay.com/musichits",
+    "source": "https://www.desdeparaguay.com/musichits",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/musichits.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:47.872Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/musichits"
+    ]
+  },
+  {
+    "id": "desde-nacional",
+    "name": "Nacional del Paraguay 95.1 FM",
+    "url": "https://www.desdeparaguay.com/nacional",
+    "source": "https://www.desdeparaguay.com/nacional",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/nacional.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:47.981Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/nacional"
+    ]
+  },
+  {
+    "id": "desde-1059",
+    "name": "Nacional San Pedro 105.9 FM",
+    "url": "https://www.desdeparaguay.com/1059",
+    "source": "https://www.desdeparaguay.com/1059",
+    "city": "SAN PEDRO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1059.png?4",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1059"
+    ],
+    "lastError": "The operation was aborted due to timeout"
+  },
+  {
+    "id": "desde-naranjo",
+    "name": "Naranjo",
+    "url": "https://www.desdeparaguay.com/naranjo",
+    "source": "https://www.desdeparaguay.com/naranjo",
+    "city": "RADIOS ONLINE (ARGENTINA)",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/naranjo.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:48.602Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/naranjo"
+    ]
   },
   {
     "id": "py-91fbbf0de0471edf",
@@ -828,9 +2195,69 @@
     "source": "https://paraguayonline.net/nativafm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:47.688Z"
+  },
+  {
+    "id": "desde-netradio",
+    "name": "Net Music IA",
+    "url": "https://www.desdeparaguay.com/netradio",
+    "source": "https://www.desdeparaguay.com/netradio",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/netradio.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:49.106Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/netradio"
+    ]
+  },
+  {
+    "id": "desde-nihongakko",
+    "name": "Nihon Gakko 101.7 FM",
+    "url": "https://www.desdeparaguay.com/nihongakko",
+    "source": "https://www.desdeparaguay.com/nihongakko",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/nihongakko.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:49.282Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/nihongakko"
+    ]
+  },
+  {
+    "id": "desde-nihongakkotv",
+    "name": "Nihon Gakko TV",
+    "url": "https://www.desdeparaguay.com/nihongakkotv",
+    "source": "https://www.desdeparaguay.com/nihongakkotv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/nihongakkotv.png?4",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/nihongakkotv"
+    ],
+    "lastError": "The operation was aborted due to timeout"
+  },
+  {
+    "id": "desde-norte",
+    "name": "Norte 91.7 FM",
+    "url": "https://www.desdeparaguay.com/norte",
+    "source": "https://www.desdeparaguay.com/norte",
+    "city": "SAN PEDRO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/norte.png?4",
+    "available": false,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/norte"
+    ],
+    "lastError": "HTTP 404 "
   },
   {
     "id": "py-f727a0f01313f4d2",
@@ -839,9 +2266,69 @@
     "source": "https://paraguayonline.net/nuevoamanecer/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:49.468Z"
+  },
+  {
+    "id": "desde-nandejaraneetv",
+    "name": "Ñande Jara Ñe'e TV",
+    "url": "https://www.desdeparaguay.com/nandejaraneetv",
+    "source": "https://www.desdeparaguay.com/nandejaraneetv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/nandejaraneetv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:50.749Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/nandejaraneetv"
+    ]
+  },
+  {
+    "id": "desde-1020",
+    "name": "Ñanduti 1020 AM",
+    "url": "https://www.desdeparaguay.com/1020",
+    "source": "https://www.desdeparaguay.com/1020",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1020.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:50.862Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1020"
+    ]
+  },
+  {
+    "id": "desde-nandutitv",
+    "name": "Ñanduti TV",
+    "url": "https://www.desdeparaguay.com/nandutitv",
+    "source": "https://www.desdeparaguay.com/nandutitv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/nandutitv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:51.386Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/nandutitv"
+    ]
+  },
+  {
+    "id": "desde-883",
+    "name": "Ñemby 88.3 FM",
+    "url": "https://www.desdeparaguay.com/883",
+    "source": "https://www.desdeparaguay.com/883",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/883.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:52.164Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/883"
+    ]
   },
   {
     "id": "py-8ebc71fb67c743f0",
@@ -850,9 +2337,9 @@
     "source": "https://paraguayonline.net/nemityfm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:51.064Z"
   },
   {
     "id": "py-cecf4825c79c3cf8",
@@ -861,9 +2348,9 @@
     "source": "https://paraguayonline.net/oasisvirtual/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:51.266Z"
   },
   {
     "id": "py-cf1f3d5d0363e4b4",
@@ -872,9 +2359,9 @@
     "source": "https://paraguayonline.net/okaraguanee/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "MP3",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:51.471Z"
   },
   {
     "id": "py-4b171f74eb8831b5",
@@ -885,7 +2372,7 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
   },
   {
     "id": "py-72a13cabc9fb56ec",
@@ -894,8 +2381,9 @@
     "source": "https://paraguayonline.net/otrasensacion/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "MP3",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:53.051Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -912,13 +2400,16 @@
   {
     "id": "py-845f9d3d885670c5",
     "name": "Paraná FM",
-    "url": "https://radio.host.com.py:7005/;",
-    "source": "https://paraguayonline.net/paranafm/",
+    "url": "https://www.desdeparaguay.com/parana",
+    "source": "https://www.desdeparaguay.com/parana",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "HLS",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/parana"
+    ],
+    "checkedAt": "2026-11-05T12:09:52.933Z"
   },
   {
     "id": "py-776dcc07128b8c7e",
@@ -932,6 +2423,21 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-1069",
+    "name": "Pilar Pilar 106.9 FM",
+    "url": "https://www.desdeparaguay.com/1069",
+    "source": "https://www.desdeparaguay.com/1069",
+    "city": "PILAR",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/1069.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:53.086Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/1069"
+    ]
+  },
+  {
     "id": "py-21ec6cc53a5923dd",
     "name": "Pionero Radio",
     "url": "https://radio.host.com.py:7315/;",
@@ -943,15 +2449,45 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-piribebuy",
+    "name": "Piribebuy 96.7 FM",
+    "url": "https://www.desdeparaguay.com/piribebuy",
+    "source": "https://www.desdeparaguay.com/piribebuy",
+    "city": "PIRIBEBUY",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/piribebuy.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:53.611Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/piribebuy"
+    ]
+  },
+  {
     "id": "py-4c60b60812e39a91",
     "name": "Polka Radio",
     "url": "https://radio.host.com.py:7141/;",
     "source": "https://paraguayonline.net/polkaradio/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:53.146Z"
+  },
+  {
+    "id": "desde-poputv",
+    "name": "Popu TV",
+    "url": "https://www.desdeparaguay.com/poputv",
+    "source": "https://www.desdeparaguay.com/poputv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/poputv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:00.189Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/poputv"
+    ]
   },
   {
     "id": "py-ef446bd768e1e5e5",
@@ -965,15 +2501,75 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-portaldelchaco",
+    "name": "Portal del Chaco 99.7 FM",
+    "url": "https://www.desdeparaguay.com/portaldelchaco",
+    "source": "https://www.desdeparaguay.com/portaldelchaco",
+    "city": "PUERTO CASADO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/portaldelchaco.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:54.603Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/portaldelchaco"
+    ]
+  },
+  {
+    "id": "desde-pro",
+    "name": "Pro TV",
+    "url": "https://www.desdeparaguay.com/pro",
+    "source": "https://www.desdeparaguay.com/pro",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/pro.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:55.064Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/pro"
+    ]
+  },
+  {
+    "id": "desde-productivatv",
+    "name": "Productiva TV",
+    "url": "https://www.desdeparaguay.com/productivatv",
+    "source": "https://www.desdeparaguay.com/productivatv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/productivatv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:56.285Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/productivatv"
+    ]
+  },
+  {
+    "id": "desde-pueblo",
+    "name": "Pueblo 87.9 FM",
+    "url": "https://www.desdeparaguay.com/pueblo",
+    "source": "https://www.desdeparaguay.com/pueblo",
+    "city": "SAN JOSé OBRERO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/pueblo.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:56.284Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/pueblo"
+    ]
+  },
+  {
     "id": "py-09bfd9c68f53c1af",
     "name": "Quiindy FM",
     "url": "https://radio.host.com.py:7152/;",
     "source": "https://paraguayonline.net/quiindyfm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:55.267Z"
   },
   {
     "id": "py-af9996a5d17584e2",
@@ -982,9 +2578,9 @@
     "source": "https://paraguayonline.net/vozpotente/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:55.469Z"
   },
   {
     "id": "py-f8f531bf5d43af5c",
@@ -993,9 +2589,9 @@
     "source": "https://paraguayonline.net/rccradio/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:55.673Z"
   },
   {
     "id": "py-52df5a3ae27f07ac",
@@ -1006,7 +2602,7 @@
     "tags": "",
     "codec": "MP3",
     "logo": "https://1000noticias.com.py/wp-content/uploads/2024/03/130x30-1000-Noticias-1.png",
-    "checkedAt": "2026-11-05T11:23:45.251Z",
+    "checkedAt": "2026-11-05T12:09:56.172Z",
     "available": true
   },
   {
@@ -1017,8 +2613,9 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:23:44.936Z",
-    "available": true
+    "checkedAt": "2026-11-05T12:02:56.741Z",
+    "available": false,
+    "lastError": "HTTP 404 text/html"
   },
   {
     "id": "py-4ccea67ce6695539",
@@ -1065,26 +2662,15 @@
     "lastError": "HTTP 404 text/html"
   },
   {
-    "id": "py-e4dfbad2e2b9672a",
-    "name": "Radio ABC Cardinal 730 AM",
-    "url": "http://sc.abc.com.py:8000/stream",
-    "source": "https://www.radio-browser.info/history/bcc2363f-d35e-42cc-9437-68881134d908",
-    "city": "Asuncion",
-    "tags": "",
-    "codec": "MP3",
-    "logo": "https://cdn-radiotime-logos.tunein.com/s17748q.png",
-    "checkedAt": "2026-11-05T11:23:45.107Z",
-    "available": true
-  },
-  {
     "id": "py-57fa8a24b228a419",
     "name": "Radio Aceval Poty FM",
-    "url": "https://radio.host.com.py:7194/;",
+    "url": "https://radio.host.com.py:7194/stream",
     "source": "https://paraguayonline.net/acevalpotyfm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:57.598Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -1145,13 +2731,16 @@
   {
     "id": "py-1c58d0af19074410",
     "name": "Radio America 95.3 FM",
-    "url": "https://radio.host.com.py:7256/;",
-    "source": "https://paraguayonline.net/radioamerica/",
+    "url": "https://www.desdeparaguay.com/america",
+    "source": "https://www.desdeparaguay.com/america",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "HLS",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/america"
+    ],
+    "checkedAt": "2026-11-05T12:09:57.847Z"
   },
   {
     "id": "py-2536b6189c7f2eed",
@@ -1189,14 +2778,17 @@
   {
     "id": "py-d414e462e2dd96d7",
     "name": "Radio Amor 95.9FM",
-    "url": "https://copaco.desdeparaguay.net/movamor/movamor.stream/playlist.m3u8",
-    "source": "https://www.radio-browser.info/history/bfe79bf3-6752-4d01-af26-bdfd65075e62",
+    "url": "https://www.desdeparaguay.com/amor",
+    "source": "https://www.desdeparaguay.com/amor",
     "city": "",
     "tags": "",
-    "codec": "UNKNOWN",
+    "codec": "HLS",
     "logo": "https://www.facebook.com/favicon.ico",
-    "available": false,
-    "lastError": "Formato de audio no identificado"
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/amor"
+    ],
+    "checkedAt": "2026-11-05T12:09:58.002Z"
   },
   {
     "id": "py-45007d3af10ad7b2",
@@ -1243,30 +2835,6 @@
     "lastError": "HTTP 404 text/html"
   },
   {
-    "id": "py-835de2ca5033c7f8",
-    "name": "Radio Aspen 102.7 FM",
-    "url": "https://rds3.desdeparaguay.net/movaspen/movaspen.stream/playlist.m3u8",
-    "source": "https://www.radio-browser.info/history/7c19e3ff-bbba-42d3-a411-d06f07963dcb",
-    "city": "",
-    "tags": "",
-    "codec": "HLS",
-    "logo": "https://www.radioaspen.com.py/wp-content/uploads/2021/05/cropped-android-chrome-512x512-1-1-180x180.png",
-    "checkedAt": "2026-11-05T11:23:45.758Z",
-    "available": true
-  },
-  {
-    "id": "py-bfc0e820cc17e0e0",
-    "name": "Radio Aspen Paraguay",
-    "url": "https://tigocloud.desdeparaguay.net/movaspen/movaspen.stream/playlist.m3u8?k=cab33b6f9bb8d7e340d2a8ce8d4476e4576ce92fbc993b81666e7db795dc1da7&exp=1664206557",
-    "source": "https://www.radio-browser.info/history/65396ff4-6e59-4554-bfc1-c3a67f8cad8f",
-    "city": "Asuncion",
-    "tags": "",
-    "codec": "HLS",
-    "logo": "https://www.radioaspen.com.py/wp-content/uploads/2021/05/cropped-android-chrome-512x512-1-1-180x180.png",
-    "checkedAt": "2026-11-05T11:23:45.516Z",
-    "available": true
-  },
-  {
     "id": "py-be46a89c87d7f206",
     "name": "Radio Babilonia FM 97.7",
     "url": "https://radio.host.com.py:7132/;",
@@ -1275,7 +2843,7 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 401 "
+    "lastError": "HTTP 404 text/html"
   },
   {
     "id": "py-05a26205b44a6625",
@@ -1306,9 +2874,9 @@
     "source": "https://paraguayonline.net/caapucufm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:57.130Z"
   },
   {
     "id": "py-4996f2b2a650e742",
@@ -1335,14 +2903,17 @@
   {
     "id": "py-3f23b17d1fb12675",
     "name": "Radio Canal 100.1 FM",
-    "url": "https://rds3.desdeparaguay.net/movcanal100/movcanal100.stream/playlist.m3u8",
-    "source": "https://www.radio-browser.info/history/28d68ce9-4775-4882-aa56-2ce9573bc7e6",
+    "url": "https://www.desdeparaguay.com/canal100",
+    "source": "https://www.desdeparaguay.com/canal100",
     "city": "",
     "tags": "",
-    "codec": "UNKNOWN",
+    "codec": "HLS",
     "logo": "https://firebasestorage.googleapis.com/v0/b/radiogalaxy-580f4.appspot.com/o/images%2FIMG_20240720_160828943.jpg?alt=media&token=f299e9c1-3181-400b-a31c-39bd9b668160",
-    "available": false,
-    "lastError": "Formato de audio no identificado"
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/canal100"
+    ],
+    "checkedAt": "2026-11-05T12:09:58.564Z"
   },
   {
     "id": "py-d56f04fe45629fef",
@@ -1380,24 +2951,27 @@
   {
     "id": "py-a98d6ca996f31eb5",
     "name": "Radio Concierto",
-    "url": "https://radio.host.com.py:7030/;",
-    "source": "https://paraguayonline.net/radioconcierto/",
+    "url": "https://www.desdeparaguay.com/concierto",
+    "source": "https://www.desdeparaguay.com/concierto",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "HLS",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/concierto"
+    ],
+    "checkedAt": "2026-11-05T12:09:58.763Z"
   },
   {
     "id": "py-dde8592cd0d9a670",
     "name": "Radio Conexion Online",
-    "url": "https://radio.host.com.py:7158/;",
+    "url": "https://radio.host.com.py:7158/stream",
     "source": "https://paraguayonline.net/radioconexion/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:58.081Z"
   },
   {
     "id": "py-d2bad1fe068ffac0",
@@ -1408,19 +2982,11 @@
     "tags": "",
     "codec": "HLS",
     "logo": "https://cdn.radoxo.com/images/paraguay/conquistador-fm.avif?v=1791194402",
-    "checkedAt": "2026-11-05T11:23:45.871Z",
-    "available": true
-  },
-  {
-    "id": "py-2205715411bd292e",
-    "name": "Radio Corazon del Norte FM",
-    "url": "https://radio.host.com.py:7215/;",
-    "source": "https://paraguayonline.net/corazondelnorte/",
-    "city": "",
-    "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "checkedAt": "2026-11-05T12:09:58.091Z",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/conquistador"
+    ]
   },
   {
     "id": "py-b077bb54b8eaf2a7",
@@ -1475,8 +3041,11 @@
     "tags": "",
     "codec": "HLS",
     "logo": "https://py.radiodisney.com/favicon.ico",
-    "checkedAt": "2026-11-05T11:23:47.801Z",
-    "available": true
+    "checkedAt": "2026-11-05T12:10:00.179Z",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/radiodisney"
+    ]
   },
   {
     "id": "py-4a5c1310f21375cf",
@@ -1536,12 +3105,13 @@
   {
     "id": "py-7bdbd0d180d7c681",
     "name": "Radio Especta Online",
-    "url": "https://radio.host.com.py:7198/;",
+    "url": "https://radio.host.com.py:7198/stream",
     "source": "https://paraguayonline.net/espectaonline/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:02:59.432Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -1564,19 +3134,19 @@
     "tags": "",
     "codec": "AAC",
     "logo": "null",
-    "checkedAt": "2026-11-05T11:23:47.040Z",
+    "checkedAt": "2026-11-05T12:09:59.853Z",
     "available": true
   },
   {
     "id": "py-7379592a8c5c4b8d",
     "name": "Radio Estación 7 104.7 FM – UniRadio TV",
-    "url": "https://radio.host.com.py:7101/;",
+    "url": "https://radio.host.com.py:7101/stream",
     "source": "https://paraguayonline.net/uniradio/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "MP3",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:59.001Z"
   },
   {
     "id": "py-0879618bfe2a8c65",
@@ -1619,8 +3189,9 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "available": true,
-    "checkedAt": "2026-11-05T11:23:46.580Z"
+    "available": false,
+    "checkedAt": "2026-11-05T11:23:46.580Z",
+    "lastError": "HTTP 404 text/html"
   },
   {
     "id": "py-e1e26f4622d317c0",
@@ -1689,17 +3260,6 @@
     "lastError": "HTTP 404 text/html"
   },
   {
-    "id": "py-fb1623d3676ccbcc",
-    "name": "Radio Horizonte FM",
-    "url": "https://radio.host.com.py:7107/;",
-    "source": "https://paraguayonline.net/horizontefm/",
-    "city": "",
-    "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
-  },
-  {
     "id": "py-13d88ee508125c7e",
     "name": "Radio Imbatible Digital",
     "url": "https://radio.host.com.py:7283/;",
@@ -1739,8 +3299,9 @@
     "source": "https://paraguayonline.net/itacorafm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:03:00.353Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -1785,7 +3346,7 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 401 "
+    "lastError": "HTTP 404 text/html"
   },
   {
     "id": "py-b8a114fe3328d6df",
@@ -1794,9 +3355,9 @@
     "source": "https://paraguayonline.net/laninafm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:09:59.915Z"
   },
   {
     "id": "py-f21c5a3b3251f03d",
@@ -1945,13 +3506,16 @@
   {
     "id": "py-043dfae48ade1985",
     "name": "Radio Metro 106.1 FM",
-    "url": "https://radio.host.com.py:7261/;",
-    "source": "https://paraguayonline.net/metrofm/",
+    "url": "https://www.desdeparaguay.com/metro",
+    "source": "https://www.desdeparaguay.com/metro",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "HLS",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/metro"
+    ],
+    "checkedAt": "2026-11-05T12:10:01.552Z"
   },
   {
     "id": "py-fb6d6d9508952059",
@@ -2006,8 +3570,11 @@
     "tags": "",
     "codec": "MP3",
     "logo": "",
-    "checkedAt": "2026-11-05T11:23:48.156Z",
-    "available": true
+    "checkedAt": "2026-11-05T12:10:00.413Z",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/920"
+    ]
   },
   {
     "id": "py-50e540e82d9bea4d",
@@ -2027,8 +3594,9 @@
     "source": "https://paraguayonline.net/nordestefm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:03:01.267Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -2100,14 +3668,17 @@
   {
     "id": "py-ceb9b51f19695e49",
     "name": "Radio Palma 106.5 FM",
-    "url": "http://rds3.desdeparaguay.net/transpalma/transpalma/playlist.m3u8",
-    "source": "https://www.radio-browser.info/history/41496f04-4e66-4892-8c99-e5871217589f",
+    "url": "https://www.desdeparaguay.com/palma",
+    "source": "https://www.desdeparaguay.com/palma",
     "city": "",
     "tags": "",
-    "codec": "UNKNOWN",
+    "codec": "HLS",
     "logo": "https://firebasestorage.googleapis.com/v0/b/radiogalaxy-580f4.appspot.com/o/images%2FIMG_20240930_212416672.jpg?alt=media&token=fb9395f8-389a-4d42-ac12-0e7da655b528",
-    "available": false,
-    "lastError": "Formato de audio no identificado"
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/palma"
+    ],
+    "checkedAt": "2026-11-05T12:10:01.949Z"
   },
   {
     "id": "py-fe9aebc9da657ae5",
@@ -2134,13 +3705,13 @@
   {
     "id": "py-946752bd67a246f5",
     "name": "Radio Pilar Día a Día",
-    "url": "https://radio.host.com.py:7295/;",
+    "url": "https://radio.host.com.py:7295/stream",
     "source": "https://paraguayonline.net/pilardiadia/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "MP3",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:00.829Z"
   },
   {
     "id": "py-6a1247cea34f9b74",
@@ -2194,8 +3765,9 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "available": true,
-    "checkedAt": "2026-11-05T11:23:48.449Z"
+    "available": false,
+    "checkedAt": "2026-11-05T11:23:48.449Z",
+    "lastError": "HTTP 404 text/html"
   },
   {
     "id": "py-3366019cc07ccf8a",
@@ -2300,12 +3872,13 @@
   {
     "id": "py-629c36eb71b34bb2",
     "name": "Radio San Agustin 101.7 FM",
-    "url": "https://radio.host.com.py:7079/;",
+    "url": "https://radio.host.com.py:7079/stream",
     "source": "https://paraguayonline.net/sanagustinfm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:03:02.192Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -2328,7 +3901,7 @@
     "tags": "",
     "codec": "AAC",
     "logo": "https://radiosanfernandofm.com/wp-content/themes/sanfernando/assets/img/logo-sanfernando.webp",
-    "checkedAt": "2026-11-05T11:23:49.986Z",
+    "checkedAt": "2026-11-05T12:10:02.248Z",
     "available": true
   },
   {
@@ -2450,7 +4023,7 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
   },
   {
     "id": "py-9dc7523dfa513f6c",
@@ -2515,8 +4088,9 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "available": true,
-    "checkedAt": "2026-11-05T11:23:49.386Z"
+    "available": false,
+    "checkedAt": "2026-11-05T11:23:49.386Z",
+    "lastError": "HTTP 404 text/html"
   },
   {
     "id": "py-d9aaf4b3ab1bc345",
@@ -2613,8 +4187,9 @@
     "source": "https://paraguayonline.net/universalfm/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:03:03.130Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -2648,8 +4223,11 @@
     "tags": "",
     "codec": "AAC",
     "logo": "null",
-    "checkedAt": "2026-11-05T11:23:50.686Z",
-    "available": true
+    "checkedAt": "2026-11-05T12:10:03.473Z",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/urbana"
+    ]
   },
   {
     "id": "py-d1fefea039baf128",
@@ -2694,6 +4272,21 @@
     "codec": "",
     "available": false,
     "lastError": "HTTP 404 text/html"
+  },
+  {
+    "id": "desde-rcctv",
+    "name": "RCC TV",
+    "url": "https://www.desdeparaguay.com/rcctv",
+    "source": "https://www.desdeparaguay.com/rcctv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/rcctv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:03.618Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/rcctv"
+    ]
   },
   {
     "id": "py-ef4dc635b514bec3",
@@ -2747,8 +4340,56 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:23:50.245Z",
-    "available": true
+    "checkedAt": "2026-11-05T12:10:02.520Z",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/660"
+    ]
+  },
+  {
+    "id": "desde-relaxstation",
+    "name": "Relax Station",
+    "url": "https://www.desdeparaguay.com/relaxstation",
+    "source": "https://www.desdeparaguay.com/relaxstation",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/relaxstation.png?4",
+    "available": false,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/relaxstation"
+    ],
+    "lastError": "The operation was aborted due to timeout"
+  },
+  {
+    "id": "desde-republica",
+    "name": "República 101.3 FM",
+    "url": "https://www.desdeparaguay.com/republica",
+    "source": "https://www.desdeparaguay.com/republica",
+    "city": "VILLARRICA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/republica.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:03.921Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/republica"
+    ]
+  },
+  {
+    "id": "desde-republicatv",
+    "name": "República TV",
+    "url": "https://www.desdeparaguay.com/republicatv",
+    "source": "https://www.desdeparaguay.com/republicatv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/republicatv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:03.951Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/republicatv"
+    ]
   },
   {
     "id": "py-bf19fc9abde34bed",
@@ -2757,9 +4398,55 @@
     "source": "https://paraguayonline.net/revelacionradio/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:03.674Z"
+  },
+  {
+    "id": "desde-rockandpop",
+    "name": "Rock & Pop 95.5 FM",
+    "url": "https://www.desdeparaguay.com/rockandpop",
+    "source": "https://www.desdeparaguay.com/rockandpop",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/rockandpop.png?4",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "checkedAt": "2026-11-05T12:03:06.548Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/rockandpop"
+    ],
+    "lastError": "La página de esta emisora ya no está disponible"
+  },
+  {
+    "id": "desde-rockandpoptv",
+    "name": "Rock & Pop TV",
+    "url": "https://www.desdeparaguay.com/rockandpoptv",
+    "source": "https://www.desdeparaguay.com/rockandpoptv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/rockandpoptv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:05.111Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/rockandpoptv"
+    ]
+  },
+  {
+    "id": "desde-romance",
+    "name": "Romance 104.5 FM",
+    "url": "https://www.desdeparaguay.com/romance",
+    "source": "https://www.desdeparaguay.com/romance",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/romance.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:05.330Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/romance"
+    ]
   },
   {
     "id": "py-099cf909d9ef7a5a",
@@ -2779,9 +4466,25 @@
     "source": "https://paraguayonline.net/rpradiorestauracion/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:03:06.476Z",
     "lastError": "HTTP 404 text/html"
+  },
+  {
+    "id": "desde-rqp",
+    "name": "RQP 94.3 FM",
+    "url": "https://www.desdeparaguay.com/rqp",
+    "source": "https://www.desdeparaguay.com/rqp",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/rqp.png?4",
+    "available": false,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/rqp"
+    ],
+    "lastError": "HTTP 404 application/vnd.apple.mpegurl"
   },
   {
     "id": "py-7cd3c84ce5c7484e",
@@ -2792,7 +4495,52 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
+  },
+  {
+    "id": "desde-transmundial",
+    "name": "RTM",
+    "url": "https://www.desdeparaguay.com/transmundial",
+    "source": "https://www.desdeparaguay.com/transmundial",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/transmundial.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:06.546Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/transmundial"
+    ]
+  },
+  {
+    "id": "desde-sagrados",
+    "name": "Sagrados",
+    "url": "https://www.desdeparaguay.com/sagrados",
+    "source": "https://www.desdeparaguay.com/sagrados",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/sagrados.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:06.559Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/sagrados"
+    ]
+  },
+  {
+    "id": "desde-sanandres",
+    "name": "San Andrés 103.7 FM",
+    "url": "https://www.desdeparaguay.com/sanandres",
+    "source": "https://www.desdeparaguay.com/sanandres",
+    "city": "ALTO VERá",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/sanandres.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:06.831Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/sanandres"
+    ]
   },
   {
     "id": "py-408a2532d5506f3a",
@@ -2803,7 +4551,7 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
   },
   {
     "id": "py-c2e35f6c16934d13",
@@ -2814,7 +4562,7 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
   },
   {
     "id": "py-3c578a55102b643b",
@@ -2872,14 +4620,30 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-emisorasanjoseobrero",
+    "name": "San José Obrero 104.9 FM",
+    "url": "https://www.desdeparaguay.com/emisorasanjoseobrero",
+    "source": "https://www.desdeparaguay.com/emisorasanjoseobrero",
+    "city": "SAN JOSé OBRERO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/emisorasanjoseobrero.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:07.996Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/emisorasanjoseobrero"
+    ]
+  },
+  {
     "id": "py-ba8467a3c86109eb",
     "name": "San Pedro Apóstol 88.3 FM",
     "url": "https://radio.host.com.py:7088/;",
     "source": "https://paraguayonline.net/sanpedroapostol/",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "AAC",
     "available": false,
+    "checkedAt": "2026-11-05T12:03:08.688Z",
     "lastError": "HTTP 404 text/html"
   },
   {
@@ -2890,8 +4654,23 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "checkedAt": "2026-11-05T11:23:50.595Z",
+    "checkedAt": "2026-11-05T12:10:06.835Z",
     "available": true
+  },
+  {
+    "id": "desde-sanguri",
+    "name": "Sanguri 90.7 FM",
+    "url": "https://www.desdeparaguay.com/sanguri",
+    "source": "https://www.desdeparaguay.com/sanguri",
+    "city": "SANTA ROSA DE LIMA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/sanguri.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:08.058Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/sanguri"
+    ]
   },
   {
     "id": "py-d9e8f67de6e1774f",
@@ -2903,6 +4682,21 @@
     "codec": "",
     "available": false,
     "lastError": "HTTP 404 text/html"
+  },
+  {
+    "id": "desde-santahelena",
+    "name": "Santa Helena 103.9 FM",
+    "url": "https://www.desdeparaguay.com/santahelena",
+    "source": "https://www.desdeparaguay.com/santahelena",
+    "city": "ENCARNACIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/santahelena.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:08.219Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/santahelena"
+    ]
   },
   {
     "id": "py-143144714bb1dabb",
@@ -2927,15 +4721,45 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-selecta",
+    "name": "Selecta",
+    "url": "https://www.desdeparaguay.com/selecta",
+    "source": "https://www.desdeparaguay.com/selecta",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/selecta.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:08.560Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/selecta"
+    ]
+  },
+  {
     "id": "py-187363a73927362a",
     "name": "Señal del Este Radio",
     "url": "https://radio.host.com.py:7009/;",
     "source": "https://paraguayonline.net/senaldeleste/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:08.196Z"
+  },
+  {
+    "id": "desde-serrania",
+    "name": "Serranía 99.7 FM",
+    "url": "https://www.desdeparaguay.com/serrania",
+    "source": "https://www.desdeparaguay.com/serrania",
+    "city": "CAACUPE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/serrania.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:09.505Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/serrania"
+    ]
   },
   {
     "id": "py-d26437b1038de781",
@@ -2944,9 +4768,9 @@
     "source": "https://paraguayonline.net/siervosdecristo/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:08.399Z"
   },
   {
     "id": "py-eacc51a044ca1b8f",
@@ -2958,6 +4782,36 @@
     "codec": "",
     "available": false,
     "lastError": "HTTP 404 text/html"
+  },
+  {
+    "id": "desde-tvillarrica",
+    "name": "T 94.7 FM",
+    "url": "https://www.desdeparaguay.com/tvillarrica",
+    "source": "https://www.desdeparaguay.com/tvillarrica",
+    "city": "VILLARRICA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/tvillarrica.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:09.792Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/tvillarrica"
+    ]
+  },
+  {
+    "id": "desde-tapiracuai",
+    "name": "Tapiracuai 88.7 FM",
+    "url": "https://www.desdeparaguay.com/tapiracuai",
+    "source": "https://www.desdeparaguay.com/tapiracuai",
+    "city": "SAN ESTANISLAO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/tapiracuai.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:09.851Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/tapiracuai"
+    ]
   },
   {
     "id": "py-0a48e745401d4db2",
@@ -2982,15 +4836,75 @@
     "lastError": "HTTP 404 text/html"
   },
   {
-    "id": "py-9095943d6af5eb6b",
-    "name": "Unasur FM 93.7",
-    "url": "https://radio.host.com.py:7105/;",
-    "source": "https://paraguayonline.net/unasurfm/",
+    "id": "py-a302cd663480c295",
+    "name": "Triunfo FM 93.1",
+    "url": "https://panel.wilhost.com:8078/stream",
+    "source": "https://radiosanfernandofm.com/#FM Triunfo",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "logo": "https://radiosanfernandofm.com/wp-content/themes/sanfernando/assets/img/logo-triunfo.webp",
+    "checkedAt": "2026-11-05T12:10:10.094Z",
+    "available": true
+  },
+  {
+    "id": "desde-tropicalia",
+    "name": "Tropicalia 93.9 FM",
+    "url": "https://www.desdeparaguay.com/tropicalia",
+    "source": "https://www.desdeparaguay.com/tropicalia",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/tropicalia.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:10.951Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/tropicalia"
+    ]
+  },
+  {
+    "id": "desde-uga",
+    "name": "UGA",
+    "url": "https://www.desdeparaguay.com/uga",
+    "source": "https://www.desdeparaguay.com/uga",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/uga.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:11.197Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/uga"
+    ]
+  },
+  {
+    "id": "desde-ugatv",
+    "name": "UGA TV",
+    "url": "https://www.desdeparaguay.com/ugatv",
+    "source": "https://www.desdeparaguay.com/ugatv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/ugatv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:11.330Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/ugatv"
+    ]
+  },
+  {
+    "id": "py-9095943d6af5eb6b",
+    "name": "Unasur FM 93.7",
+    "url": "https://www.desdeparaguay.com/unasur",
+    "source": "https://www.desdeparaguay.com/unasur",
+    "city": "",
+    "tags": "",
+    "codec": "HLS",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/unasur"
+    ],
+    "checkedAt": "2026-11-05T12:10:11.483Z"
   },
   {
     "id": "py-e4dfb6fa2f9bb1c6",
@@ -2999,9 +4913,9 @@
     "source": "https://paraguayonline.net/unionfmlimpio/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "MP3",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:10.593Z"
   },
   {
     "id": "py-e6dea3beadf1dc84",
@@ -3015,15 +4929,105 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-800tv",
+    "name": "Unión TV",
+    "url": "https://www.desdeparaguay.com/800tv",
+    "source": "https://www.desdeparaguay.com/800tv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/800tv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:12.113Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/800tv"
+    ]
+  },
+  {
+    "id": "desde-unisal",
+    "name": "UNISAL",
+    "url": "https://www.desdeparaguay.com/unisal",
+    "source": "https://www.desdeparaguay.com/unisal",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/unisal.png?4",
+    "available": false,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/unisal"
+    ],
+    "lastError": "The operation was aborted due to timeout"
+  },
+  {
+    "id": "desde-universocde",
+    "name": "Universo 92.5 FM",
+    "url": "https://www.desdeparaguay.com/universocde",
+    "source": "https://www.desdeparaguay.com/universocde",
+    "city": "CIUDAD DEL ESTE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/universocde.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:12.622Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/universocde"
+    ]
+  },
+  {
+    "id": "desde-970",
+    "name": "Universo 970 AM",
+    "url": "https://www.desdeparaguay.com/970",
+    "source": "https://www.desdeparaguay.com/970",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/970.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:12.777Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/970"
+    ]
+  },
+  {
+    "id": "desde-venus",
+    "name": "Venus 105.1 FM",
+    "url": "https://www.desdeparaguay.com/venus",
+    "source": "https://www.desdeparaguay.com/venus",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/venus.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:12.929Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/venus"
+    ]
+  },
+  {
+    "id": "desde-venusmedia",
+    "name": "Venusmedia TV",
+    "url": "https://www.desdeparaguay.com/venusmedia",
+    "source": "https://www.desdeparaguay.com/venusmedia",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/venusmedia.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:13.550Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/venusmedia"
+    ]
+  },
+  {
     "id": "py-46bb7354fa0ffa67",
     "name": "Via Musical Radio Online",
     "url": "https://radio.host.com.py:7104/;",
     "source": "https://paraguayonline.net/viamusical/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:12.823Z"
   },
   {
     "id": "py-32e11aa26d1e9a1e",
@@ -3032,9 +5036,24 @@
     "source": "https://paraguayonline.net/vianneyfm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:12.979Z"
+  },
+  {
+    "id": "desde-vibras",
+    "name": "Vibras 92.7 FM",
+    "url": "https://www.desdeparaguay.com/vibras",
+    "source": "https://www.desdeparaguay.com/vibras",
+    "city": "ASUNCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/vibras.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:14.200Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/vibras"
+    ]
   },
   {
     "id": "py-197b9c95f7b9ffa3",
@@ -3043,20 +5062,53 @@
     "source": "https://paraguayonline.net/victorcosta/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:13.131Z"
+  },
+  {
+    "id": "desde-villaelisaradio",
+    "name": "Villa Elisa",
+    "url": "https://www.desdeparaguay.com/villaelisaradio",
+    "source": "https://www.desdeparaguay.com/villaelisaradio",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/villaelisaradio.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:14.380Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/villaelisaradio"
+    ]
   },
   {
     "id": "py-fa80ac9a9d544b7e",
     "name": "Villa Elisa Radio TV",
-    "url": "https://radio.host.com.py:7021/;",
-    "source": "https://paraguayonline.net/villaelisa/",
+    "url": "https://www.desdeparaguay.com/villaelisatv",
+    "source": "https://www.desdeparaguay.com/villaelisatv",
     "city": "",
     "tags": "",
-    "codec": "",
+    "codec": "HLS",
+    "available": true,
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/villaelisatv"
+    ],
+    "checkedAt": "2026-11-05T12:10:14.533Z"
+  },
+  {
+    "id": "desde-villaoliva",
+    "name": "Villa Oliva 88.7 FM",
+    "url": "https://www.desdeparaguay.com/villaoliva",
+    "source": "https://www.desdeparaguay.com/villaoliva",
+    "city": "VILLA OLIVA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/villaoliva.png?4",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/villaoliva"
+    ],
+    "lastError": "HTTP 404 "
   },
   {
     "id": "py-576eac9f4a9a8435",
@@ -3067,7 +5119,37 @@
     "tags": "",
     "codec": "",
     "available": false,
-    "lastError": "HTTP 404 text/html"
+    "lastError": "HTTP 401 "
+  },
+  {
+    "id": "desde-visionfm",
+    "name": "Visión 97.5 FM",
+    "url": "https://www.desdeparaguay.com/visionfm",
+    "source": "https://www.desdeparaguay.com/visionfm",
+    "city": "VILLARRICA",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/visionfm.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:16.525Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/visionfm"
+    ]
+  },
+  {
+    "id": "desde-visiontv",
+    "name": "Visión TV",
+    "url": "https://www.desdeparaguay.com/visiontv",
+    "source": "https://www.desdeparaguay.com/visiontv",
+    "city": "TV",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/visiontv.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:16.459Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/visiontv"
+    ]
   },
   {
     "id": "py-59d7f401eee97dd0",
@@ -3076,9 +5158,9 @@
     "source": "https://paraguayonline.net/vivefm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:14.734Z"
   },
   {
     "id": "py-abc4a0710ee1e594",
@@ -3088,8 +5170,9 @@
     "city": "",
     "tags": "",
     "codec": "AAC",
-    "available": true,
-    "checkedAt": "2026-11-05T11:23:51.192Z"
+    "available": false,
+    "checkedAt": "2026-11-05T11:23:51.192Z",
+    "lastError": "HTTP 404 text/html"
   },
   {
     "id": "py-8f1fb31af3f95cd5",
@@ -3103,15 +5186,90 @@
     "lastError": "HTTP 404 text/html"
   },
   {
+    "id": "desde-yacyreta",
+    "name": "Yacyreta 98.9 FM",
+    "url": "https://www.desdeparaguay.com/yacyreta",
+    "source": "https://www.desdeparaguay.com/yacyreta",
+    "city": "PARAGUARí",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/yacyreta.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:16.464Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/yacyreta"
+    ]
+  },
+  {
+    "id": "desde-yariguaa",
+    "name": "Yarigua'a 87.9 FM",
+    "url": "https://www.desdeparaguay.com/yariguaa",
+    "source": "https://www.desdeparaguay.com/yariguaa",
+    "city": "PARAGUARí",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/yariguaa.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:17.038Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/yariguaa"
+    ]
+  },
+  {
+    "id": "desde-ycuamandyyu",
+    "name": "Ycuamandyyú 590 AM",
+    "url": "https://www.desdeparaguay.com/ycuamandyyu",
+    "source": "https://www.desdeparaguay.com/ycuamandyyu",
+    "city": "SAN PEDRO",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/ycuamandyyu.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:17.870Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/ycuamandyyu"
+    ]
+  },
+  {
+    "id": "desde-ypane",
+    "name": "Ypane 104.3 FM",
+    "url": "https://www.desdeparaguay.com/ypane",
+    "source": "https://www.desdeparaguay.com/ypane",
+    "city": "CONCEPCIóN",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/ypane.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:17.853Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/ypane"
+    ]
+  },
+  {
     "id": "py-73c4debccfec3dfd",
     "name": "Yrenda FM",
     "url": "https://radio.host.com.py:7274/;",
     "source": "https://paraguayonline.net/yrendafm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:16.727Z"
+  },
+  {
+    "id": "desde-yvaga",
+    "name": "Yvaga",
+    "url": "https://www.desdeparaguay.com/yvaga",
+    "source": "https://www.desdeparaguay.com/yvaga",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/yvaga.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:18.102Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/yvaga"
+    ]
   },
   {
     "id": "py-b93eb200d22841e2",
@@ -3120,8 +5278,23 @@
     "source": "https://paraguayonline.net/yvagarapefm/",
     "city": "",
     "tags": "",
-    "codec": "",
-    "available": false,
-    "lastError": "HTTP 404 text/html"
+    "codec": "AAC",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:17.241Z"
+  },
+  {
+    "id": "desde-yvytu",
+    "name": "Yvytu",
+    "url": "https://www.desdeparaguay.com/yvytu",
+    "source": "https://www.desdeparaguay.com/yvytu",
+    "city": "RADIOS ONLINE",
+    "tags": "Paraguay",
+    "codec": "HLS",
+    "logo": "https://www.desdeparaguay.com/images_hpy/logos/radios/90x90px2/yvytu.png?4",
+    "available": true,
+    "checkedAt": "2026-11-05T12:10:18.630Z",
+    "alternativeSources": [
+      "https://www.desdeparaguay.com/yvytu"
+    ]
   }
 ]

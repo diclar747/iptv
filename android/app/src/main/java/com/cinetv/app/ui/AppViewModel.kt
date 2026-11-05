@@ -163,7 +163,7 @@ class AppViewModel : ViewModel() {
     }
 
     fun playRadio(station: com.cinetv.app.data.RadioStation) {
-        val mime = if (Net.isHls(station.url)) "application/x-mpegURL" else if (station.codec.contains("AAC", true)) "audio/aac" else if (station.codec.contains("OGG", true) || station.codec.contains("OPUS", true)) "audio/ogg" else "audio/mpeg"
+        val mime = if (Net.isHls(station.url) || station.codec.equals("HLS", true)) "application/x-mpegURL" else if (station.codec.contains("AAC", true)) "audio/aac" else if (station.codec.contains("OGG", true) || station.codec.contains("OPUS", true)) "audio/ogg" else "audio/mpeg"
         play = PlayTarget(Net.proxied(station.url, ref = station.source), mime, station.name, station.url, ref = station.source, isLive = true, reactionType = "radio", reactionId = station.id, isAudio = true, subtitle = station.city.ifBlank { "Paraguay · Transmisión en directo" })
     }
 

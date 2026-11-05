@@ -5,7 +5,8 @@ let scanning = false;
 export async function probeRadio(station, request = fetch) {
   const controller = new AbortController();
   try {
-    const response = await request(station.url, {
+    const url = await resolveDesdeStream(station.url, request);
+    const response = await request(url, {
       signal: AbortSignal.any([controller.signal, AbortSignal.timeout(6500)]),
       headers: { 'User-Agent': 'Mozilla/5.0 LiveTV/1.19', ...(station.source ? { Referer: station.source } : {}) },
     });
@@ -48,3 +49,4 @@ export function radioStatuses(stations) {
     return { ...s, status: current ? (result.online ? 'online' : 'offline') : 'checking', checkedAt: result ? new Date(result.at).toISOString() : null };
   });
 }
+import { resolveDesdeStream } from './desdeparaguay.js';

@@ -9,6 +9,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -69,6 +71,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
     val castContext = remember { runCatching { CastContext.getSharedInstance(context) }.getOrNull() }
 
     val scope = rememberCoroutineScope()
+    var controlsVisible by remember { mutableStateOf(true) }
 
     // Teléfono: URL del proxy (autenticada por cookie vía OkHttp).
     val mediaItem = remember(target) {
@@ -243,6 +246,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     useController = true
+                    setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility -> controlsVisible = visibility == View.VISIBLE })
                     keepScreenOn = true // no apagar la pantalla mirando TV
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
                     layoutParams = ViewGroup.LayoutParams(
@@ -253,20 +257,21 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
             update = { it.player = currentPlayer }
         )
 
+        if (!target.isAudio && controlsVisible) VideoStudioHeader(target, playing, buffering || reconnecting, failed)
         if (target.isAudio) {
             RadioNowPlaying(target, playing, buffering || reconnecting, failed, volume, { volume = it; currentPlayer.volume = it }, {
                 if(currentPlayer.isPlaying) { retryJob?.cancel(); currentPlayer.pause() }
                 else { if(currentPlayer.playbackState == Player.STATE_IDLE) currentPlayer.prepare(); currentPlayer.play() }
             })
         }
-        if (!target.isAudio && target.reactionId.isNotBlank()) {
-            Box(Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 100.dp).background(Color(0xDD101217))) {
+        if (!target.isAudio && controlsVisible && target.reactionId.isNotBlank()) {
+            Box(Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 86.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xB30D1928))) {
                 VoteButtons(target.reactionType, target.reactionId)
             }
         }
 
         // Aviso de reconexión (solo cuando estamos reintentando tras un corte).
-        if (reconnecting && !target.isAudio) {
+        if (reconnecting && !target.isAudio && !controlsVisible) {
             Row(
                 Modifier
                     .align(Alignment.TopCenter)
@@ -281,7 +286,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
             }
         }
 
-        Row(Modifier.align(Alignment.TopEnd).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.align(Alignment.TopEnd).padding(8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xB30D1928)), verticalAlignment = Alignment.CenterVertically) {
             if (castContext != null) {
                 AndroidView(
                     modifier = Modifier.size(40.dp),

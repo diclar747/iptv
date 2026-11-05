@@ -46,7 +46,7 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 20, versionName: '1.19', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 21, versionName: '1.20', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
@@ -166,12 +166,12 @@ app.get('/api/channels', requireActiveViewer, withData, async (req, res) => {
 
   // Canales manuales: se anteponen en la primera página cuando coinciden con el
   // filtro de país/categoría (y con el texto buscado, si lo hay).
-  if (pageN === 1 && (country || category)) {
+  if (country || category) {
     let man = await manualCards({ country: country || undefined, category: category || undefined }).catch(() => []);
     const q = (search || '').trim().toLowerCase();
     if (q) man = man.filter((c) => c.name.toLowerCase().includes(q));
     if (man.length) {
-      result.items = [...man, ...result.items];
+      if (pageN === 1) result.items = [...man, ...result.items];
       result.total += man.length;
     }
   }

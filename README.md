@@ -183,3 +183,18 @@ El reproductor de radio incluye imagen local de estudio, controles propios,
 volumen, animación ambiental durante reproducción y votos con iconos de pulgar.
 La etiqueta En vivo depende del estado real del reproductor. Actualizar backend
 y APK juntos para que funcione la verificación de las señales.
+
+## LiveTV APK 1.20 — Diseño unificado y Desde Paraguay
+
+Canales en vivo con buscador, filtros, vista lista/cuadrícula y paginación. Inicio
+con accesos a TV, radios y películas; portada, fichas y acceso con fondo propio
+de estudio de TV. El reproductor conserva sus controles nativos y agrega una
+cabecera con el estado real de reproducción que se oculta con los controles.
+
+Desde Paraguay: el importador compara el catálogo con las emisoras existentes
+por nombre y frecuencia. Conserva las páginas de origen y obtiene las direcciones
+HLS temporales al reproducir, sin almacenar firmas vencidas en el catálogo.
+Comando: npm run import:radios:desdeparaguay. Los estados siguen siendo
+comprobaciones del servidor; la disponibilidad puede cambiar.
+
+Desplegar backend y APK 1.20 juntos para las radios con enlaces temporales.

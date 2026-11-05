@@ -1,5 +1,7 @@
 package com.cinetv.app.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ScreenShare
 import android.content.Context
 import android.content.Intent
 import android.net.wifi.WifiManager
@@ -74,6 +76,6 @@ fun TvSettings(onClose: () -> Unit) {
 @Composable
 fun TvSettingsButton() {
     var open by remember { mutableStateOf(false) }
-    TextButton(onClick = { open = true }) { Text("TV", color = androidx.compose.ui.graphics.Color.White) }
+    IconButton(onClick = { open = true }) { Icon(Icons.Filled.ScreenShare, "Conectar a TV", tint = androidx.compose.ui.graphics.Color.White) }
     if (open) TvSettings { open = false }
 }

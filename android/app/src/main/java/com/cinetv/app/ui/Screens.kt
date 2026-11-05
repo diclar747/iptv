@@ -115,30 +115,7 @@ fun SplashLoading() {
 }
 
 @Composable
-fun LoginScreen(vm: AppViewModel) {
-    var u by remember { mutableStateOf("") }
-    var p by remember { mutableStateOf("") }
-    Box(Modifier.fillMaxSize().background(Bg).padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Text("LiveTV", color = Red, fontSize = 42.sp, fontWeight = FontWeight.Black)
-            Text("Toda la TV del mundo, en vivo.", color = Muted, fontSize = 14.sp)
-            Spacer(Modifier.height(24.dp))
-            OutlinedTextField(u, { u = it }, label = { Text("Usuario") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(10.dp))
-            OutlinedTextField(p, { p = it }, label = { Text("Contraseña") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            vm.error?.let { Text(it, color = Red, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = { vm.login(u, p) }, enabled = !vm.busy && u.isNotBlank() && p.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Red),
-                modifier = Modifier.fillMaxWidth().height(50.dp)
-            ) { Text(if (vm.busy) "Entrando…" else "Entrar", fontWeight = FontWeight.Bold) }
-            TextButton(onClick = { vm.loginDemo() }, enabled = !vm.busy) {
-                Text("▶ Entrar como prueba", color = Color.White)
-            }
-        }
-    }
-}
+fun LoginScreen(vm: AppViewModel) { StudioLoginScreen(vm) }
 
 @Composable
 fun MainScreen(vm: AppViewModel) {
@@ -152,13 +129,13 @@ fun MainScreen(vm: AppViewModel) {
     Scaffold(
         containerColor = Bg,
         bottomBar = {
-            NavigationBar(containerColor = Panel) {
+            NavigationBar(containerColor = StudioSurface, modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))) {
                 tabs.forEachIndexed { i, (label, icon) ->
                     NavigationBarItem(
                         selected = tab == i, onClick = { tab = i },
                         icon = { Icon(icon, label) }, label = { Text(label, fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Red, selectedTextColor = Red, indicatorColor = Color(0xFF1A1016)
+                            selectedIconColor = StudioAccent, selectedTextColor = StudioAccent, indicatorColor = StudioAccent.copy(alpha = .12f)
                         )
                     )
                 }
@@ -167,8 +144,15 @@ fun MainScreen(vm: AppViewModel) {
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
             if (tab != 5) TopBar(vm.user, onSearch = { searchOpen = true }, onProfile = { tab = 5 })
+            if (vm.busy) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp), color = StudioAccent)
+            vm.error?.let { message ->
+                Row(Modifier.fillMaxWidth().background(Color(0xFF2B2020)).padding(start = 16.dp),verticalAlignment = Alignment.CenterVertically) {
+                    Text(message,color = Color(0xFFFFCE9A),fontSize = 12.sp,modifier = Modifier.weight(1f))
+                    IconButton(onClick = {vm.error = null}) {Icon(Icons.Filled.Close,"Cerrar aviso",tint = Muted,modifier = Modifier.size(17.dp))}
+                }
+            }
             when (tab) {
-                0 -> HomeTab(vm)
+                0 -> HomeTab(vm) { tab = it }
                 1 -> MoviesTab(vm)
                 2 -> GridTab(vm) { Net.api.seriesList() }
                 3 -> LiveTab(vm)
@@ -185,7 +169,7 @@ fun MainScreen(vm: AppViewModel) {
 @Composable
 private fun TopBar(user: User?, onSearch: () -> Unit, onProfile: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().background(Bg).padding(horizontal = 14.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().background(StudioSurface).padding(horizontal = 16.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text("LiveTV", color = Red, fontSize = 24.sp, fontWeight = FontWeight.Black)
@@ -194,7 +178,7 @@ private fun TopBar(user: User?, onSearch: () -> Unit, onProfile: () -> Unit) {
         TvSettingsButton()
         IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, "Buscar", tint = Color.White) }
         Box(
-            Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF3A3F49)).clickable { onProfile() },
+            Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF203349)).border(1.dp, StudioAccent.copy(alpha = .25f), CircleShape).clickable { onProfile() },
             contentAlignment = Alignment.Center
         ) {
             Text((user?.username?.firstOrNull() ?: 'U').uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
@@ -247,18 +231,19 @@ private fun CastAction() {
 // va rotando con botón "Ver en vivo"; debajo, las filas de canales por país,
 // deportes, noticias, etc. Las películas viven en la pestaña Pelis.
 @Composable
-private fun HomeTab(vm: AppViewModel) {
+private fun HomeTab(vm: AppViewModel, onNavigate: (Int) -> Unit) {
     val heroChannels = remember(vm.channelRows) {
         vm.channelRows.flatMap { it.items ?: emptyList() }.distinctBy { it.id }.take(8)
     }
-    LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
+    LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+        item { StudioShortcuts(onNavigate) }
         if (heroChannels.isNotEmpty()) item { ChannelHero(heroChannels, onPlay = { vm.playChannel(it) }, onOpen = { vm.openCard(it) }) }
         items(vm.channelRows) { row ->
             if (!row.items.isNullOrEmpty()) {
                 Text(row.title ?: "", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 14.dp, top = 16.dp, bottom = 8.dp))
                 LazyRow(contentPadding = PaddingValues(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(row.items) { CardView(it) { vm.openCard(it) } }
+                    items(row.items) { CardView(it) { if(it.kind == "channel") vm.playChannel(it) else vm.openCard(it) } }
                 }
             }
         }
@@ -292,57 +277,7 @@ private fun HomeTab(vm: AppViewModel) {
 // badge EN VIVO, nombre grande y botón "Ver en vivo". Rota solo.
 @Composable
 private fun ChannelHero(channels: List<Card>, onPlay: (Card) -> Unit, onOpen: (Card) -> Unit) {
-    if (channels.isEmpty()) return
-    var idx by remember(channels) { mutableIntStateOf(0) }
-    LaunchedEffect(channels) {
-        while (channels.size > 1) { delay(5000); idx = (idx + 1) % channels.size }
-    }
-    val card = channels[idx.coerceIn(0, channels.lastIndex)]
-    Box(Modifier.fillMaxWidth().height(330.dp).clickable { onOpen(card) }) {
-        // Fondo tipo portada: logo grande difuminado que llena todo el ancho.
-        Crossfade(targetState = card, animationSpec = tween(650), label = "hero-bg", modifier = Modifier.matchParentSize()) { c ->
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF1E2430), Color(0xFF0B0C11))))) {
-                val logo = c.logo ?: c.image
-                if (logo != null) {
-                    AsyncImage(
-                        logo, null, contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().blur(30.dp).alpha(0.40f)
-                    )
-                }
-            }
-        }
-        // Scrim: oscurece hacia abajo para legibilidad y funde con el fondo.
-        Box(Modifier.matchParentSize().background(
-            Brush.verticalGradient(listOf(Color(0x33000000), Color(0xAA0A0B10), Bg))))
-        // Logo nítido grande, arriba-centro.
-        Crossfade(
-            targetState = card, animationSpec = tween(650), label = "hero-logo",
-            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(top = 40.dp)
-        ) { c ->
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                ChannelLogo(c.logo ?: c.image, c.displayTitle, Modifier.fillMaxWidth(0.56f).height(130.dp), fontSize = 28.sp, textPadding = 16.dp)
-            }
-        }
-        LiveChip(Modifier.align(Alignment.TopStart).padding(16.dp))
-        // Nombre + CTA + puntitos abajo.
-        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 16.dp)) {
-            Text(card.displayTitle, color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(
-                    onClick = { onPlay(card) }, colors = ButtonDefaults.buttonColors(containerColor = Red),
-                    shape = RoundedCornerShape(12.dp), modifier = Modifier.height(48.dp)
-                ) { Icon(Icons.Filled.PlayArrow, null); Text("  Ver en vivo", fontWeight = FontWeight.Bold, fontSize = 15.sp) }
-                Spacer(Modifier.weight(1f))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    channels.indices.forEach { i ->
-                        Box(Modifier.size(if (i == idx) 9.dp else 7.dp).clip(CircleShape)
-                            .background(if (i == idx) Red else Color(0x66FFFFFF)))
-                    }
-                }
-            }
-        }
-    }
+    StudioChannelShowcase(channels, onPlay, onOpen)
 }
 
 @Composable
@@ -406,52 +341,7 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun LiveTab(vm: AppViewModel) {
-    val countries = vm.meta?.countries.orEmpty()
-    // Arranca en el país detectado por IP; si cambia la detección, se reajusta
-    // (hasta que el usuario elija otro manualmente).
-    var country by remember(vm.geoCountry) { mutableStateOf(vm.geoCountry) }
-    var cat by remember { mutableStateOf<String?>(null) } // null | "sports" | "news"
-    var expanded by remember { mutableStateOf(false) }
-    val current = countries.firstOrNull { it.code == country }
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(start = 12.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box {
-                Row(
-                    Modifier.clip(RoundedCornerShape(10.dp)).background(Color(0xFF16171D)).clickable { expanded = true }
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text((current?.flag ?: "🌎") + "  " + (current?.name ?: "Paraguay"), color = Color.White, fontSize = 14.sp)
-                    Icon(Icons.Filled.KeyboardArrowDown, null, tint = Muted)
-                }
-                DropdownMenu(expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color(0xFF16171D))) {
-                    countries.forEach { c ->
-                        DropdownMenuItem(
-                            text = { Text("${c.flag ?: ""}  ${c.name ?: c.code}", color = Color.White) },
-                            onClick = { country = c.code; expanded = false }
-                        )
-                    }
-                }
-            }
-        }
-        LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            item { Chip("Todos", cat == null) { cat = null } }
-            item { Chip("Deportes", cat == "sports") { cat = "sports" } }
-            item { Chip("Noticias", cat == "news") { cat = "news" } }
-        }
-        // Canales -> celdas más anchas (16:10) para que el logo entre bien.
-        GridTab(vm, key = country + (cat ?: ""), minCell = 156.dp) {
-            // Deportes/Noticias: traer de TODOS los países (prefiriendo el elegido),
-            // porque por país suele haber muy pocos. "Todos": solo el país elegido.
-            val resp = if (cat != null)
-                Net.api.channels(country = null, category = cat, prefer = country)
-            else
-                Net.api.channels(country = country, category = null)
-            resp.items ?: emptyList()
-        }
-    }
-}
+private fun LiveTab(vm: AppViewModel) { StudioLiveTab(vm) }
 
 @Composable
 private fun GridTab(vm: AppViewModel, key: Any? = Unit, minCell: Dp = 112.dp, header: (@Composable () -> Unit)? = null, loader: suspend () -> List<Card>) {
@@ -529,33 +419,7 @@ private fun ChannelLogo(
 
 @Composable
 private fun ChannelCard(card: Card, modifier: Modifier = Modifier.width(150.dp), onClick: () -> Unit) {
-    Column(modifier.clickable { onClick() }) {
-        Box(
-            Modifier.fillMaxWidth().aspectRatio(16f / 10f)
-                .shadow(6.dp, RoundedCornerShape(12.dp))
-                .clip(RoundedCornerShape(12.dp)).background(LogoTile)
-                .border(1.dp, TileBorder, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            // 76% del tile: logo uniforme (object-fit:contain), con respaldo al
-            // nombre si la imagen falta o no carga.
-            ChannelLogo(card.logo ?: card.image, card.displayTitle, Modifier.fillMaxSize(0.76f))
-            Row(
-                Modifier.align(Alignment.TopStart).padding(8.dp)
-                    .clip(RoundedCornerShape(5.dp)).background(Color(0xE6E50914))
-                    .padding(horizontal = 6.dp, vertical = 3.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(Modifier.size(5.dp).clip(CircleShape).background(Color.White))
-                Spacer(Modifier.width(4.dp))
-                Text("EN VIVO", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
-            }
-        }
-        Text(
-            card.displayTitle, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp)
-        )
-    }
+    StudioChannelCard(card, modifier, onPlay = onClick)
 }
 
 @Composable
@@ -940,40 +804,7 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
 // elevada (mismo lenguaje que los tiles: oscuro, borde sutil y sombra), badge
 // EN VIVO, título grande y chips de país/categoría.
 @Composable
-private fun ChannelHeader(card: Card) {
-    Box(
-        Modifier.fillMaxWidth().height(240.dp)
-            .background(Brush.verticalGradient(listOf(Color(0xFF1C2130), Color(0xFF0C0D12)))),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            Modifier.fillMaxWidth(0.56f).aspectRatio(16f / 10f)
-                .shadow(12.dp, RoundedCornerShape(16.dp))
-                .clip(RoundedCornerShape(16.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF232838), Color(0xFF12141B))))
-                .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(16.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            ChannelLogo(card.logo ?: card.image, card.displayTitle, Modifier.fillMaxSize(0.72f), fontSize = 20.sp, textPadding = 14.dp)
-        }
-        Row(
-            Modifier.align(Alignment.TopStart).padding(16.dp)
-                .clip(RoundedCornerShape(6.dp)).background(Color(0xE6E50914)).padding(horizontal = 9.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
-            Spacer(Modifier.width(5.dp))
-            Text("EN VIVO", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
-        }
-    }
-    Text(card.displayTitle, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 16.dp, top = 12.dp))
-    val chips = listOfNotNull(card.country, card.category)
-    if (chips.isNotEmpty()) {
-        Row(Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            chips.forEach { HeaderPill(it) }
-        }
-    } else Spacer(Modifier.height(8.dp))
-}
+private fun ChannelHeader(card: Card) { StudioChannelHeader(card) }
 
 @Composable
 private fun HeaderPill(text: String) {

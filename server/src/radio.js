@@ -7,15 +7,26 @@ function curatedRadios() {
   try { return JSON.parse(readFileSync(new URL('./radios-py.json', import.meta.url), 'utf8')); }
   catch { return []; }
 }
+export function sameRadio(a, b) {
+  const clean = name => name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/(\d)(am|fm)\b/g,'$1').replace(/\b(radio|fm|am|paraguay)\b/g,'');
+  const left = clean(a.name), right = clean(b.name);
+  const exact = name => name.replace(/[^a-z0-9]/g,'');
+  if(exact(left) === exact(right)) return true;
+  const freqA = left.match(/\d{2,4}(?:[.,]\d)?/)?.[0];
+  const freqB = right.match(/\d{2,4}(?:[.,]\d)?/)?.[0];
+  if(freqA && freqB && freqA !== freqB) return false;
+  const core = name => name.replace(/[\d.,]+/g,'').replace(/[^a-z]/g,'');
+  return core(left).length > 2 && core(left) === core(right);
+}
 export function mergeRadios(curated, directory) {
-  const seen = new Set();
-  const names = new Set();
-  return [...curated, ...directory].filter(r => {
-    const name = r.name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\bradio\b|\bfm\b|\bam\b/g, '').replace(/[^a-z0-9]/g, '');
-    const url = r.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    if (seen.has(url) || names.has(name)) return false;
-    seen.add(url); names.add(name); return true;
-  }).sort((a,b) => a.name.localeCompare(b.name, 'es'));
+  const result = [];
+  const urlKey = url => url.replace(/^https?:\/\//,'').replace(/\/$/,'');
+  for(const station of [...curated,...directory]) {
+    const index = result.findIndex(r => urlKey(r.url) === urlKey(station.url) || sameRadio(r,station));
+    if(index < 0) result.push({...station});
+    else if(result[index].available === false && station.available === true) result[index] = {...station,id:result[index].id};
+  }
+  return result.sort((a,b) => a.name.localeCompare(b.name, 'es'));
 }
 
 const router = express.Router();
