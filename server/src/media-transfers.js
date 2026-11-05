@@ -45,7 +45,9 @@ async function fileSize(id){const file=await receivedFile(id);return file?(await
 async function freeSpace(size){const {statfs}=await import('node:fs/promises');await mkdir(MEDIA_ROOT,{recursive:true});const s=await statfs(MEDIA_ROOT);if(s.bavail*s.bsize<size+256*1024**2)throw fail('No hay espacio suficiente en el servidor',507);}
 async function probeFile(file){try{const {stdout}=await exec(process.env.FFPROBE_BIN||'ffprobe',['-v','error','-show_format','-show_streams','-of','json',file],{timeout:30000,maxBuffer:2*1024**2});return JSON.parse(stdout);}catch{throw fail('No se pudo leer el video. Usá un archivo MP4 o MKV válido; el servidor necesita FFprobe.',422);}}
 let preparationTail=Promise.resolve();
+const activePreparations=new Set(),recoveringPreparations=new Set();
 async function finalizeTransfer(j,{file,probe,checksum}){
+ if(activePreparations.has(j.id))return;activePreparations.add(j.id);
  const previous=preparationTail;let release;preparationTail=new Promise(r=>{release=r;});
  const heartbeat=setInterval(()=>void query("UPDATE media_import_jobs SET updated_at=now() WHERE id=$1 AND state='publishing'",[j.id]).catch(()=>{}),10000);heartbeat.unref?.();
  try{
@@ -70,7 +72,7 @@ async function finalizeTransfer(j,{file,probe,checksum}){
   await publishYoutubeJob(j,{video:plan.file,cover,size,metadata:meta});
   if(path.basename(file)==='upload.part')await rm(file,{force:true}).catch(()=>{});
  }catch(e){console.error('[media-transfer finalize]',j.id,e.code||'',String(e.message).slice(0,200));await query("UPDATE media_import_jobs SET state='error',error=$2,updated_at=now() WHERE id=$1 AND state<>'done'",[j.id,e.status?e.message:'No se pudo preparar el video. Podés reintentar o subir un MP4 H.264/AAC.']);}
- finally{clearInterval(heartbeat);release();}
+ finally{clearInterval(heartbeat);release();activePreparations.delete(j.id);}
 }
 
 router.get('/admin/media-devices',admin,h(async(req,res)=>res.json(await many('SELECT id,name,created_at,last_seen,revoked_at FROM media_devices ORDER BY created_at DESC'))));
@@ -167,7 +169,20 @@ for(const prefix of ['/admin/media-transfers','/companion/jobs']){
  router.post(prefix+'/:id/cancel',h(async(req,res)=>{const j=await access(req,req.params.id);res.json(await cancelYoutubeJob(j.id));}));
 }
 export default router;
+export async function recoverTransferredJobs({all=false}={}){
+ const jobs=await many("SELECT * FROM media_import_jobs WHERE execution<>'server' AND state='publishing' AND ($1 OR updated_at<now()-interval '5 minutes') ORDER BY created_at",[all]);
+ for(const j of jobs){
+  if(activePreparations.has(j.id)||recoveringPreparations.has(j.id))continue;recoveringPreparations.add(j.id);
+  try{
+   const file=await receivedFile(j.id);if(!file||await fileSize(j.id)!==Number(j.upload_size))throw fail('El archivo recibido está incompleto. Continuá el envío antes de publicar.');
+   const probe=await probeFile(file);if(!probe.streams?.some(s=>s.codec_type==='video'))throw fail('El archivo no contiene video');
+   const fresh=await one("UPDATE media_import_jobs SET processing=$2,progress=0,updated_at=now() WHERE id=$1 AND state='publishing' RETURNING *",[j.id,{phase:'queued',percent:0,totalSeconds:Number(probe.format?.duration)||null}]);
+   if(fresh)void finalizeTransfer(fresh,{file,probe,checksum:j.metadata?.sourceSha256||null});
+  }catch(e){await query("UPDATE media_import_jobs SET state='error',error=$2,updated_at=now() WHERE id=$1 AND state='publishing'",[j.id,e.status?e.message:'No se pudo retomar la publicación del archivo.']);}
+  finally{recoveringPreparations.delete(j.id);}
+ }
+}
 export function startTransferMaintenance(){
- const tick=()=>query("UPDATE media_import_jobs SET state='error',error='La publicación fue interrumpida. Volvé a finalizar el envío.',updated_at=now() WHERE execution<>'server' AND state='publishing' AND updated_at<now()-interval '5 minutes'").catch(e=>console.error('[media-transfer]',e.message));
- void tick();const timer=setInterval(tick,60000);timer.unref?.();return()=>clearInterval(timer);
+ const tick=all=>recoverTransferredJobs({all}).catch(e=>console.error('[media-transfer]',e.message));
+ void tick(true);const timer=setInterval(()=>void tick(false),60000);timer.unref?.();return()=>clearInterval(timer);
 }

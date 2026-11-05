@@ -62,8 +62,11 @@ export async function castTo(url, title, poster) {
   await context.requestSession();
   const session = context.getCurrentSession();
   if (!session) throw new Error('No se pudo conectar al dispositivo');
-  const isHls = /\.m3u8(\?|$)/i.test(url);
-  const info = new g.chrome.cast.media.MediaInfo(url, isHls ? 'application/x-mpegURL' : 'video/mp4');
+  let original=url;
+  try { original=new URL(url,window.location.origin).searchParams.get('url')||url; } catch {}
+  const isHls = /\.m3u8(\?|$)/i.test(original);
+  const mime=isHls?'application/x-mpegURL':/\.webm(\?|$)/i.test(original)?'video/webm':/\.mkv(\?|$)/i.test(original)?'video/x-matroska':'video/mp4';
+  const info = new g.chrome.cast.media.MediaInfo(url, mime);
   info.streamType = g.chrome.cast.media.StreamType.LIVE;
   const meta = new g.chrome.cast.media.GenericMediaMetadata();
   meta.title = title || 'SEÑAL';

@@ -183,7 +183,13 @@ class AppViewModel : ViewModel() {
 
     private fun startPlay(rawUrl: String, title: String, ua: String?, ref: String?, isLive: Boolean, reactionType: String = "series", reactionId: String = (detail as? Detail.Serie)?.d?.id?.toString() ?: "") {
         val proxied = Net.proxied(rawUrl, ua, ref)
-        val mime = if (Net.isHls(rawUrl)) "application/x-mpegURL" else "video/mp4"
+        val path = rawUrl.substringBefore('?')
+        val mime = when {
+            Net.isHls(rawUrl) -> "application/x-mpegURL"
+            path.endsWith(".webm", ignoreCase = true) -> "video/webm"
+            path.endsWith(".mkv", ignoreCase = true) -> "video/x-matroska"
+            else -> "video/mp4"
+        }
         play = PlayTarget(proxied, mime, title, rawUrl, ua, ref, isLive, reactionType, reactionId)
     }
 

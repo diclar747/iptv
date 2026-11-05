@@ -1,6 +1,6 @@
 import '../src/env.js';
 import assert from 'node:assert/strict';import express from 'express';import {randomUUID,createHash} from 'node:crypto';import {readFile,rm,mkdtemp} from 'node:fs/promises';import path from 'node:path';import os from 'node:os';import {execFile} from 'node:child_process';import {promisify} from 'node:util';
-import {initSchema,one,query} from '../src/pg.js';import {attachUser,createSession} from '../src/auth.js';import router,{CHUNK_BYTES} from '../src/media-transfers.js';import {assetDirectory} from '../src/youtube-downloader.js';
+import {initSchema,one,query} from '../src/pg.js';import {attachUser,createSession} from '../src/auth.js';import router,{CHUNK_BYTES,recoverTransferredJobs} from '../src/media-transfers.js';import {assetDirectory} from '../src/youtube-downloader.js';
 import library from '../src/media-library.js';
 import catalog from '../src/catalog.js';
 await initSchema();const admin=await one("SELECT id FROM users WHERE role='admin' AND status='active' LIMIT 1");assert.ok(admin);
@@ -57,10 +57,11 @@ try{
   const mp4=path.join(temp,'original.mp4');await exec(process.env.FFMPEG_BIN,['-v','error','-y','-i',input,'-c:v','libx264','-c:a','aac',mp4]);const original=await readFile(mp4);
   const direct=await call('/admin/media-transfers',{method:'POST',body:{...options,size:original.length},status:201});jobs.push(direct.id);
   await call('/admin/media-transfers/'+direct.id+'/chunk',{method:'PUT',body:original,headers:{...auth,'X-Upload-Offset':'0','X-Chunk-SHA256':sha(original)}});
-  await call('/admin/media-transfers/'+direct.id+'/finish',{method:'POST',body:{sha256:sha(original)},status:202});
+  await query("UPDATE media_import_jobs SET state='publishing' WHERE id=$1",[direct.id]);
+  await Promise.all([recoverTransferredJobs({all:true}),recoverTransferredJobs({all:true})]);
   for(let i=0;i<60;i++){status=await call('/admin/media-transfers/'+direct.id);if(['done','error'].includes(status.state))break;await new Promise(r=>setTimeout(r,500));}assert.equal(status.state,'done',status.error);movieIds.push(status.movieId);
   assert.equal(sha(await readFile(path.join(assetDirectory(direct.id),'video.mp4'))),sha(original),'MP4 must be published byte-for-byte unchanged');
-  console.log('PASS: MP4 original idéntico byte por byte; MKV VP9/Opus publicado como WebM con paquetes idénticos, sin recodificación; portada, privacidad y Range.');
+  console.log('PASS: recuperación tras reinicio sin duplicar; MP4 original idéntico byte por byte; MKV VP9/Opus publicado como WebM con paquetes idénticos, sin recodificación; portada, privacidad y Range.');
  }
  console.log('PASS: vinculación única, autenticación, permisos, dispositivos limitados a sus trabajos, cola durable, duplicados, fragmentos SHA-256, reanudación, segundo fragmento, rechazo de archivos incompletos, cancelación y revocación.');
 }finally{
