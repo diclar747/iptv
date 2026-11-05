@@ -11,7 +11,7 @@ import {radioSources,radioReferrer,RADIO_USER_AGENT} from './radio-sources.js';
 import {preferredRadioSource} from './radio-health.js';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { streamToken } from './streamToken.js';
+import { streamToken,tokenExpiresAt } from './streamToken.js';
 import { isDesdeParaguay, resolveDesdeStreams, preferDesdeStream } from './desdeparaguay.js';
 import { isResolvable, resolvePlatform } from './resolver.js';
 
@@ -33,7 +33,7 @@ function proxify(absoluteUrl, ua, ref, tokenMode) {
   const qs = new URLSearchParams({ url: absoluteUrl });
   if (ua) qs.set('ua', ua);
   if (ref) qs.set('ref', ref);
-  if (tokenMode) qs.set('t', streamToken(absoluteUrl));
+  if (tokenMode) qs.set('t', streamToken(absoluteUrl,tokenMode));
   return `/api/stream?${qs.toString()}`;
 }
 
@@ -71,6 +71,10 @@ export function streamHandler({request=fetch,lookupRadio=findRadio,connectTimeou
   // IncomingMessage.close can fire after the request has been read; only a
   // response disconnect means the viewer has actually stopped streaming.
   res.on('close',close);
+  const expiry=Math.min(req.user?.role==='client'&&req.user.expires_at?new Date(req.user.expires_at).getTime():Infinity,tokenExpiresAt(req.query.t)??Infinity);
+  let expiryTimer;let expired=false;
+  function scheduleExpiry(){expiryTimer=setTimeout(()=>{if(Date.now()<expiry){scheduleExpiry();return;}expired=true;controller.abort();if(!res.headersSent&&!res.destroyed)res.status(403).json({error:'Tu acceso venció',reason:'expired'});else if(!res.writableEnded)res.destroy();},Math.max(0,Math.min(expiry-Date.now(),2147483647)));}
+  if(Number.isFinite(expiry))scheduleExpiry();
   const attempts=[];let station;
   try{
    station=await lookupRadio(original);
@@ -107,7 +111,7 @@ export function streamHandler({request=fetch,lookupRadio=findRadio,connectTimeou
       if(!body.trimStart().startsWith('#EXTM3U')){attempts.push({host:new URL(source).host,stage,status:upstream.status,code:'INVALID_MANIFEST'});continue;}
       clearTimeout(timer);clearTimeout(total);
       res.status(200).set('Content-Type','application/vnd.apple.mpegurl').set('Cache-Control','no-cache');
-      return res.send(rewriteManifest(body,baseUrl,req.query.ua,ref,Boolean(req.query.t)));
+      return res.send(rewriteManifest(body,baseUrl,req.query.ua,ref,tokenExpiresAt(req.query.t)));
      }
      if(/text\/html|application\/json/i.test(contentType)){await upstream.body?.cancel();attempts.push({host:new URL(source).host,stage,status:upstream.status,code:'NOT_MEDIA'});continue;}
      const reader=upstream.body?.getReader();if(!reader){attempts.push({host:new URL(source).host,stage,code:'EMPTY_BODY'});continue;}
@@ -124,12 +128,12 @@ export function streamHandler({request=fetch,lookupRadio=findRadio,connectTimeou
      if(upstream?.body&&!upstream.body.locked)await upstream.body.cancel().catch(()=>{});
     }finally{clearTimeout(timer);}
    }
-   if(!res.destroyed&&!res.headersSent){
+   if(!expired&&!res.destroyed&&!res.headersSent){
     console.warn('[stream] Fuentes no disponibles',JSON.stringify({radio:station?.id||null,attempts}));
     const timeout=controller.signal.aborted||attempts.some(a=>a.code==='TIMEOUT');
     res.status(timeout?504:502).json({error:'No se pudo conectar con la señal. Volvé a intentar.',code:timeout?'UPSTREAM_TIMEOUT':'UPSTREAM_UNAVAILABLE',attempts});
    }
-  }catch(error){if(!res.destroyed&&!res.headersSent)res.status(502).json({error:'No se pudo preparar la reproducción',code:'STREAM_SETUP_ERROR'});}
-  finally{clearTimeout(total);res.off('close',close);}
+  }catch(error){if(!expired&&!res.destroyed&&!res.headersSent)res.status(502).json({error:'No se pudo preparar la reproducción',code:'STREAM_SETUP_ERROR'});}
+  finally{clearTimeout(total);clearTimeout(expiryTimer);res.off('close',close);}
  };
 }

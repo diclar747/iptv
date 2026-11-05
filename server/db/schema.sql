@@ -348,3 +348,16 @@ CREATE TABLE IF NOT EXISTS comment_reactions (
 
 ALTER TABLE comment_reactions DROP CONSTRAINT IF EXISTS comment_reactions_emoji_check;
 ALTER TABLE comment_reactions ADD CONSTRAINT comment_reactions_emoji_check CHECK (emoji IN ('👍','👎','❤️','😂','🎉','🙏'));
+
+-- Durable radio metadata and last verification, never audio or signed CDN URLs.
+CREATE TABLE IF NOT EXISTS radio_health_cache (
+ station_id TEXT PRIMARY KEY,
+ fingerprint TEXT NOT NULL,
+ result JSONB NOT NULL,
+ checked_at TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS radio_directory_cache (
+ country TEXT PRIMARY KEY,
+ items JSONB NOT NULL,
+ checked_at TIMESTAMPTZ NOT NULL
+);

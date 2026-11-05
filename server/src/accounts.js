@@ -100,17 +100,8 @@ export async function ensureSeed() {
     await query("UPDATE users SET pass_hash=$1, pass_salt=$2 WHERE username='vendedor'", [hash, salt]);
   }
 
-  // Cuenta DEMO de acceso libre para probar el sistema: es un "vendedor" (así
-  // tiene acceso total y no vence). Cualquiera entra con demo / demo.
-  const demo = await one("SELECT id FROM users WHERE username='demo'");
-  if (!demo) {
-    const { salt, hash } = hashPassword(process.env.DEMO_PASSWORD || 'demo');
-    await query(
-      "INSERT INTO users (username, pass_hash, pass_salt, role, credits) VALUES ('demo',$1,$2,'reseller',50)",
-      [hash, salt]
-    );
-    console.log('[seed] cuenta demo creada -> demo / demo (acceso libre)');
-  }
+  // Retire the old shared unlimited account; public access now uses personal trials.
+  await query("UPDATE users SET status='disabled',credits=0 WHERE username='demo' AND role='reseller' AND created_by IS NULL");
 
   const { n } = await one('SELECT count(*)::int AS n FROM packages');
   if (n === 0) {
@@ -170,20 +161,20 @@ router.post(
 // Registro público con PRUEBA GRATIS: cualquiera crea su cuenta y queda activo
 // por TRIAL_HOURS horas, sin consumir créditos de ningún reseller. Al vencer,
 // ve la pantalla de "suscripción vencida" y un reseller puede renovarlo.
-const TRIAL_HOURS = parseInt(process.env.TRIAL_HOURS, 10) || 24;
+const TRIAL_HOURS = 24;
 
 router.post(
   '/auth/register',
   h(async (req, res) => {
-    const username = (req.body?.username || '').trim();
-    const password = req.body?.password || '';
+    const username = typeof req.body?.username==='string'?req.body.username.trim():'';
+    const password = typeof req.body?.password==='string'?req.body.password:'';
     if (!username || !password) throw httpError(400, 'Usuario y contraseña requeridos');
-    if (username.length < 3) throw httpError(400, 'El usuario debe tener al menos 3 caracteres');
-    if (password.length < 4) throw httpError(400, 'La contraseña debe tener al menos 4 caracteres');
+    if (!/^[\p{L}\p{N}_.-]{3,40}$/u.test(username)) throw httpError(400, 'Usá de 3 a 40 letras, números, puntos, guiones o guiones bajos');
+    if (password.length < 8 || password.length > 128) throw httpError(400, 'La contraseña debe tener entre 8 y 128 caracteres');
     // Afiliados: si viene ?ref=<usuario de un vendedor activo>, el nuevo cliente
     // queda asignado a ese vendedor (lo ve en su panel y puede renovarlo).
     let parentId = null;
-    const ref = (req.body?.ref || '').trim();
+    const ref = typeof req.body?.ref==='string'?req.body.ref.trim().slice(0,100):'';
     if (ref) {
       const r = await one("SELECT id FROM users WHERE username=$1 AND role='reseller' AND status='active'", [ref]);
       if (r) parentId = r.id;

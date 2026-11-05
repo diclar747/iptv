@@ -1,9 +1,10 @@
+import './env.js'; // carga .env antes que nada (debe ir primero)
+import {initRadioCache,startRadioMaintenance} from './radio-cache.js';
 import {queryPublicChannels} from './channelCatalog.js';
 import { applyOfficialChannelRepairs } from './officialChannelRepairs.js';
 import movieAdminRouter from './movieAdmin.js';
 import channelAdminRouter, { verifyChannel } from './channelAdmin.js';
 import { initChannelState } from './channelState.js';
-import './env.js'; // carga .env antes que nada (debe ir primero)
 import { exec } from 'node:child_process';
 import express from 'express';
 import cors from 'cors';
@@ -51,7 +52,7 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 25, versionName: '1.24', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 26, versionName: '1.25', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
@@ -190,7 +191,8 @@ app.get('/api/cast-url', requireActiveViewer, (req, res) => {
   const qs = new URLSearchParams({ url });
   if (ua) qs.set('ua', ua);
   if (ref) qs.set('ref', ref);
-  qs.set('t', streamToken(url));
+  const expiry=Math.min(Date.now()+24*60*60*1000,req.user.role==='client'&&req.user.expires_at?new Date(req.user.expires_at).getTime():Infinity);
+  qs.set('t', streamToken(url,expiry));
   // El sitio se sirve por HTTPS (detrás de Cloudflare). req.protocol a veces
   // queda en 'http' aunque el borde sea https; si la URL de cast sale en http,
   // el Chromecast recibe un redirect 308 que NO sigue y no reproduce nada.
@@ -247,6 +249,8 @@ async function start() {
     await ensureVodSeed(); // contenido de dominio público (catálogo base reproducible)
     await retireMetadataOnlyMovies();
     await initChannelState();
+    const radioCache=await initRadioCache();
+    console.log('[radio-cache] Comprobaciones restauradas:',radioCache.checks);
     await ensureManualSeed(); // canales manuales conocidos (p. ej. TVS por su Twitch)
     console.log('[api] PostgreSQL conectado y listo');
   } catch (e) {
@@ -257,6 +261,7 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`[api] escuchando en http://localhost:${PORT}`);
+    startRadioMaintenance();
     // Precarga en segundo plano para que la primera consulta sea rápida.
     ensureLoaded()
       .then(async () => {console.log('[api] datos de iptv-org cargados');await applyOfficialChannelRepairs();})

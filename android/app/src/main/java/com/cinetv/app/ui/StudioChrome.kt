@@ -33,6 +33,8 @@ fun StudioLoginScreen(vm: AppViewModel) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visible by remember { mutableStateOf(false) }
+    var registering by remember { mutableStateOf(false) }
+    var confirm by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize().background(Bg)) {
         Image(painterResource(R.drawable.live_studio),null,Modifier.fillMaxWidth().fillMaxHeight(.6f),contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x55070B13),Bg.copy(alpha = .95f),Bg))))
@@ -44,15 +46,19 @@ fun StudioLoginScreen(vm: AppViewModel) {
             Text("Tu mundo, en directo.",color = Color.White,fontSize = 28.sp,fontWeight = FontWeight.Bold,modifier = Modifier.padding(top = 36.dp))
             Text("Televisión, radio y cine. En un solo lugar.",color = Muted,fontSize = 13.sp,modifier = Modifier.padding(top = 8.dp,bottom = 26.dp))
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(StudioSurface.copy(alpha = .93f)).border(1.dp,Color(0xFF25354A),RoundedCornerShape(26.dp)).padding(22.dp),verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("Bienvenido",color = Color.White,fontSize = 20.sp,fontWeight = FontWeight.SemiBold)
-                OutlinedTextField(username,{username = it},label = {Text("Usuario")},leadingIcon = {Icon(Icons.Default.Person,null)},singleLine = true,shape = RoundedCornerShape(14.dp),modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(password,{password = it},label = {Text("Contraseña")},leadingIcon = {Icon(Icons.Default.Lock,null)},singleLine = true,visualTransformation = if(visible) VisualTransformation.None else PasswordVisualTransformation(),
+                Text(if(registering)"24 horas gratis para vos" else "Bienvenido",color = Color.White,fontSize = 20.sp,fontWeight = FontWeight.SemiBold)
+                Text(if(registering)"Tu prueba comienza al crear la cuenta. Sin tarjeta. Después elegís si renovar por Gs. 27.500 al mes." else "¿Es tu primera vez? Creá tu cuenta y probá 24 horas gratis.",color=Muted,fontSize=12.sp)
+                OutlinedTextField(username,{username = it.take(40)},label = {Text("Usuario")},leadingIcon = {Icon(Icons.Default.Person,null)},singleLine = true,shape = RoundedCornerShape(14.dp),modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(password,{password = it.take(128)},label = {Text("Contraseña")},leadingIcon = {Icon(Icons.Default.Lock,null)},singleLine = true,visualTransformation = if(visible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = { IconButton(onClick = {visible = !visible}) {Icon(if(visible) Icons.Default.VisibilityOff else Icons.Default.Visibility,if(visible) "Ocultar contraseña" else "Mostrar contraseña")} },shape = RoundedCornerShape(14.dp),modifier = Modifier.fillMaxWidth())
+                if(registering)OutlinedTextField(confirm,{confirm=it.take(128)},label={Text("Repetir contraseña")},singleLine=true,visualTransformation=PasswordVisualTransformation(),shape=RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth())
+                if(registering&&password.isNotEmpty()&&password.length<8)Text("Usá al menos 8 caracteres",color=Muted,fontSize=11.sp)
+                if(registering&&confirm.isNotEmpty()&&confirm!=password)Text("Las contraseñas no coinciden",color=Color(0xFFFF8D9E),fontSize=11.sp)
                 vm.error?.let {Text(it,color = Color(0xFFFF8D9E),fontSize = 12.sp)}
-                Button(onClick = {vm.login(username,password)},enabled = !vm.busy && username.isNotBlank() && password.isNotBlank(),modifier = Modifier.fillMaxWidth().height(50.dp),shape = RoundedCornerShape(14.dp),colors = ButtonDefaults.buttonColors(containerColor = StudioAccent,contentColor = Color(0xFF08251B))) {
-                    if(vm.busy) CircularProgressIndicator(Modifier.size(20.dp),strokeWidth = 2.dp,color = Color(0xFF08251B)) else Text("Entrar a LiveTV",fontWeight = FontWeight.Bold)
+                Button(onClick = {if(registering)vm.register(username,password) else vm.login(username,password)},enabled = !vm.busy && username.isNotBlank() && password.isNotBlank() && (!registering||(username.trim().length>=3&&password.length>=8&&password==confirm)),modifier = Modifier.fillMaxWidth().height(50.dp),shape = RoundedCornerShape(14.dp),colors = ButtonDefaults.buttonColors(containerColor = StudioAccent,contentColor = Color(0xFF08251B))) {
+                    if(vm.busy) CircularProgressIndicator(Modifier.size(20.dp),strokeWidth = 2.dp,color = Color(0xFF08251B)) else Text(if(registering)"Empezar mis 24 horas gratis" else "Entrar a LiveTV",fontWeight = FontWeight.Bold)
                 }
-                TextButton(onClick = {vm.loginDemo()},enabled = !vm.busy,modifier = Modifier.align(Alignment.CenterHorizontally)) {Text("Explorar como prueba",color = Color(0xFFA9BCD3))}
+                TextButton(onClick = {registering=!registering;vm.error=null},enabled = !vm.busy,modifier = Modifier.align(Alignment.CenterHorizontally)) {Text(if(registering)"Ya tengo cuenta · Iniciar sesión" else "Crear cuenta · 24 horas gratis",color = Color(0xFFA9BCD3))}
             }
         }
     }

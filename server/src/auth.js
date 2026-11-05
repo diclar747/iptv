@@ -31,7 +31,7 @@ export function destroySession(token) {
 export async function userFromToken(token) {
   const s = token && sessions.get(token);
   if (!s) return null;
-  return one('SELECT * FROM users WHERE id = $1', [s.userId]);
+  return one("SELECT * FROM users WHERE id = $1 AND status='active'", [s.userId]);
 }
 
 // ---------- Cookies ----------
@@ -64,9 +64,9 @@ export function tokenFromReq(req) {
 // ---------- Estado de suscripción ----------
 // Opera sobre una fila de la tabla users (snake_case).
 export function subscriptionStatus(user) {
-  if (user.role !== 'client') return { active: true, reason: null };
   if (user.status !== 'active') return { active: false, reason: 'disabled' };
-  if (user.expires_at && new Date(user.expires_at).getTime() < Date.now()) {
+  if (user.role !== 'client') return { active: true, reason: null };
+  if (user.expires_at && new Date(user.expires_at).getTime() <= Date.now()) {
     return { active: false, reason: 'expired' };
   }
   return { active: true, reason: null };

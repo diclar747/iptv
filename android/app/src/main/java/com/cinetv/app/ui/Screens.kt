@@ -121,6 +121,23 @@ fun LoginScreen(vm: AppViewModel) { StudioLoginScreen(vm) }
 fun MainScreen(vm: AppViewModel) {
     var tab by remember { mutableStateOf(0) }
     val foreground=rememberForeground()
+    val expiry=vm.user?.expiresAt
+    var expiredByClock by remember(expiry){mutableStateOf(expiry?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()<=System.currentTimeMillis()}.getOrDefault(false)}?:false)}
+    LaunchedEffect(expiry,foreground){
+        if(!foreground||expiry==null)return@LaunchedEffect
+        val deadline=runCatching{java.time.Instant.parse(expiry).toEpochMilli()}.getOrNull()?:return@LaunchedEffect
+        while(true){val remaining=deadline-System.currentTimeMillis();if(remaining<=0){expiredByClock=true;vm.closePlayer();break};delay(minOf(remaining,60000))}
+    }
+    if(vm.user?.role=="client"&&(expiredByClock||vm.user?.subscription?.active==false)){
+        val context=LocalContext.current
+        Column(Modifier.fillMaxSize().background(Bg).padding(28.dp),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally){
+            Text(if(vm.user?.packageName?.startsWith("Prueba")==true)"Terminó tu prueba gratis" else "Tu suscripción venció",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Bold)
+            Text("Podés renovar por Gs. 27.500 al mes y seguir disfrutando de LiveTV.",color=Muted,modifier=Modifier.padding(vertical=18.dp))
+            Button(onClick={context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("https://wa.me/595994860527?text="+android.net.Uri.encode("Quiero renovar LiveTV. Usuario: "+vm.user?.username))))}){Text("Renovar por WhatsApp")}
+            TextButton(onClick={vm.logout()}){Text("Cerrar sesión")}
+        }
+        return
+    }
     LaunchedEffect(tab,foreground) { if(tab==0&&foreground)while(true) { delay(30000); vm.refreshSignalStates() } }
     var searchOpen by remember { mutableStateOf(false) }
     var panelOpen by remember { mutableStateOf(false) }
@@ -535,7 +552,7 @@ private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
                 if (u.role == "client") {
                     InfoRow("Suscripción", if (u.subscription?.active == true) "Activa" else "Vencida")
                     u.packageName?.let { InfoRow("Paquete", it) }
-                    u.expiresAt?.let { InfoRow("Vence", it.take(10)) }
+                    u.expiresAt?.let { value -> InfoRow("Vence",runCatching{java.time.Instant.parse(value).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}.getOrDefault(value.take(16))) }
                     InfoRow("Pantallas", (u.maxConnections ?: 1).toString())
                 }
                 if (isAdmin) InfoRow("Rol", "Administrador")

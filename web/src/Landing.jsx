@@ -4,7 +4,7 @@ import './landing.css';
 
 // Landing pública (usuarios sin sesión): presenta el servicio al estilo de una
 // plataforma de streaming y abre el modal de login/registro real. El acceso
-// demo sigue disponible para probar.
+// registro ofrece una prueba personal de 24 horas.
 
 const WA_NUMBER = '595994860527'; // +595 994 860 527
 const WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('¡Hola! Quiero suscribirme a LiveTV 📺')}`;
@@ -51,7 +51,7 @@ const FAQS = [
   ['¿Qué necesito para mirar?', 'Solo tu cuenta y conexión a internet. Funciona en el navegador del teléfono, la tablet, la computadora y la Smart TV. No hace falta instalar nada ni poner antena.'],
   ['¿Funciona en Smart TV?', 'Sí. Podés proyectar cualquier canal a tu televisor con Chromecast o AirPlay desde el botón de proyectar, estando en la misma red de wifi.'],
   ['¿Cuánto cuesta?', `El plan mensual cuesta ${PRICE} guaraníes e incluye todos los canales. Sin costos ocultos.`],
-  ['¿Puedo probar antes de pagar?', 'Sí. Entrá con el acceso de prueba y recorré la plataforma antes de suscribirte.'],
+  ['¿Puedo probar antes de pagar?', 'Sí. Creá tu propia cuenta y disfrutá 24 horas gratis desde el registro, sin tarjeta. Después elegís si querés renovar.'],
   ['¿Cómo pago?', 'Escribinos por WhatsApp y te pasamos las formas de pago disponibles. Activamos tu cuenta al momento.'],
 ];
 
@@ -95,12 +95,6 @@ function AuthModal({ open, mode, onMode, onClose, prefill }) {
       else await login(username.trim(), password);
     } catch (err) { setError(err.message); setBusy(false); }
   }
-  async function demo() {
-    setBusy(true); setError(null);
-    try { await login('demo', 'demo'); }
-    catch (err) { setError(err.message); setBusy(false); }
-  }
-
   return (
     <div className="lp-modal" onClick={onClose}>
       <form className="lp-auth" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
@@ -111,27 +105,27 @@ function AuthModal({ open, mode, onMode, onClose, prefill }) {
           <button type="button" role="tab" aria-selected={isReg} className={isReg ? 'on' : ''} onClick={() => onMode('register')}>Crear cuenta</button>
         </div>
 
-        {isReg && <p className="lp-auth-note">Creá tu cuenta y empezá a mirar. Probá la plataforma antes de suscribirte.</p>}
+        {isReg && <p className="lp-auth-note">Creá tu cuenta y disfrutá 24 horas gratis desde el registro. Después podés renovar por Gs. 27.500 al mes.</p>}
 
         <label className="lp-field">
           <span>Usuario</span>
           <input autoFocus autoComplete="username" value={username}
-            onChange={(e) => setUsername(e.target.value)} placeholder="tu usuario" />
+            onChange={(e) => setUsername(e.target.value)} placeholder="tu usuario" minLength={isReg?3:undefined} maxLength={40} required />
         </label>
         <label className="lp-field">
           <span>Contraseña</span>
           <input type="password" autoComplete={isReg ? 'new-password' : 'current-password'}
-            value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+            value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" minLength={isReg?8:undefined} maxLength={128} required />
         </label>
 
         {error && <div className="lp-auth-err">{error}</div>}
 
         <button className="lp-btn lp-btn-red lp-btn-block" type="submit" disabled={busy || !username || !password}>
-          {busy ? (isReg ? 'Creando…' : 'Entrando…') : (isReg ? 'Crear cuenta' : 'Entrar')}
+          {busy ? (isReg ? 'Creando…' : 'Entrando…') : (isReg ? 'Empezar mis 24 horas gratis' : 'Entrar')}
         </button>
 
-        <button type="button" className="lp-btn lp-btn-ghost lp-btn-block" onClick={demo} disabled={busy}>
-          ▶ Entrar como prueba
+        <button type="button" className="lp-btn lp-btn-ghost lp-btn-block" onClick={() => onMode(isReg?'login':'register')} disabled={busy}>
+          {isReg?'Ya tengo cuenta · Iniciar sesión':'Crear mi cuenta · 24 horas gratis'}
         </button>
 
         <a className="lp-auth-wa" href={WA_LINK} target="_blank" rel="noopener noreferrer">
@@ -293,10 +287,10 @@ export default function Landing() {
           <form className="lp-quick" onSubmit={startQuick}>
             <input value={quick} onChange={(e) => setQuick(e.target.value)}
               placeholder="Elegí tu usuario para empezar" aria-label="Usuario" />
-            <button className="lp-btn lp-btn-red lp-btn-lg" type="submit">Comenzar ›</button>
+            <button className="lp-btn lp-btn-red lp-btn-lg" type="submit">Probar 24 horas gratis ›</button>
           </form>
           <div className="lp-hero-price">
-            Desde <strong>{PRICE} Gs</strong> por mes · <button className="lp-link" onClick={() => openAuth('login')}>probá gratis</button>
+            Desde <strong>{PRICE} Gs</strong> por mes · <button className="lp-link" onClick={() => openAuth('register')}>probá 24 horas gratis</button>
           </div>
           <a className="lp-apk" href={APK_URL} download rel="noopener noreferrer">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -376,7 +370,7 @@ export default function Landing() {
       {/* CTA FINAL */}
       <section className="lp-cta" ref={reveal}>
         <h2 className="lp-cta-h">Listo para mirar.<br />Empezá hoy.</h2>
-        <button className="lp-btn lp-btn-red lp-btn-lg" onClick={() => openAuth('register')}>Crear cuenta gratis</button>
+        <button className="lp-btn lp-btn-red lp-btn-lg" onClick={() => openAuth('register')}>Probar 24 horas gratis</button>
         <ShareBar />
       </section>
 

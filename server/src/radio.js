@@ -39,6 +39,8 @@ export function mergeRadios(curated, directory) {
 const router = express.Router();
 let cache = null;
 let pending = null;
+let saveDirectory=async()=>{};
+export function configureRadioDirectoryCache(record,save){if(Array.isArray(record?.items)&&record.items.length){cache={at:new Date(record.checked_at).getTime(),items:record.items.filter(s=>s.id&&s.name&&/^https?:\/\//i.test(s.url||''))};}saveDirectory=save;}
 async function loadDirectory() {
   if (cache && Date.now() - cache.at < 3600000) return cache.items;
   if (pending) return pending;
@@ -61,6 +63,7 @@ async function loadDirectory() {
         });
         if (!items.length) throw Error('Directorio vacío');
         cache = { at: Date.now(), items };
+        void saveDirectory(cache).catch(e=>console.warn('[radio-cache] No se pudo guardar directorio:',e.message));
         return items;
       } catch { /* probar otro servidor del directorio */ }
     }

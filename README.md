@@ -320,3 +320,41 @@ no se debe confundir una señal pendiente de comprobar con una emisora apagada.
 Se comprobaron respuestas de audio y las pruebas automatizadas; queda pendiente
 confirmar en producción la estabilidad de ABC después del despliegue, pues el
 servidor anterior mostró respuestas intermitentes incluso en su segundo CDN.
+
+## LiveTV 1.25 — Prueba personal de 24 horas y caché persistente
+
+Web y APK permiten crear una cuenta propia y entrar automáticamente con 24 horas
+gratuitas desde el registro, sin tarjeta. El vencimiento se calcula en el
+servidor; iniciar sesión nuevamente no lo extiende. El registro siempre crea un
+cliente con una conexión, ignora privilegios/fechas enviados por el visitante y
+valida usuario y contraseña (mínimo ocho caracteres). La cuenta demo compartida
+sin vencimiento deja de crearse y se deshabilita al iniciar si corresponde a la
+cuenta demo original del sistema. No se modifican las otras cuentas.
+
+Al vencer se bloquean las API de reproducción y se corta una transmisión directa
+que ya estuviera abierta. Los enlaces firmados para Smart TV incluyen vencimiento,
+limitado también por el plazo de la cuenta, y sus segmentos no pueden extenderlo.
+Los enlaces antiguos de cast deben regenerarse. STREAM_SECRET en .env permite
+conservar la firma entre reinicios; si falta se genera una clave privada en memoria.
+La APK muestra la pantalla de renovación por Gs. 27.500 mensuales y permite cerrar
+sesión. La prueba pública dura siempre 24 horas; TRIAL_HOURS deja de configurarla.
+
+Las comprobaciones de radio y el directorio externo se guardan en PostgreSQL.
+Se restauran antes de abrir el servicio: volver a abrir la app o reiniciar el
+backend ya no borra las comprobaciones guardadas. Los resultados de hasta 24 horas
+se muestran como último estado conocido, con fecha y aviso de actualización cuando
+corresponde. No se fuerza online una emisora nunca comprobada. La primera
+instalación necesita llenar la caché; en adelante se reutiliza.
+
+Dos tareas de mantenimiento comparten la cola global de cuatro verificaciones
+con los usuarios. Refrescan en segundo plano los resultados online de más de diez
+minutos, los offline de más de treinta y los errores de más de cinco. Las tarjetas
+visibles pueden actualizarse antes. Se guardan catálogo y resultados, no audio,
+archivos de video ni firmas temporales de los CDN. La caché existente de imágenes
+y del catálogo de canales se conserva.
+
+Desplegar backend y web, reiniciar para aplicar las dos tablas nuevas y publicar
+la APK 1.25. Validación: verify-trial.mjs comprueba registro, sesión, privilegios,
+24 horas exactas y vencimiento; verify-radio-cache.mjs guarda/restaura un resultado
+real en PostgreSQL. Las pruebas unitarias verifican restauración, concurrencia,
+continuidad del audio y caducidad de enlaces HLS. Compilaciones web y APK correctas.

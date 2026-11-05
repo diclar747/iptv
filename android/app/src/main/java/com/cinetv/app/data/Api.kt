@@ -25,6 +25,9 @@ interface Api {
     @POST("api/auth/login")
     suspend fun login(@Body body: LoginReq): UserResp
 
+    @POST("api/auth/register")
+    suspend fun register(@Body body: LoginReq): UserResp
+
     @GET("api/auth/me")
     suspend fun me(): UserResp
 

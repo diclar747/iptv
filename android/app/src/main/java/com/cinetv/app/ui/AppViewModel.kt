@@ -55,6 +55,12 @@ class AppViewModel : ViewModel() {
         private set
 
     var detail by mutableStateOf<Detail?>(null)
+    private var accessExpiryJob: kotlinx.coroutines.Job? = null
+    private fun scheduleAccessExpiry(){
+        accessExpiryJob?.cancel()
+        val deadline=user?.takeIf{it.role=="client"}?.expiresAt?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()}.getOrNull()}?:return
+        accessExpiryJob=viewModelScope.launch{kotlinx.coroutines.delay((deadline-System.currentTimeMillis()).coerceAtLeast(0));closePlayer()}
+    }
     private var radioJob: kotlinx.coroutines.Job? = null
     private var radioGeneration = 0
     var play by mutableStateOf<PlayTarget?>(null)
@@ -65,7 +71,7 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 user = api.me().user
-                if (user != null) loadHome()
+                if (user != null) {scheduleAccessExpiry();loadHome()}
             } catch (_: Exception) { /* sin sesión */ }
             booting = false
         }
@@ -84,9 +90,19 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    fun loginDemo() = login("demo", "demo")
+    fun register(username: String,password: String){
+        viewModelScope.launch {
+            busy=true;error=null
+            try{user=api.register(LoginReq(username.trim(),password)).user;if(user!=null){scheduleAccessExpiry();loadHome()}}
+            catch(e:kotlinx.coroutines.CancellationException){throw e}
+            catch(e:retrofit2.HttpException){error=when(e.code()){409->"Ese usuario ya existe. Elegí otro o iniciá sesión.";400->"Revisá el usuario y la contraseña (mínimo 8 caracteres).";else->"No pudimos crear tu cuenta. Volvé a intentar."}}
+            catch(_:Exception){error="No pudimos conectar. Revisá tu conexión e intentá nuevamente."}
+            finally{busy=false}
+        }
+    }
 
     fun logout() {
+        accessExpiryJob?.cancel();closePlayer()
         user = null; featured = emptyList(); channelRows = emptyList(); movieRows = emptyList(); detail = null; play = null
     }
 

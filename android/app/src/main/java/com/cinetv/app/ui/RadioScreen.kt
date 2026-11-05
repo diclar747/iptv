@@ -46,7 +46,7 @@ fun RadioStatus(status: String,stale: Boolean=false) {
     val color = when(status) { "online" -> if(stale)Color(0xFFFFCC73) else RadioMint; "offline" -> Color(0xFFFF778A); else -> Color(0xFFFFCC73) }
     Row(Modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = .12f)).padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         Box(Modifier.size(5.dp).clip(CircleShape).background(color))
-        Text(when(status) { "online" -> if(stale)"ONLINE · ACTUALIZANDO" else "ONLINE"; "offline" -> "SIN SEÑAL"; "error" -> "POR VERIFICAR"; else -> "REVISANDO" }, color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = .7.sp)
+        Text(when(status) { "online" -> if(stale)"ÚLTIMO ESTADO: ONLINE" else "ONLINE"; "offline" -> "SIN SEÑAL"; "error" -> "POR VERIFICAR"; else -> "REVISANDO" }, color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = .7.sp)
     }
 }
 
@@ -170,6 +170,7 @@ fun RadiosTab(vm: AppViewModel) {
                     Text(station.name, color = if(offline) Muted else Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(station.city.ifBlank { "Paraguay" }, color = Color(0xFF8D9FB6), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     RadioStatus(station.status,station.stale)
+                    station.checkedAt?.let { value -> Text("Comprobada "+runCatching{java.time.Instant.parse(value).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"))}.getOrDefault("recientemente"),color=Muted,fontSize=9.sp) }
                     if(station.status=="error")Text("No se pudo comprobar · Podés intentar escuchar",color=Color(0xFFFFCC73),fontSize=10.sp)
                 }
                 Box(Modifier.size(36.dp).clip(CircleShape).background(if(offline) Color(0xFF263041) else RadioMint.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
