@@ -21,7 +21,7 @@ data class PlayTarget(
     // En vivo (canal): reintentar/reanudar indefinidamente. Película: no.
     val isLive: Boolean = false,
     val reactionType: String = "channel", val reactionId: String = "",
-    val isAudio: Boolean = false,
+    val isAudio: Boolean = false, val subtitle: String = "",
 )
 
 // Detalle abierto (ficha de película o serie).
@@ -164,7 +164,7 @@ class AppViewModel : ViewModel() {
 
     fun playRadio(station: com.cinetv.app.data.RadioStation) {
         val mime = if (Net.isHls(station.url)) "application/x-mpegURL" else if (station.codec.contains("AAC", true)) "audio/aac" else if (station.codec.contains("OGG", true) || station.codec.contains("OPUS", true)) "audio/ogg" else "audio/mpeg"
-        play = PlayTarget(Net.proxied(station.url, ref = station.source), mime, station.name, station.url, ref = station.source, isLive = true, reactionType = "radio", reactionId = station.id, isAudio = true)
+        play = PlayTarget(Net.proxied(station.url, ref = station.source), mime, station.name, station.url, ref = station.source, isLive = true, reactionType = "radio", reactionId = station.id, isAudio = true, subtitle = station.city.ifBlank { "Paraguay · Transmisión en directo" })
     }
 
     fun closePlayer() { play = null }

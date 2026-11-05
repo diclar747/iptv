@@ -107,6 +107,22 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
     val castPlayer = remember(castContext) { castContext?.let { CastPlayer(it) } }
     var currentPlayer by remember { mutableStateOf<Player>(exoPlayer) }
 
+    var playing by remember { mutableStateOf(false) }
+    var buffering by remember { mutableStateOf(true) }
+    var failed by remember { mutableStateOf(false) }
+    var volume by remember { mutableStateOf(1f) }
+    DisposableEffect(currentPlayer) {
+        val observed = currentPlayer
+        fun sync() { playing = observed.isPlaying; buffering = observed.playbackState == Player.STATE_BUFFERING || observed.playbackState == Player.STATE_IDLE }
+        val observer = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) { sync() }
+            override fun onPlaybackStateChanged(state: Int) { sync(); if(state == Player.STATE_READY) failed = false }
+            override fun onPlayerError(error: PlaybackException) { failed = true; sync() }
+        }
+        sync(); observed.addListener(observer)
+        onDispose { observed.removeListener(observer) }
+    }
+
     // Estado de reconexión para el overlay y el backoff de reintentos.
     var reconnecting by remember { mutableStateOf(false) }
     var attempt by remember { mutableIntStateOf(0) }
@@ -222,7 +238,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(
+        if (!target.isAudio) AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -238,16 +254,19 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
         )
 
         if (target.isAudio) {
-            Text(target.title, color = Color.White, modifier = Modifier.align(Alignment.Center), fontSize = 24.sp)
+            RadioNowPlaying(target, playing, buffering || reconnecting, failed, volume, { volume = it; currentPlayer.volume = it }, {
+                if(currentPlayer.isPlaying) { retryJob?.cancel(); currentPlayer.pause() }
+                else { if(currentPlayer.playbackState == Player.STATE_IDLE) currentPlayer.prepare(); currentPlayer.play() }
+            })
         }
-        if (target.reactionId.isNotBlank()) {
+        if (!target.isAudio && target.reactionId.isNotBlank()) {
             Box(Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 100.dp).background(Color(0xDD101217))) {
                 VoteButtons(target.reactionType, target.reactionId)
             }
         }
 
         // Aviso de reconexión (solo cuando estamos reintentando tras un corte).
-        if (reconnecting) {
+        if (reconnecting && !target.isAudio) {
             Row(
                 Modifier
                     .align(Alignment.TopCenter)

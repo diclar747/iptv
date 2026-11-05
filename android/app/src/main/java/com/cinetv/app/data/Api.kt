@@ -221,5 +221,5 @@ data class ReactionsResp(
     val comments: List<Comment> = emptyList(),
 )
 
-data class RadioStation(val id: String, val name: String, val url: String, val city: String = "", val tags: String = "", val codec: String = "", val source: String? = null, val logo: String? = null)
+data class RadioStation(val id: String, val name: String, val url: String, val city: String = "", val tags: String = "", val codec: String = "", val source: String? = null, val logo: String? = null, val status: String = "checking", val checkedAt: String? = null)
 data class RadiosResp(val items: List<RadioStation> = emptyList(), val total: Int = 0)

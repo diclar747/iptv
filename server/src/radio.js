@@ -1,9 +1,10 @@
 import express from 'express';
 import { requireActiveViewer } from './auth.js';
 import { readFileSync } from 'node:fs';
+import { radioStatuses } from './radio-health.js';
 
 function curatedRadios() {
-  try { return JSON.parse(readFileSync(new URL('./radios-py.json', import.meta.url), 'utf8')).filter(r => r.available !== false); }
+  try { return JSON.parse(readFileSync(new URL('./radios-py.json', import.meta.url), 'utf8')); }
   catch { return []; }
 }
 export function mergeRadios(curated, directory) {
@@ -57,9 +58,12 @@ export async function loadRadios() {
 }
 router.get('/radios', requireActiveViewer, async (req, res) => {
   try {
-    const all = await loadRadios();
+    const all = radioStatuses(await loadRadios());
+    const order = { online: 0, checking: 1, offline: 2 };
+    all.sort((a,b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name, 'es'));
     const search = String(req.query.search || '').toLocaleLowerCase('es');
     res.json({ items: all.filter(r => `${r.name} ${r.city} ${r.tags}`.toLocaleLowerCase('es').includes(search)), total: all.length,
+      counts: { online: all.filter(s => s.status === 'online').length, offline: all.filter(s => s.status === 'offline').length, checking: all.filter(s => s.status === 'checking').length },
       attribution: 'Radio Browser · Paraguay Online · señales oficiales', country: 'PY' });
   } catch (error) { res.status(502).json({ error: error.message }); }
 });

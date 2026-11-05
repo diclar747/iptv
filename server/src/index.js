@@ -46,7 +46,7 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 19, versionName: '1.18', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 20, versionName: '1.19', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).

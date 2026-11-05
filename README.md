@@ -170,3 +170,16 @@ conservan y los títulos con fuente mantienen su visibilidad.
   en la misma red sin aislamiento. Miracast y Google Cast son métodos diferentes.
 - Desplegar backend y APK juntos: el inicio aplica la migración SQL; la APK
   actualizable se publica en /cinetv.apk para mantener el enlace existente.
+
+## LiveTV APK 1.19 — Radio Studio
+
+Diseño de radios con logos, filtros y estados online/offline/revisando. El servidor
+comprueba que cada URL entregue audio, con seis consultas simultáneas y caché
+de tres minutos; la APK actualiza la lista cada ocho segundos mientras se usa.
+El estado indica disponibilidad desde el servidor, no una garantía permanente.
+Las emisoras offline se muestran en su filtro y no inician reproducción.
+
+El reproductor de radio incluye imagen local de estudio, controles propios,
+volumen, animación ambiental durante reproducción y votos con iconos de pulgar.
+La etiqueta En vivo depende del estado real del reproductor. Actualizar backend
+y APK juntos para que funcione la verificación de las señales.
