@@ -46,11 +46,21 @@ try{
   let status;for(let i=0;i<60;i++){status=await call('/admin/media-transfers/'+u.id);if(['done','error'].includes(status.state))break;await new Promise(r=>setTimeout(r,500));}
   assert.equal(status.state,'done',status.error);movieIds.push(status.movieId);
   const asset=await one('SELECT * FROM media_assets WHERE id=$1',[u.id]);assert.ok(asset.size_bytes>24);assert.equal(asset.metadata.sourceSha256,sha(source));
-  const {stdout}=await exec(process.env.FFPROBE_BIN,['-v','error','-show_streams','-of','json',path.join(assetDirectory(u.id),'video.mp4')]);const streams=JSON.parse(stdout).streams;assert.equal(streams.find(s=>s.codec_type==='video').codec_name,'h264');assert.equal(streams.find(s=>s.codec_type==='audio').codec_name,'aac');
-  const privateFile=await fetch(base+'/api/library/'+u.id+'/video.mp4');assert.equal(privateFile.status,401);
-  const range=await fetch(base+'/api/library/'+u.id+'/video.mp4',{headers:{...auth,Range:'bytes=4-7'}});assert.equal(range.status,206);assert.equal(await range.text(),'ftyp');
+  assert.equal(asset.video_name,'video.webm');
+  const output=path.join(assetDirectory(u.id),asset.video_name);
+  const {stdout}=await exec(process.env.FFPROBE_BIN,['-v','error','-show_streams','-of','json',output]);const streams=JSON.parse(stdout).streams;assert.equal(streams.find(s=>s.codec_type==='video').codec_name,'vp9');assert.equal(streams.find(s=>s.codec_type==='audio').codec_name,'opus');
+  async function packets(file){const {stdout}=await exec(process.env.FFPROBE_BIN,['-v','error','-show_packets','-show_entries','packet=codec_type,data_hash','-show_data_hash','sha256','-of','json',file]);return JSON.parse(stdout).packets;}
+  assert.deepEqual(await packets(output),await packets(input),'Encoded video/audio packets must remain identical: no recoding');
+  const privateFile=await fetch(base+'/api/library/'+u.id+'/video.webm');assert.equal(privateFile.status,401);
+  const range=await fetch(base+'/api/library/'+u.id+'/video.webm',{headers:{...auth,Range:'bytes=0-3'}});assert.equal(range.status,206);assert.equal(range.headers.get('content-type'),'video/webm');assert.equal(Buffer.from(await range.arrayBuffer()).toString('hex'),'1a45dfa3');
   const cover=await fetch(base+'/api/library/'+u.id+'/cover.jpg',{headers:auth});assert.equal(cover.status,200);
-  console.log('PASS: MKV VP9/Opus real convertido a MP4 H.264/AAC, publicación completa, portada, acceso privado y reproducción con Range.');
+  const mp4=path.join(temp,'original.mp4');await exec(process.env.FFMPEG_BIN,['-v','error','-y','-i',input,'-c:v','libx264','-c:a','aac',mp4]);const original=await readFile(mp4);
+  const direct=await call('/admin/media-transfers',{method:'POST',body:{...options,size:original.length},status:201});jobs.push(direct.id);
+  await call('/admin/media-transfers/'+direct.id+'/chunk',{method:'PUT',body:original,headers:{...auth,'X-Upload-Offset':'0','X-Chunk-SHA256':sha(original)}});
+  await call('/admin/media-transfers/'+direct.id+'/finish',{method:'POST',body:{sha256:sha(original)},status:202});
+  for(let i=0;i<60;i++){status=await call('/admin/media-transfers/'+direct.id);if(['done','error'].includes(status.state))break;await new Promise(r=>setTimeout(r,500));}assert.equal(status.state,'done',status.error);movieIds.push(status.movieId);
+  assert.equal(sha(await readFile(path.join(assetDirectory(direct.id),'video.mp4'))),sha(original),'MP4 must be published byte-for-byte unchanged');
+  console.log('PASS: MP4 original idéntico byte por byte; MKV VP9/Opus publicado como WebM con paquetes idénticos, sin recodificación; portada, privacidad y Range.');
  }
  console.log('PASS: vinculación única, autenticación, permisos, dispositivos limitados a sus trabajos, cola durable, duplicados, fragmentos SHA-256, reanudación, segundo fragmento, rechazo de archivos incompletos, cancelación y revocación.');
 }finally{

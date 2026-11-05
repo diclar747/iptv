@@ -10,6 +10,7 @@ import {requireRole} from './auth.js';
 import {assetDirectory,MAX_BYTES,sanitizeMetadata,MEDIA_ROOT} from './youtube-downloader.js';
 import {createYoutubeJob,publishYoutubeJob,cancelYoutubeJob} from './youtube-import.js';
 import {prepareVideo} from './media-preparation.js';
+import {originalMediaPlan} from './media-format.js';
 
 const router=express.Router(),exec=promisify(execFile);
 export const CHUNK_BYTES=4*1024*1024;
@@ -39,7 +40,8 @@ async function access(req,id,client){
  return j;
 }
 async function lock(client,id){await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',['media-transfer:'+id]);}
-async function fileSize(id){try{return (await stat(path.join(assetDirectory(id),'upload.part'))).size;}catch(e){if(e.code!=='ENOENT')throw e;try{return (await stat(path.join(assetDirectory(id),'video.mp4'))).size;}catch{return 0;}}}
+async function receivedFile(id){for(const name of ['upload.part','video.mp4','video.webm','video.mkv']){const file=path.join(assetDirectory(id),name);try{await stat(file);return file;}catch(e){if(e.code!=='ENOENT')throw e;}}return null;}
+async function fileSize(id){const file=await receivedFile(id);return file?(await stat(file)).size:0;}
 async function freeSpace(size){const {statfs}=await import('node:fs/promises');await mkdir(MEDIA_ROOT,{recursive:true});const s=await statfs(MEDIA_ROOT);if(s.bavail*s.bsize<size+256*1024**2)throw fail('No hay espacio suficiente en el servidor',507);}
 async function probeFile(file){try{const {stdout}=await exec(process.env.FFPROBE_BIN||'ffprobe',['-v','error','-show_format','-show_streams','-of','json',file],{timeout:30000,maxBuffer:2*1024**2});return JSON.parse(stdout);}catch{throw fail('No se pudo leer el video. Usá un archivo MP4 o MKV válido; el servidor necesita FFprobe.',422);}}
 let preparationTail=Promise.resolve();
@@ -48,23 +50,24 @@ async function finalizeTransfer(j,{file,probe,checksum}){
  const heartbeat=setInterval(()=>void query("UPDATE media_import_jobs SET updated_at=now() WHERE id=$1 AND state='publishing'",[j.id]).catch(()=>{}),10000);heartbeat.unref?.();
  try{
   await previous;
-  const dir=assetDirectory(j.id),v=probe.streams.find(s=>s.codec_type==='video'),a=probe.streams.find(s=>s.codec_type==='audio');
-  const copyVideo=v.codec_name==='h264'&&['yuv420p','yuvj420p'].includes(v.pix_fmt),copyAudio=!a||['aac','mp3'].includes(a.codec_name);
-  await freeSpace(MAX_BYTES);
-  const target=path.join(dir,'encoded.mp4'),args=['-v','error','-y','-threads','2','-i',file,'-map','0:v:0','-map','0:a:0?','-c:v',copyVideo?'copy':'libx264'];
-  if(!copyVideo)args.push('-preset','veryfast','-crf','22','-pix_fmt','yuv420p','-threads','2','-vf',"scale=w='min(1920,iw)':h='min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2");
-  args.push('-c:a',copyAudio?'copy':'aac');if(!copyAudio)args.push('-b:a','160k');
-  args.push('-movflags','+faststart','-fs',String(MAX_BYTES+1),target);
-  let savedAt=0;
-  await prepareVideo(process.env.FFMPEG_BIN||'ffmpeg',args,{duration:Number(probe.format?.duration)||0,onProgress:processing=>{if(Date.now()-savedAt<2000)return;savedAt=Date.now();void query("UPDATE media_import_jobs SET progress=$2,processing=$3,updated_at=now() WHERE id=$1 AND state='publishing'",[j.id,processing.percent,processing]).catch(()=>{});}});
+  const dir=assetDirectory(j.id),plan=originalMediaPlan(probe);
+  let target=file;
+  if(plan.remux){
+   await freeSpace(Number(j.upload_size));
+   target=path.join(dir,'prepared.'+plan.file.split('.').pop());
+   const args=['-v','error','-y','-i',file,'-map','0:v:0','-map','0:a:0?','-c','copy'];
+   if(plan.file.endsWith('.mp4'))args.push('-movflags','+faststart');args.push(target);
+   let savedAt=0;
+   await prepareVideo(process.env.FFMPEG_BIN||'ffmpeg',args,{duration:Number(probe.format?.duration)||0,timeoutMs:30*60*1000,onProgress:p=>{if(Date.now()-savedAt<2000)return;savedAt=Date.now();const processing={...p,phase:'remuxing'};void query("UPDATE media_import_jobs SET progress=$2,processing=$3,updated_at=now() WHERE id=$1 AND state='publishing'",[j.id,p.percent,processing]).catch(()=>{});}});
+  }
   await query("UPDATE media_import_jobs SET processing=$2,progress=99,updated_at=now() WHERE id=$1",[j.id,{phase:'cover',percent:99}]);
   const size=(await stat(target)).size;if(size>MAX_BYTES)throw fail('La copia compatible supera el límite de almacenamiento por video',422);
   const output=await probeFile(target),video=output.streams.find(s=>s.codec_type==='video');
   const duration=Number(output.format?.duration)||null;if(Number(probe.format?.duration)>2&&duration<Number(probe.format.duration)-2)throw fail('La preparación del video quedó incompleta',422);
-  const meta={...j.metadata,height:Number(video.height)||null,duration,sourceSha256:checksum};let cover=null;
+  const meta={...j.metadata,height:Number(video.height)||null,duration,sourceSha256:checksum,videoCodec:video.codec_name,audioCodec:output.streams.find(s=>s.codec_type==='audio')?.codec_name||null,preservedCodecs:true};let cover=null;
   try{await exec(process.env.FFMPEG_BIN||'ffmpeg',['-y','-i',target,'-frames:v','1','-vf','scale=640:-2',path.join(dir,'cover.jpg')],{timeout:30000,maxBuffer:1024**2});cover='cover.jpg';}catch{}
-  await rename(target,path.join(dir,'video.mp4'));
-  await publishYoutubeJob(j,{video:'video.mp4',cover,size,metadata:meta});
+  if(target!==path.join(dir,plan.file))await rename(target,path.join(dir,plan.file));
+  await publishYoutubeJob(j,{video:plan.file,cover,size,metadata:meta});
   if(path.basename(file)==='upload.part')await rm(file,{force:true}).catch(()=>{});
  }catch(e){console.error('[media-transfer finalize]',j.id,e.code||'',String(e.message).slice(0,200));await query("UPDATE media_import_jobs SET state='error',error=$2,updated_at=now() WHERE id=$1 AND state<>'done'",[j.id,e.status?e.message:'No se pudo preparar el video. Podés reintentar o subir un MP4 H.264/AAC.']);}
  finally{clearInterval(heartbeat);release();}
@@ -151,9 +154,10 @@ for(const prefix of ['/admin/media-transfers','/companion/jobs']){
   let input;const j=await tx(async c=>{await lock(c,req.params.id);const j=await access(req,req.params.id,c);if(['done','publishing'].includes(j.state))return j;
    if(!['uploading','error'].includes(j.state))throw fail('El archivo ya se está verificando o fue cancelado',409);
    const dir=assetDirectory(j.id),size=await fileSize(j.id);if(!j.upload_size||size!==Number(j.upload_size))throw fail('Todavía faltan fragmentos del video',409);
-   let file=path.join(dir,'upload.part');try{await stat(file);}catch{file=path.join(dir,'video.mp4');}
+   const file=await receivedFile(j.id);if(!file)throw fail('El archivo recibido no está disponible',404);
    const fd=await open(file,'r');const head=Buffer.alloc(16);try{await fd.read(head,0,16,0);}finally{await fd.close();}if(head.toString('ascii',4,8)!=='ftyp'&&head.readUInt32BE(0)!==0x1a45dfa3)throw fail('El archivo debe ser un video MP4 o MKV válido');
-   const hash=createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);const checksum=hash.digest('hex');if(req.body.sha256&&req.body.sha256!==checksum)throw fail('El archivo recibido no coincide con el original');
+   // Every chunk is already checked before storage. Only reread a large file when the client supplies an additional full-file checksum.
+   let checksum=null;if(req.body.sha256){if(!/^[a-f0-9]{64}$/i.test(req.body.sha256))throw fail('La verificación del archivo no es válida');const hash=createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);checksum=hash.digest('hex');if(req.body.sha256.toLowerCase()!==checksum)throw fail('El archivo recibido no coincide con el original');}
    const probe=await probeFile(file);if(!probe.streams?.some(s=>s.codec_type==='video'&&s.width>0&&s.height>0))throw fail('El archivo no contiene un video válido',422);
    input={file,probe,checksum};await c.query("UPDATE media_import_jobs SET state='publishing',progress=0,processing=$2,error=NULL,updated_at=now() WHERE id=$1",[j.id,{phase:'queued',percent:0,totalSeconds:Number(probe.format?.duration)||null}]);return j;
   });

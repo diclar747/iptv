@@ -181,6 +181,12 @@ comprobación de origen y un código aleatorio por inicio.
 El asistente no usa cuentas ni cookies de YouTube y no omite sus verificaciones.
 La disponibilidad depende del video y de la conexión de la computadora.
 
+Las cargas no recodifican el video automáticamente: MP4 se publica sin modificar;
+MKV VP9/Opus se remultiplexa a WebM y MKV H.264/AAC a MP4 usando copia de paquetes.
+Otros MKV se conservan como originales. La reproducción depende del soporte de
+codecs de cada dispositivo. Los fragmentos siempre verifican SHA-256; el checksum
+del archivo completo se compara adicionalmente cuando lo envía el cliente.
+
 Pruebas: `node server/scripts/verify-media-transfers.mjs` y
 `node server/scripts/verify-companion.mjs`.
 
