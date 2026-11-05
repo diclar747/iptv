@@ -9,6 +9,7 @@ import Channels from './views/Channels.jsx';
 import Search from './views/Search.jsx';
 import Perfil from './views/Perfil.jsx';
 import Panel from './panel/Panel.jsx';
+import Radios from './views/Radios.jsx';
 import TitleModal from './ui/TitleModal.jsx';
 import Icon from './ui/Icon.jsx';
 
@@ -29,6 +30,7 @@ const NAV = [
   { k: 'peliculas', label: 'Películas', icon: 'film' },
   { k: 'series', label: 'Series', icon: 'series' },
   { k: 'tv', label: 'TV en Vivo', icon: 'live' },
+  { k: 'radios', label: 'Radios', icon: 'live' },
   { k: 'deportes', label: 'Deportes', icon: 'sports' },
   { k: 'milista', label: 'Mi Lista', icon: 'list' },
   { k: 'perfil', label: 'Perfil', icon: 'user' },
@@ -40,7 +42,7 @@ const BOTTOM = [
   { k: 'peliculas', label: 'Pelis', icon: 'film' },
   { k: 'series', label: 'Series', icon: 'series' },
   { k: 'tv', label: 'En Vivo', icon: 'live' },
-  { k: 'buscar', label: 'Buscar', icon: 'search' },
+  { k: 'radios', label: 'Radios', icon: 'live' },
 ];
 
 export default function App() {
@@ -66,6 +68,7 @@ export default function App() {
     }
   }, [user?.id]);
 
+  useEffect(()=>{if(!user)return;let alive=true;const q=new URLSearchParams(window.location.search),id=q.get('play'),type=q.get('type');if(id&&type==='channel')setModal({type:'channel',id,name:id});if(id&&type==='radio')api.radios().then(r=>{const radio=r.items.find(s=>s.id===id);if(alive&&radio)setModal({...radio,type:'radio'});}).catch(()=>{});return()=>{alive=false;};},[user?.id]);
   // Pantalla completa de toda la app.
   useEffect(() => {
     const onFs = () => setFs(Boolean(document.fullscreenElement));
@@ -114,6 +117,7 @@ export default function App() {
     : view === 'peliculas' ? <Catalog mode="movies" title="Películas" onOpen={onOpen} onAuthError={refresh} />
     : view === 'series' ? <Catalog mode="series" title="Series" onOpen={onOpen} onAuthError={refresh} />
     : view === 'milista' ? <Catalog mode="mylist" title="Mi Lista" onOpen={onOpen} onAuthError={refresh} />
+    : view === 'radios' ? <Radios onOpen={onOpen} />
     : view === 'tv' ? <Channels title="TV en Vivo" defaultCountry={geo} onOpen={onOpen} onAuthError={refresh} />
     : view === 'deportes' ? <Channels title="Deportes" fixedCategory="sports" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />
     : view === 'documentales' ? <Channels title="Documentales" fixedCategory="documentary" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />

@@ -19,6 +19,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
   const isMovie = item.type === 'movie';
   const isSerie = item.type === 'serie';
   const isChannel = item.type === 'channel';
+  const isRadio = item.type === 'radio';
   const embed = curatedEmbed(item.type, item.id);
 
   const [detail, setDetail] = useState(null); // ficha enriquecida (cine)
@@ -47,7 +48,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
 
   // Cargar contenido según tipo.
   useEffect(() => {
-    if (isMovie) {
+    if (isRadio) { const stream={url:item.url,referrer:item.source}; setStreams([stream]);setActiveStream(stream); } else if (isMovie) {
       api.movie(item.id).then((m) => {
         setDetail(m);
         if (m.available && m.streams?.length) { setStreams(m.streams); setActiveStream(m.streams[0]); }
@@ -66,7 +67,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
       if (direct) { setStreams([direct]); setActiveStream(direct); }
       else if (tc) { setStreams([{ url: tc }]); setActiveStream({ url: tc }); }
       else {
-        api.streams(item.id).then((r) => { setStreams(r.streams); if (r.streams[0]) setActiveStream(r.streams[0]); }).catch(handleErr);
+        api.streams(item.id).then((r) => { setDetail(r.channel || null); setStreams(r.streams); if (r.streams[0]) setActiveStream(r.streams[0]); }).catch(handleErr);
       }
     }
   }, [item.id]);
@@ -129,7 +130,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
   }
 
   const d = detail || {};
-  const title = item.title || item.name;
+  const title = detail?.name || item.title || item.name;
   const genres = (d.genres || []).join(' · ');
   const meta = isMovie ? [d.year || item.year, d.runtime ? `${d.runtime} min` : null, d.rating ? `★ ${d.rating}` : null].filter(Boolean).join('  ·  ')
     : isSerie ? [`${episodes.length} episodios`, d.year || item.year, d.status].filter(Boolean).join('  ·  ')
@@ -200,7 +201,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
           {d.director?.length > 0 && <p className="vod-credit"><b>Dirección:</b> {d.director.join(', ')}</p>}
           {d.cast?.length > 0 && <p className="vod-credit"><b>Reparto:</b> {d.cast.map((c) => c.name).join(', ')}</p>}
 
-          {isChannel && (
+          {(isChannel || isRadio) && (
             <WatchActions
               contentId={keyOf(item.type, item.id)} title={title}
               streams={streams} activeStream={activeStream}

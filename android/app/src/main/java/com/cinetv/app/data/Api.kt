@@ -95,6 +95,9 @@ interface Api {
     @POST("api/catalog/comments")
     suspend fun addComment(@Body body: CommentReq): Comment
 
+    @POST("api/catalog/comments/{id}/reaction")
+    suspend fun reactComment(@Path("id") id: String, @Body body: CommentReactionReq): CommentReactionResp
+
     @DELETE("api/catalog/comments/{id}")
     suspend fun deleteComment(@Path("id") id: String)
 
@@ -209,6 +212,9 @@ data class ChannelStreamsResp(val streams: List<Stream>? = null)
 data class SearchResp(val movies: List<Card>? = null, val series: List<Card>? = null)
 
 data class ReactReq(val type: String, val id: String, val value: Int = 1)
+data class CommentReactionReq(val emoji: String)
+data class CommentReactionResp(val reaction: String? = null, val reactions: Map<String,Int> = emptyMap())
+
 data class CommentReq(val type: String, val id: String, val body: String)
 data class LikeResp(val liked: Boolean = false, val likes: Int = 0, val disliked: Boolean = false, val dislikes: Int = 0)
 data class Comment(
@@ -217,6 +223,8 @@ data class Comment(
     val body: String? = null,
     val created: String? = null,
     val mine: Boolean = false,
+    val reaction: String? = null,
+    val reactions: Map<String,Int> = emptyMap(),
 )
 data class ReactionsResp(
     val dislikes: Int = 0,

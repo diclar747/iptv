@@ -97,7 +97,9 @@ export const api = {
 
   // Me gusta y comentarios (compartidos entre usuarios)
   reactions: (type, id) => get('/catalog/reactions', { type, id }),
-  toggleLike: (type, id) => post('/catalog/likes', { type, id }),
+  toggleLike: (type, id, value=1) => post('/catalog/likes', { type, id, value }),
+  reactComment: (id, emoji) => post(`/catalog/comments/${id}/reaction`, {emoji}),
+  radios: () => get('/radios'),
   addComment: (type, id, body) => post('/catalog/comments', { type, id, body }),
   deleteComment: (id) => del(`/catalog/comments/${id}`),
 

@@ -65,7 +65,7 @@ fun RadioNowPlaying(target: PlayTarget, playing: Boolean, connecting: Boolean, f
                 Icon(Icons.Default.VolumeUp, null, tint = Color(0xFF7D91AB), modifier = Modifier.size(18.dp))
             }
             Spacer(Modifier.height(14.dp))
-            VoteButtons(target.reactionType, target.reactionId)
+            SocialActions(target)
             Text("LA RADIO NOS CONECTA", color = Color(0xFF53677E), fontSize = 8.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 22.dp))
         }
     }

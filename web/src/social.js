@@ -7,7 +7,7 @@ import { api } from './api.js';
 function parse(ref) {
   const s = String(ref ?? '');
   const i = s.indexOf(':');
-  if (i < 0) return { type: 'channel', id: s };
+  if (i < 0 || !['channel','radio','movie','serie','series'].includes(s.slice(0,i))) return { type: 'channel', id: s };
   return { type: s.slice(0, i), id: s.slice(i + 1) };
 }
 
@@ -18,9 +18,9 @@ export async function getReactions(ref) {
 }
 
 // { liked, likes }
-export async function toggleLike(ref) {
+export async function toggleLike(ref, value=1) {
   const { type, id } = parse(ref);
-  return api.toggleLike(type, id);
+  return api.toggleLike(type, id, value);
 }
 
 // Devuelve el comentario recién creado.

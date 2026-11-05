@@ -138,8 +138,12 @@ fun VoteButtons(type: String, id: String) {
     var error by remember(type, id) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(type, id) {
-        try { state = Net.api.reactions(type, id) }
-        catch (_: Exception) { error = "No se pudieron cargar los votos" }
+        while (true) {
+            try { state = Net.api.reactions(type, id); error = null }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { error = "No se pudieron cargar los votos" }
+            delay(5000)
+        }
     }
     fun vote(value: Int) {
         busy = true; error = null

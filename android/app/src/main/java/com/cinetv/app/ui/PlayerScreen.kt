@@ -266,7 +266,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
         }
         if (!target.isAudio && controlsVisible && target.reactionId.isNotBlank()) {
             Box(Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 86.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xB30D1928))) {
-                VoteButtons(target.reactionType, target.reactionId)
+                SocialActions(target)
             }
         }
 

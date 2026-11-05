@@ -1,139 +1,25 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { getReactions, toggleLike, addComment, deleteComment } from './social.js';
-
-// Barra de acciones del visor, estilo "YouTube": me gusta, compartir, comentar
-// y selección de calidad. Me gusta y comentarios son compartidos (backend).
-export default function WatchActions({
-  contentId, title, streams, activeStream, onSelectStream,
-  onVerify, checking, activeCount, user, kind = 'canal',
-}) {
-  const [liked, setLiked] = useState(false);
-  const [likes, setLikes] = useState(0);
-  const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
-  const [shared, setShared] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    setShowComments(false);
-    setShared(false);
-    getReactions(contentId)
-      .then((r) => { if (!alive) return; setLiked(!!r.liked); setLikes(r.likes || 0); setComments(r.comments || []); })
-      .catch(() => { if (alive) { setLiked(false); setLikes(0); setComments([]); } });
-    return () => { alive = false; };
-  }, [contentId]);
-
-  // Opciones de calidad a partir de las señales (etiqueta amigable, sin URL).
-  const options = useMemo(() => {
-    const counts = {};
-    return streams.map((s, i) => {
-      const q = s.quality || 'SD';
-      counts[q] = (counts[q] || 0) + 1;
-      return { stream: s, index: i, label: counts[q] > 1 ? `${q} · ${counts[q]}` : q };
-    });
-  }, [streams]);
-
-  async function like() {
-    // Optimista: refleja el cambio al toque y confirma con el backend.
-    setLiked((v) => !v);
-    setLikes((n) => (liked ? Math.max(0, n - 1) : n + 1));
-    try { const r = await toggleLike(contentId); setLiked(!!r.liked); setLikes(r.likes || 0); }
-    catch { setLiked((v) => !v); setLikes((n) => (liked ? n + 1 : Math.max(0, n - 1))); }
-  }
-
-  async function share() {
-    const url = window.location.origin;
-    const data = { title: 'SEÑAL IPTV', text: `Mirá ${title} en SEÑAL`, url };
-    try {
-      if (navigator.share) await navigator.share(data);
-      else { await navigator.clipboard.writeText(url); setShared(true); setTimeout(() => setShared(false), 2000); }
-    } catch { /* cancelado */ }
-  }
-
-  async function submitComment(e) {
-    e.preventDefault();
-    const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    try {
-      const c = await addComment(contentId, text);
-      setComments((list) => [c, ...list]);
-      setDraft('');
-    } catch { /* reintentar */ }
-    setSending(false);
-  }
-
-  async function removeComment(id) {
-    try { await deleteComment(id); setComments((list) => list.filter((c) => c.id !== id)); }
-    catch { /* ignore */ }
-  }
-
-  return (
-    <div className="watch">
-      <div className="watch-bar">
-        <button className={`wbtn ${liked ? 'liked' : ''}`} onClick={like}>
-          <span className="wi">♥</span> Me gusta{likes ? ` · ${likes}` : ''}
-        </button>
-        <button className="wbtn" onClick={share}>
-          <span className="wi">↗</span> {shared ? 'Enlace copiado' : 'Compartir'}
-        </button>
-        <button className={`wbtn ${showComments ? 'on' : ''}`} onClick={() => setShowComments((v) => !v)}>
-          <span className="wi">💬</span> Comentar{comments.length ? ` (${comments.length})` : ''}
-        </button>
-      </div>
-
-      {options.length > 1 && (
-        <div className="quality">
-          <span className="quality-label">Calidad</span>
-          <div className="quality-pills">
-            {options.map((o) => (
-              <button
-                key={o.index}
-                className={`qpill ${activeStream?.url === o.stream.url ? 'on' : ''}`}
-                onClick={() => onSelectStream(o.stream)}
-                title={kind === 'canal' ? 'Elegir señal' : 'Elegir calidad'}
-              >
-                {o.label}
-                {o.stream.ok === true && <i className="qdot ok" />}
-                {o.stream.ok === false && <i className="qdot bad" />}
-              </button>
-            ))}
-          </div>
-          {onVerify && (
-            <button className="verify-min" onClick={onVerify} disabled={checking}>
-              {checking ? '…' : activeCount != null ? `${activeCount}/${streams.length} ok` : 'Verificar'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {showComments && (
-        <div className="comments">
-          <form className="comment-form" onSubmit={submitComment}>
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Escribí un comentario…"
-              maxLength={300}
-            />
-            <button className="verify" type="submit" disabled={!draft.trim()}>Enviar</button>
-          </form>
-          <ul className="comment-list">
-            {comments.map((c) => (
-              <li key={c.id}>
-                <span className="c-author">{c.author}</span>
-                <span className="c-text">{c.body}</span>
-                {c.mine && (
-                  <button className="c-del" title="Borrar" onClick={() => removeComment(c.id)}>×</button>
-                )}
-              </li>
-            ))}
-            {comments.length === 0 && <li className="c-empty">Sé el primero en comentar.</li>}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
+import React, {useEffect,useState} from 'react';
+import {getReactions,toggleLike,addComment,deleteComment} from './social.js';
+import {api} from './api.js';
+const emojis=['👍','❤️','😂','🎉','🙏'];
+export default function WatchActions({contentId,title,streams=[],activeStream,onSelectStream,onVerify,checking,user}) {
+ const [state,setState]=useState({comments:[]}),[open,setOpen]=useState(false),[draft,setDraft]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[sharing,setSharing]=useState(false);
+ useEffect(()=>{let alive=true;setState({comments:[]});setDraft('');setError('');const load=()=>getReactions(contentId).then(r=>{if(alive)setState(r);}).catch(()=>{if(alive)setError('No se pudo actualizar la conversación.');});load();const timer=setInterval(load,5000);return()=>{alive=false;clearInterval(timer);};},[contentId]);
+ const raw=String(contentId),colon=raw.indexOf(':'),prefixed=['channel','radio','movie','serie','series'].includes(raw.slice(0,colon));
+ const type=prefixed?raw.slice(0,colon):'channel',id=prefixed?raw.slice(colon+1):raw;
+ const url=`${window.location.origin}/?type=${encodeURIComponent(type)}&play=${encodeURIComponent(id)}`;
+ async function action(fn){if(busy)return;setBusy(true);setError('');try{await fn();}catch(e){setError(e.message||'No se guardó. Volvé a intentar.');}finally{setBusy(false);}}
+ async function vote(value){await action(async()=>{const r=await toggleLike(contentId,value);setState(s=>({...s,...r}));});}
+ async function share(){try{if(navigator.share)await navigator.share({title:`${title} · LiveTV`,text:`${type==='radio'?'Escuchá':'Mirá'} ${title} en LiveTV`,url});else setSharing(v=>!v);}catch(e){if(e.name!=='AbortError')setSharing(true);}}
+ return <section className="watch social-studio"><div className="watch-bar">
+ <button aria-label="Me gusta" aria-pressed={!!state.liked} disabled={busy} className={`wbtn ${state.liked?'liked':''}`} onClick={()=>vote(1)}>👍 {state.likes||0}</button>
+ <button aria-label="No me gusta" aria-pressed={!!state.disliked} disabled={busy} className={`wbtn ${state.disliked?'liked':''}`} onClick={()=>vote(-1)}>👎 {state.dislikes||0}</button>
+ <button className={`wbtn ${open?'on':''}`} onClick={()=>setOpen(v=>!v)}>💬 {state.comments.length} Comentarios</button><button className="wbtn" onClick={share}>↗ Compartir</button></div>
+ {sharing&&<div className="watch-bar"><a className="wbtn" href={`https://wa.me/?text=${encodeURIComponent(title+' · LiveTV '+url)}`} target="_blank" rel="noreferrer">WhatsApp</a><a className="wbtn" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`} target="_blank" rel="noreferrer">Facebook</a><button className="wbtn" onClick={()=>action(async()=>{await navigator.clipboard.writeText(url);setError('Enlace copiado');})}>Copiar enlace</button></div>}
+ {streams.length>1&&<div className="quality"><span>Calidad</span>{streams.map((s,i)=><button key={i} className={`qpill ${activeStream?.url===s.url?'on':''}`} onClick={()=>onSelectStream(s)}>{s.quality||'Señal'} {i+1}</button>)}{onVerify&&<button disabled={checking} onClick={onVerify}>Verificar</button>}</div>}
+ {error&&<p role="status">{error}</p>}
+ {open&&<div className="comments"><div className="social-heading"><strong>Conversación en vivo</strong><span>● Se actualiza automáticamente</span></div>
+ <form className="social-compose" onSubmit={e=>{e.preventDefault();action(async()=>{const c=await addComment(contentId,draft.trim());setState(s=>({...s,comments:[c,...s.comments]}));setDraft('');});}}><div className="social-avatar">{(user?.username||'Yo').slice(0,2).toUpperCase()}</div><textarea aria-label="Comentario" placeholder="Mandá un saludo o compartí lo que estás viviendo…" maxLength={500} value={draft} onChange={e=>setDraft(e.target.value)}/><div className="social-emojis">{['👋','❤️','😂','🎉','🙏','🇵🇾'].map(e=><button type="button" key={e} aria-label={`Agregar ${e}`} onClick={()=>setDraft(s=>(s+e).slice(0,500))}>{e}</button>)}<small>{draft.length}/500</small><button type="submit" disabled={busy||!draft.trim()}>Enviar ➤</button></div></form>
+ <ul className="social-feed">{state.comments.map(c=><li key={c.id}><div className="social-avatar">{(c.author||'?').slice(0,2).toUpperCase()}</div><div className="social-bubble"><strong>{c.author}</strong><time>{c.created?new Date(c.created).toLocaleString():''}</time><p>{c.body}</p><div className="social-emojis">{emojis.map(emoji=><button key={emoji} aria-label={`Reaccionar ${emoji}`} aria-pressed={c.reaction===emoji} disabled={busy} className={c.reaction===emoji?'selected':''} onClick={()=>action(async()=>{const r=await api.reactComment(c.id,emoji);setState(s=>({...s,comments:s.comments.map(v=>v.id===c.id?{...v,...r}:v)}));})}>{emoji} {c.reactions?.[emoji]||''}</button>)}{(c.mine||user?.role==='admin')&&<button disabled={busy} onClick={()=>action(async()=>{await deleteComment(c.id);setState(s=>({...s,comments:s.comments.filter(v=>v.id!==c.id)}));})}>Eliminar</button>}</div></div></li>)}</ul>{!state.comments.length&&<p>¡Sé el primero en mandar un saludo! 👋</p>}<small>Se muestran los últimos 100 comentarios.</small></div>}
+ </section>;
 }

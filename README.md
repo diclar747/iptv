@@ -225,3 +225,26 @@ de descarga y la firma de actualización. No es necesario volver a importar cana
 Validación: node --test server/src/checker.test.js server/src/radio.test.js
 server/src/desdeparaguay.test.js. Prueba de administración con PostgreSQL disponible:
 node server/scripts/verify-management.mjs (crea y limpia únicamente sus fixtures).
+
+## LiveTV 1.22 — Conversación y compartir
+
+Canales y radios incluyen pulgares positivo/negativo, conversación con avatar de
+iniciales y nombre del usuario, fecha, emojis y cinco reacciones por comentario.
+Una persona mantiene una reacción por comentario: tocarla de nuevo la quita y
+seleccionar otra la cambia. Los comentarios se actualizan cada cinco segundos
+con el panel abierto en Android; la web consulta mientras se muestra el visor.
+Se muestran los últimos cien. Cada usuario elimina sus propios comentarios y el
+administrador también puede moderarlos desde la web. Se limita el envío a un
+comentario cada cinco segundos por cuenta y a quinientos caracteres.
+
+Compartir abre el selector nativo (WhatsApp y demás aplicaciones instaladas).
+En web hay alternativas WhatsApp/Facebook/copiar enlace cuando el navegador no
+ofrece compartir. Los enlaces contienen el canal o radio y se abren en la web;
+si hace falta iniciar sesión, se conserva el destino. Se agregó la sección de
+radios a la web. Yvy Pytá 94.1 FM de Hohenau se incorporó al catálogo fijo con
+su señal comprobada; la dirección se obtuvo del directorio Online Radio Box,
+que identifica y enlaza el sitio oficial de la emisora.
+
+Desplegar backend y web juntos y publicar la APK 1.22. La tabla de reacciones a
+comentarios se crea al iniciar, conservando votos y comentarios anteriores.
+Validación social con PostgreSQL local: node server/scripts/verify-social.mjs.

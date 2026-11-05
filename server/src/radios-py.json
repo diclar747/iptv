@@ -5296,5 +5296,17 @@
     "alternativeSources": [
       "https://www.desdeparaguay.com/yvytu"
     ]
+  },
+  {
+    "id": "yvypyta-941",
+    "name": "Yvy Pytá 94.1 FM",
+    "url": "https://v.orlandohugo.com:10929/;",
+    "source": "https://yvypytadigital.com/",
+    "city": "Hohenau · Itapúa",
+    "tags": "Paraguay, música, noticias",
+    "codec": "MP3",
+    "logo": "https://cdn.onlineradiobox.com/img/l/1/127131.v4.png",
+    "available": true,
+    "checkedAt": "2026-11-05T13:22:39.388Z"
   }
 ]

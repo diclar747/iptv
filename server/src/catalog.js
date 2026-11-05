@@ -271,23 +271,26 @@ const ctype = (t) => (t === 'serie' ? 'series' : (['movie', 'series', 'channel',
 
 // Estado social de un contenido: cantidad de me gusta, si YO di me gusta, y comentarios.
 router.get('/catalog/reactions', async (req, res) => {
+  res.set('Cache-Control','private, no-store');
   const type = ctype(req.query.type);
   const id = String(req.query.id || '').slice(0, 200);
   if (!id) return res.status(400).json({ error: 'falta id' });
   const [likeRow, mineRow, comments] = await Promise.all([
     one(`SELECT count(*) FILTER (WHERE value=1)::int n, count(*) FILTER (WHERE value=-1)::int dislikes FROM content_likes WHERE content_type=$1 AND content_id=$2`, [type, id]),
     one(`SELECT value FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3`, [type, id, req.user.id]),
-    many(`SELECT c.id, c.body, c.created_at, u.username, (c.user_id=$3) AS mine
+    many(`SELECT c.id, c.body, c.created_at, u.username, (c.user_id=$3) AS mine,
+          COALESCE((SELECT jsonb_object_agg(emoji,n) FROM (SELECT emoji,count(*)::int n FROM comment_reactions WHERE comment_id=c.id GROUP BY emoji) r),'{}') reactions,
+          (SELECT emoji FROM comment_reactions WHERE comment_id=c.id AND user_id=$3) AS reaction
           FROM comments c JOIN users u ON u.id=c.user_id
           WHERE c.content_type=$1 AND c.content_id=$2 AND NOT c.hidden
-          ORDER BY c.created_at DESC LIMIT 100`, [type, id, req.user.id]),
+          ORDER BY c.created_at DESC, c.id DESC LIMIT 100`, [type, id, req.user.id]),
   ]);
   res.json({
     likes: likeRow?.n || 0,
     liked: mineRow?.value === 1,
     disliked: mineRow?.value === -1,
     dislikes: likeRow?.dislikes || 0,
-    comments: comments.map((c) => ({ id: String(c.id), author: c.username, body: c.body, created: c.created_at, mine: c.mine })),
+    comments: comments.map((c) => ({ id: String(c.id), author: c.username, body: c.body, created: c.created_at, mine: c.mine, reactions:c.reactions, reaction:c.reaction })),
   });
 });
 
@@ -314,11 +317,17 @@ router.post('/catalog/likes', async (req, res) => {
 router.post('/catalog/comments', async (req, res) => {
   const type = ctype(req.body?.type);
   const id = String(req.body?.id || '').slice(0, 200);
-  const body = String(req.body?.body || '').trim().slice(0, 500);
+  const body = String(req.body?.body || '').trim();
   if (!id || !body) return res.status(400).json({ error: 'faltan datos' });
-  const c = await one(
-    `INSERT INTO comments (user_id, content_type, content_id, body) VALUES ($1,$2,$3,$4)
-     RETURNING id, body, created_at`, [req.user.id, type, id, body]);
+  if(body.length>500)return res.status(400).json({error:'Máximo 500 caracteres por comentario'});
+  const c = await tx(async client=>{
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',['comment:'+req.user.id]);
+    const recent=await client.query("SELECT id FROM comments WHERE user_id=$1 AND created_at>now()-interval '5 seconds' LIMIT 1",[req.user.id]);
+    if(recent.rowCount)return null;
+    return (await client.query(`INSERT INTO comments (user_id, content_type, content_id, body) VALUES ($1,$2,$3,$4)
+     RETURNING id, body, created_at`, [req.user.id, type, id, body])).rows[0];
+  });
+  if(!c)return res.status(429).json({error:'Esperá unos segundos antes de enviar otro comentario'});
   res.json({ id: String(c.id), author: req.user.username, body: c.body, created: c.created_at, mine: true });
 });
 
@@ -332,4 +341,20 @@ router.delete('/catalog/comments/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/catalog/comments/:id/reaction', async (req,res) => {
+ const id=String(req.params.id), emoji=req.body?.emoji;
+ if(!/^\d{1,18}$/.test(id)||!['👍','❤️','😂','🎉','🙏'].includes(emoji))return res.status(400).json({error:'Reacción inválida'});
+ const result=await tx(async client=>{
+  const comment=await client.query('SELECT id FROM comments WHERE id=$1 AND NOT hidden FOR UPDATE',[id]);
+  if(!comment.rowCount)return null;
+  const old=await client.query('SELECT emoji FROM comment_reactions WHERE comment_id=$1 AND user_id=$2',[id,req.user.id]);
+  const reaction=old.rows[0]?.emoji===emoji?null:emoji;
+  if(reaction)await client.query('INSERT INTO comment_reactions(comment_id,user_id,emoji) VALUES($1,$2,$3) ON CONFLICT(comment_id,user_id) DO UPDATE SET emoji=EXCLUDED.emoji',[id,req.user.id,reaction]);
+  else await client.query('DELETE FROM comment_reactions WHERE comment_id=$1 AND user_id=$2',[id,req.user.id]);
+  const counts=await client.query('SELECT emoji,count(*)::int n FROM comment_reactions WHERE comment_id=$1 GROUP BY emoji',[id]);
+  return {reaction,reactions:Object.fromEntries(counts.rows.map(r=>[r.emoji,r.n]))};
+ });
+ if(!result)return res.status(404).json({error:'Comentario no encontrado'});
+ res.json(result);
+});
 export default router;

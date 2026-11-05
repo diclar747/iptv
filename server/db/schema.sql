@@ -285,6 +285,7 @@ CREATE TABLE IF NOT EXISTS comments (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_comments_item ON comments(content_type, content_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_user_created ON comments(user_id, created_at DESC);
 
 -- Importación / sincronización.
 CREATE TABLE IF NOT EXISTS sync_jobs (
@@ -337,3 +338,10 @@ CREATE TABLE IF NOT EXISTS channel_health (
   checked_at TIMESTAMPTZ NOT NULL DEFAULT now(), details JSONB NOT NULL DEFAULT '[]'
 );
 ALTER TABLE movies ADD COLUMN IF NOT EXISTS deleted BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS comment_reactions (
+ comment_id BIGINT NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+ user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ emoji TEXT NOT NULL CHECK (emoji IN ('👍','❤️','😂','🎉','🙏')),
+ PRIMARY KEY(comment_id,user_id)
+);
