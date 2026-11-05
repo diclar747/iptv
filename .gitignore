@@ -26,3 +26,5 @@ backup.sql
 # APK generado localmente
 /CineTV*.apk
 
+
+/LiveTV*.apk

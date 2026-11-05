@@ -128,7 +128,7 @@ export default function App() {
       {drawer && <div className="drawer-scrim" onClick={() => setDrawer(false)} />}
       <aside className={`sidebar ${drawer ? 'open' : ''}`}>
         <div className="side-head">
-          <div className="side-logo"><span className="logo">▶</span><span className="side-brand">CineTV</span></div>
+          <div className="side-logo"><span className="logo">▶</span><span className="side-brand">LiveTV</span></div>
           <button className="side-collapse" onClick={toggleCollapsed}
             title={collapsed ? 'Expandir menú' : 'Minimizar menú'}
             aria-label={collapsed ? 'Expandir menú' : 'Minimizar menú'}>

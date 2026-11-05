@@ -78,6 +78,7 @@ self.addEventListener('fetch', (event) => {
   const sameOrigin = url.origin === self.location.origin;
 
   // Vídeo y URL de cast: nunca cachear (en vivo / firmado).
+  if (url.pathname.endsWith('.apk')) return;
   if (url.pathname.startsWith('/api/stream') || url.pathname.startsWith('/api/cast-url')) return;
 
   // Listas de canales/meta/home: instantáneo con actualización en 2º plano.

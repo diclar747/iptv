@@ -18,6 +18,7 @@ import { initSchema, ping } from './pg.js';
 import { attachUser, requireAuth, requireActiveViewer } from './auth.js';
 import accountsRouter, { ensureSeed } from './accounts.js';
 import catalogRouter from './catalog.js';
+import radioRouter from './radio.js';
 import catalogAdminRouter from './catalog-admin.js';
 import manualChannelsRouter, { manualCards, manualStreams, isManualId, ensureManualSeed } from './manualChannels.js';
 import { ensureVodSeed } from './vod.js';
@@ -45,13 +46,14 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 18, versionName: '1.17', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 19, versionName: '1.18', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
 app.use('/api', accountsRouter);
 // Catálogo de películas y series (metadatos TheTVDB) + panel admin.
 app.use('/api', catalogRouter);
+app.use('/api', radioRouter);
 app.use('/api', catalogAdminRouter);
 // Canales manuales cargados por el admin (CRUD admin).
 app.use('/api', manualChannelsRouter);

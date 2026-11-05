@@ -32,7 +32,7 @@ export default function Login() {
       <form className="login-card" onSubmit={submit}>
         <div className="login-brand">
           <span className="tally" aria-hidden="true" />
-          <span className="wordmark">CineTV</span>
+          <span className="wordmark">LiveTV</span>
         </div>
         <p className="login-sub">Tu cine, tus series y toda la TV. En un solo lugar.</p>
 

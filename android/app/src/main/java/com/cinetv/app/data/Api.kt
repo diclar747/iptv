@@ -10,6 +10,9 @@ import retrofit2.http.Query
 
 
 interface Api {
+    @GET("api/radios")
+    suspend fun radios(): RadiosResp
+
     @POST("api/auth/login")
     suspend fun login(@Body body: LoginReq): UserResp
 
@@ -200,9 +203,9 @@ data class FavReq(val type: String, val id: Long)
 data class ChannelStreamsResp(val streams: List<Stream>? = null)
 data class SearchResp(val movies: List<Card>? = null, val series: List<Card>? = null)
 
-data class ReactReq(val type: String, val id: String)
+data class ReactReq(val type: String, val id: String, val value: Int = 1)
 data class CommentReq(val type: String, val id: String, val body: String)
-data class LikeResp(val liked: Boolean = false, val likes: Int = 0)
+data class LikeResp(val liked: Boolean = false, val likes: Int = 0, val disliked: Boolean = false, val dislikes: Int = 0)
 data class Comment(
     val id: String = "",
     val author: String? = null,
@@ -211,7 +214,12 @@ data class Comment(
     val mine: Boolean = false,
 )
 data class ReactionsResp(
+    val dislikes: Int = 0,
+    val disliked: Boolean = false,
     val likes: Int = 0,
     val liked: Boolean = false,
     val comments: List<Comment> = emptyList(),
 )
+
+data class RadioStation(val id: String, val name: String, val url: String, val city: String = "", val tags: String = "", val codec: String = "", val source: String? = null, val logo: String? = null)
+data class RadiosResp(val items: List<RadioStation> = emptyList(), val total: Int = 0)

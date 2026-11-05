@@ -77,7 +77,7 @@ class MainActivity : AppCompatActivity() {
                         AlertDialog(
                             onDismissRequest = { update = null },
                             title = { Text("Nueva versión disponible") },
-                            text = { Text("Hay una versión nueva de CineTV (${u.versionName}). ¿Querés actualizar?") },
+                            text = { Text("Hay una versión nueva de LiveTV (${u.versionName}). ¿Querés actualizar?") },
                             confirmButton = {
                                 TextButton(onClick = {
                                     val url = u.url ?: "https://live.cd.com.py/cinetv.apk"

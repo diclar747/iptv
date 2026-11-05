@@ -7,7 +7,7 @@ import './landing.css';
 // demo sigue disponible para probar.
 
 const WA_NUMBER = '595994860527'; // +595 994 860 527
-const WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('¡Hola! Quiero suscribirme a CineTV 📺')}`;
+const WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('¡Hola! Quiero suscribirme a LiveTV 📺')}`;
 const PRICE = '25.000';
 // APK servido desde nuestro propio servidor (web/public/cinetv.apk).
 const APK_URL = '/cinetv.apk';
@@ -105,7 +105,7 @@ function AuthModal({ open, mode, onMode, onClose, prefill }) {
     <div className="lp-modal" onClick={onClose}>
       <form className="lp-auth" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <button type="button" className="lp-auth-x" onClick={onClose} aria-label="Cerrar">✕</button>
-        <div className="lp-auth-brand"><span className="lp-dot" />CineTV</div>
+        <div className="lp-auth-brand"><span className="lp-dot" />LiveTV</div>
         <div className="lp-auth-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={!isReg} className={!isReg ? 'on' : ''} onClick={() => onMode('login')}>Iniciar sesión</button>
           <button type="button" role="tab" aria-selected={isReg} className={isReg ? 'on' : ''} onClick={() => onMode('register')}>Crear cuenta</button>
@@ -157,13 +157,13 @@ function WhatsFab() {
 // Barra para compartir la página en redes.
 function ShareBar() {
   const url = (typeof window !== 'undefined' && window.location.origin) || 'https://live.cd.com.py';
-  const text = 'Mirá toda la TV del mundo en vivo con CineTV 📺';
+  const text = 'Mirá toda la TV del mundo en vivo con LiveTV 📺';
   const enc = encodeURIComponent;
   const [copied, setCopied] = useState(false);
 
   async function share() {
     try {
-      if (navigator.share) { await navigator.share({ title: 'CineTV', text, url }); return; }
+      if (navigator.share) { await navigator.share({ title: 'LiveTV', text, url }); return; }
     } catch { /* usuario canceló */ }
     copy();
   }
@@ -180,7 +180,7 @@ function ShareBar() {
 
   return (
     <div className="lp-share">
-      <span className="lp-share-lbl">Compartí CineTV</span>
+      <span className="lp-share-lbl">Compartí LiveTV</span>
       <div className="lp-share-row">
         {links.map((l) => (
           <a key={l.k} className={`lp-share-btn lp-sh-${l.k}`} href={l.href} target="_blank" rel="noopener noreferrer" aria-label={`Compartir en ${l.label}`}>
@@ -258,7 +258,7 @@ export default function Landing() {
       {/* NAV */}
       <header className={`lp-nav ${scrolled ? 'solid' : ''}`}>
         <div className="lp-nav-in">
-          <div className="lp-logo"><span className="lp-dot" />CineTV</div>
+          <div className="lp-logo"><span className="lp-dot" />LiveTV</div>
           <div className="lp-nav-actions">
             <a className="lp-nav-link" href="#planes">Planes</a>
             <button className="lp-btn lp-btn-red" onClick={() => openAuth('login')}>Iniciar sesión</button>
@@ -322,7 +322,7 @@ export default function Landing() {
       {/* FEATURES */}
       <section className="lp-sec">
         <div className="lp-sec-head" ref={reveal}>
-          <span className="lp-eyebrow">Por qué CineTV</span>
+          <span className="lp-eyebrow">Por qué LiveTV</span>
           <h2 className="lp-h2">Todo lo que mirás, en un solo lugar</h2>
         </div>
         <div className="lp-feats">
@@ -344,7 +344,7 @@ export default function Landing() {
         </div>
         <div className="lp-plan" ref={reveal}>
           <div className="lp-plan-top">
-            <span className="lp-plan-name">Plan CineTV</span>
+            <span className="lp-plan-name">Plan LiveTV</span>
             <div className="lp-plan-price"><span className="lp-plan-amt">{PRICE}</span><span className="lp-plan-cur">Gs<br />/ mes</span></div>
           </div>
           <ul className="lp-plan-list">
@@ -383,7 +383,7 @@ export default function Landing() {
       {/* FOOTER */}
       <footer className="lp-foot">
         <div className="lp-foot-in">
-          <div className="lp-logo"><span className="lp-dot" />CineTV</div>
+          <div className="lp-logo"><span className="lp-dot" />LiveTV</div>
           <p className="lp-foot-tag">Toda la TV del mundo, en vivo.</p>
           <div className="lp-foot-links">
             <button className="lp-link" onClick={() => openAuth('login')}>Iniciar sesión</button>
@@ -392,7 +392,7 @@ export default function Landing() {
             <a className="lp-link" href="#planes">Planes</a>
             <a className="lp-link" href={APK_URL} download>Descargar app{appVer ? ` (v${appVer})` : ''}</a>
           </div>
-          <p className="lp-foot-copy">© {new Date().getFullYear()} CineTV · Hecho en Paraguay 🇵🇾</p>
+          <p className="lp-foot-copy">© {new Date().getFullYear()} LiveTV · Hecho en Paraguay 🇵🇾</p>
         </div>
       </footer>
 

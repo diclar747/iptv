@@ -211,7 +211,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
     }
 
     DisposableEffect(Unit) {
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        activity?.requestedOrientation = if (target.isAudio) ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         activity?.window?.decorView?.let { hideSystemBars(it) }
         onDispose {
             exoPlayer.release()
@@ -236,6 +236,15 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
             },
             update = { it.player = currentPlayer }
         )
+
+        if (target.isAudio) {
+            Text(target.title, color = Color.White, modifier = Modifier.align(Alignment.Center), fontSize = 24.sp)
+        }
+        if (target.reactionId.isNotBlank()) {
+            Box(Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 100.dp).background(Color(0xDD101217))) {
+                VoteButtons(target.reactionType, target.reactionId)
+            }
+        }
 
         // Aviso de reconexión (solo cuando estamos reintentando tras un corte).
         if (reconnecting) {
@@ -265,6 +274,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
                     }
                 )
             }
+            TvSettingsButton()
             IconButton(onClick = onClose) {
                 Icon(Icons.Filled.Close, contentDescription = "Cerrar", tint = Color.White)
             }

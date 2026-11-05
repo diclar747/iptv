@@ -44,7 +44,7 @@ class PlaybackService : android.app.Service() {
                 .setSmallIconResourceId(android.R.drawable.ic_media_play)
                 .setMediaDescriptionAdapter(object : PlayerNotificationManager.MediaDescriptionAdapter {
                     override fun getCurrentContentTitle(player: Player): CharSequence =
-                        PlaybackHolder.title ?: "CineTV"
+                        PlaybackHolder.title ?: "LiveTV"
                     override fun createCurrentContentIntent(player: Player): PendingIntent? {
                         val i = Intent(this@PlaybackService, MainActivity::class.java)
                             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)

@@ -125,7 +125,7 @@ export default function Perfil({ user, onLogout, onNavigate, onAuthError }) {
         <div className="profile-card">
           <h3 className="card-title">Mis datos</h3>
           <label className="fld">Nombre / Negocio
-            <input value={form.displayName} onChange={upd('displayName')} placeholder="Ej: CineTV Paraguay" /></label>
+            <input value={form.displayName} onChange={upd('displayName')} placeholder="Ej: LiveTV Paraguay" /></label>
           <label className="fld">Teléfono / WhatsApp
             <input value={form.phone} onChange={upd('phone')} placeholder="Ej: 0981 123 456" /></label>
           <label className="fld">Dirección
@@ -228,7 +228,7 @@ export default function Perfil({ user, onLogout, onNavigate, onAuthError }) {
 
       {p.role === 'client' && (
         <div className="profile-card">
-          <h3 className="card-title">¿Querés vender CineTV?</h3>
+          <h3 className="card-title">¿Querés vender LiveTV?</h3>
           <p className="muted">Convertite en distribuidor: comprás saldo y revendés a tus propios clientes al precio que quieras.</p>
           {upReq
             ? <div className="profile-msg">Solicitud enviada ⏳ — esperando aprobación del administrador.</div>

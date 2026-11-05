@@ -2,7 +2,7 @@
 // vive en media_sources y solo se ofrece "Ver ahora" cuando hay fuente autorizada
 // (o el stream_url del contenido de dominio público). Reemplaza al viejo vod.js.
 import express from 'express';
-import { query, one, many } from './pg.js';
+import { query, one, many, tx } from './pg.js';
 import { requireActiveViewer } from './auth.js';
 import { getProvider } from './catalog/index.js';
 
@@ -267,7 +267,7 @@ router.put('/catalog/progress', async (req, res) => {
 
 // --- Me gusta y comentarios (compartidos entre usuarios) ---
 // content_id es texto: canales ("Telefuturo.py"), pelis/series (id numérico en texto).
-const ctype = (t) => (t === 'serie' ? 'series' : (['movie', 'series', 'channel'].includes(t) ? t : 'channel'));
+const ctype = (t) => (t === 'serie' ? 'series' : (['movie', 'series', 'channel', 'radio'].includes(t) ? t : 'channel'));
 
 // Estado social de un contenido: cantidad de me gusta, si YO di me gusta, y comentarios.
 router.get('/catalog/reactions', async (req, res) => {
@@ -275,8 +275,8 @@ router.get('/catalog/reactions', async (req, res) => {
   const id = String(req.query.id || '').slice(0, 200);
   if (!id) return res.status(400).json({ error: 'falta id' });
   const [likeRow, mineRow, comments] = await Promise.all([
-    one(`SELECT count(*)::int n FROM content_likes WHERE content_type=$1 AND content_id=$2`, [type, id]),
-    one(`SELECT 1 FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3`, [type, id, req.user.id]),
+    one(`SELECT count(*) FILTER (WHERE value=1)::int n, count(*) FILTER (WHERE value=-1)::int dislikes FROM content_likes WHERE content_type=$1 AND content_id=$2`, [type, id]),
+    one(`SELECT value FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3`, [type, id, req.user.id]),
     many(`SELECT c.id, c.body, c.created_at, u.username, (c.user_id=$3) AS mine
           FROM comments c JOIN users u ON u.id=c.user_id
           WHERE c.content_type=$1 AND c.content_id=$2 AND NOT c.hidden
@@ -284,7 +284,9 @@ router.get('/catalog/reactions', async (req, res) => {
   ]);
   res.json({
     likes: likeRow?.n || 0,
-    liked: !!mineRow,
+    liked: mineRow?.value === 1,
+    disliked: mineRow?.value === -1,
+    dislikes: likeRow?.dislikes || 0,
     comments: comments.map((c) => ({ id: String(c.id), author: c.username, body: c.body, created: c.created_at, mine: c.mine })),
   });
 });
@@ -294,14 +296,18 @@ router.post('/catalog/likes', async (req, res) => {
   const type = ctype(req.body?.type);
   const id = String(req.body?.id || '').slice(0, 200);
   if (!id) return res.status(400).json({ error: 'falta id' });
-  const existing = await one(`SELECT 1 FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3`, [type, id, req.user.id]);
-  if (existing) {
-    await query(`DELETE FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3`, [type, id, req.user.id]);
-  } else {
-    await query(`INSERT INTO content_likes (user_id, content_type, content_id) VALUES ($3,$1,$2) ON CONFLICT DO NOTHING`, [type, id, req.user.id]);
-  }
-  const n = await one(`SELECT count(*)::int n FROM content_likes WHERE content_type=$1 AND content_id=$2`, [type, id]);
-  res.json({ liked: !existing, likes: n?.n || 0 });
+  const vote = req.body?.value === undefined ? 1 : req.body.value;
+  if (![1, -1].includes(vote)) return res.status(400).json({ error: 'Voto inválido' });
+  const result = await tx(async client => {
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [req.user.id + ':' + type + ':' + id]);
+    const old = await client.query('SELECT value FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3', [type,id,req.user.id]);
+    const value = old.rows[0]?.value === vote ? 0 : vote;
+    if (!value) await client.query('DELETE FROM content_likes WHERE content_type=$1 AND content_id=$2 AND user_id=$3',[type,id,req.user.id]);
+    else await client.query('INSERT INTO content_likes (user_id,content_type,content_id,value) VALUES ($3,$1,$2,$4) ON CONFLICT (user_id,content_type,content_id) DO UPDATE SET value=EXCLUDED.value',[type,id,req.user.id,value]);
+    const counts=await client.query('SELECT count(*) FILTER (WHERE value=1)::int likes, count(*) FILTER (WHERE value=-1)::int dislikes FROM content_likes WHERE content_type=$1 AND content_id=$2',[type,id]);
+    return { ...counts.rows[0], liked: value===1, disliked: value===-1 };
+  });
+  res.json(result);
 });
 
 // Publica un comentario.

@@ -325,3 +325,6 @@ CREATE TABLE IF NOT EXISTS manual_channels (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_manual_channels_cc ON manual_channels(country, category) WHERE enabled;
+-- Un voto por usuario y contenido: positivo o negativo.
+
+ALTER TABLE content_likes ADD COLUMN IF NOT EXISTS value SMALLINT NOT NULL DEFAULT 1 CHECK (value IN (-1,1));

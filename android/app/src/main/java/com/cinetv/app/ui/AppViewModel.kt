@@ -20,6 +20,8 @@ data class PlayTarget(
     val rawUrl: String, val ua: String? = null, val ref: String? = null,
     // En vivo (canal): reintentar/reanudar indefinidamente. Película: no.
     val isLive: Boolean = false,
+    val reactionType: String = "channel", val reactionId: String = "",
+    val isAudio: Boolean = false,
 )
 
 // Detalle abierto (ficha de película o serie).
@@ -131,7 +133,7 @@ class AppViewModel : ViewModel() {
             busy = true; error = null
             try {
                 val s = api.channelStreams(card.id).streams?.firstOrNull { !it.url.isNullOrBlank() }
-                if (s?.url != null) startPlay(s.url!!, card.displayTitle, s.userAgent, s.referrer, isLive = true)
+                if (s?.url != null) startPlay(s.url!!, card.displayTitle, s.userAgent, s.referrer, isLive = true, reactionType = "channel", reactionId = card.id)
                 else error = "Canal sin señal disponible"
             } catch (e: Exception) {
                 error = humanize(e)
@@ -143,7 +145,7 @@ class AppViewModel : ViewModel() {
     fun playMovie(d: MovieDetail) {
         val s = d.streams?.firstOrNull { !it.url.isNullOrBlank() }
         val url = s?.url ?: d.streamUrl
-        if (url != null) startPlay(url, d.title ?: "Película", s?.userAgent, s?.referrer, isLive = false)
+        if (url != null) startPlay(url, d.title ?: "Película", s?.userAgent, s?.referrer, isLive = false, reactionType = "movie", reactionId = d.id.toString())
     }
 
     fun playEpisodeUrl(url: String, title: String) = startPlay(url, title, null, null, isLive = false)
@@ -154,10 +156,15 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    private fun startPlay(rawUrl: String, title: String, ua: String?, ref: String?, isLive: Boolean) {
+    private fun startPlay(rawUrl: String, title: String, ua: String?, ref: String?, isLive: Boolean, reactionType: String = "series", reactionId: String = (detail as? Detail.Serie)?.d?.id?.toString() ?: "") {
         val proxied = Net.proxied(rawUrl, ua, ref)
         val mime = if (Net.isHls(rawUrl)) "application/x-mpegURL" else "video/mp4"
-        play = PlayTarget(proxied, mime, title, rawUrl, ua, ref, isLive)
+        play = PlayTarget(proxied, mime, title, rawUrl, ua, ref, isLive, reactionType, reactionId)
+    }
+
+    fun playRadio(station: com.cinetv.app.data.RadioStation) {
+        val mime = if (Net.isHls(station.url)) "application/x-mpegURL" else if (station.codec.contains("AAC", true)) "audio/aac" else if (station.codec.contains("OGG", true) || station.codec.contains("OPUS", true)) "audio/ogg" else "audio/mpeg"
+        play = PlayTarget(Net.proxied(station.url, ref = station.source), mime, station.name, station.url, ref = station.source, isLive = true, reactionType = "radio", reactionId = station.id, isAudio = true)
     }
 
     fun closePlayer() { play = null }

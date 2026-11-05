@@ -153,3 +153,20 @@ El catálogo muestra películas con fuente de reproducción. Se retiró la integ
 de Cinecalidad y la importación de fichas sin video. Al iniciar el backend, las
 fichas importadas sin stream ni fuente vinculada quedan ocultas; sus datos se
 conservan y los títulos con fuente mantienen su visibilidad.
+
+## LiveTV APK 1.18
+
+- Pestaña Radios: emisoras paraguayas, búsqueda por nombre/ciudad, reproducción
+  de audio y votos. Incluye las señales oficiales de San Fernando y Triunfo.
+- API autenticada: GET /api/radios?search=nombre. Combina una lista verificada
+  con Radio Browser, elimina duplicados y conserva la lista local si falla el
+  directorio. Los enlaces pueden dejar de funcionar; no cubre todas las radios
+  del país. Actualizar señales: npm run import:radios.
+- Los votos usan POST /api/catalog/likes con value 1 o -1 (omitir value conserva
+  compatibilidad con las APK anteriores). Repetir el voto lo quita; cambiarlo
+  reemplaza la elección. La migración conserva los votos positivos existentes.
+- Botón TV: búsqueda Google Cast, configuración Wi-Fi y acceso a transmisión de
+  pantalla de Android para dispositivos compatibles. Teléfono y TV deben estar
+  en la misma red sin aislamiento. Miracast y Google Cast son métodos diferentes.
+- Desplegar backend y APK juntos: el inicio aplica la migración SQL; la APK
+  actualizable se publica en /cinetv.apk para mantener el enlace existente.

@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -109,7 +110,7 @@ private val Panel = Color(0xFF0A0B10)
 @Composable
 fun SplashLoading() {
     Box(Modifier.fillMaxSize().background(Bg), contentAlignment = Alignment.Center) {
-        Text("CineTV", color = Red, fontSize = 36.sp, fontWeight = FontWeight.Black)
+        Text("LiveTV", color = Red, fontSize = 36.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -119,7 +120,7 @@ fun LoginScreen(vm: AppViewModel) {
     var p by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize().background(Bg).padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Text("CineTV", color = Red, fontSize = 42.sp, fontWeight = FontWeight.Black)
+            Text("LiveTV", color = Red, fontSize = 42.sp, fontWeight = FontWeight.Black)
             Text("Toda la TV del mundo, en vivo.", color = Muted, fontSize = 14.sp)
             Spacer(Modifier.height(24.dp))
             OutlinedTextField(u, { u = it }, label = { Text("Usuario") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -146,7 +147,7 @@ fun MainScreen(vm: AppViewModel) {
     var panelOpen by remember { mutableStateOf(false) }
     val tabs = listOf(
         "Inicio" to Icons.Filled.Home, "Pelis" to Icons.Filled.Movie,
-        "Series" to Icons.Filled.Tv, "En Vivo" to Icons.Filled.LiveTv, "Perfil" to Icons.Filled.Person,
+        "Series" to Icons.Filled.Tv, "En Vivo" to Icons.Filled.LiveTv, "Radios" to Icons.Filled.Radio, "Perfil" to Icons.Filled.Person,
     )
     Scaffold(
         containerColor = Bg,
@@ -165,12 +166,13 @@ fun MainScreen(vm: AppViewModel) {
         }
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
-            if (tab != 4) TopBar(vm.user, onSearch = { searchOpen = true }, onProfile = { tab = 4 })
+            if (tab != 5) TopBar(vm.user, onSearch = { searchOpen = true }, onProfile = { tab = 5 })
             when (tab) {
                 0 -> HomeTab(vm)
                 1 -> MoviesTab(vm)
                 2 -> GridTab(vm) { Net.api.seriesList() }
                 3 -> LiveTab(vm)
+                4 -> RadiosTab(vm)
                 else -> ProfileScreen(vm, onOpenPanel = { panelOpen = true })
             }
         }
@@ -186,9 +188,10 @@ private fun TopBar(user: User?, onSearch: () -> Unit, onProfile: () -> Unit) {
         Modifier.fillMaxWidth().background(Bg).padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("CineTV", color = Red, fontSize = 24.sp, fontWeight = FontWeight.Black)
+        Text("LiveTV", color = Red, fontSize = 24.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.weight(1f))
         CastButton()
+        TvSettingsButton()
         IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, "Buscar", tint = Color.White) }
         Box(
             Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF3A3F49)).clickable { onProfile() },
@@ -708,7 +711,7 @@ private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
 
                 // Cliente: convertirse en distribuidor
                 if (u.role == "client") {
-                    Text("¿Querés vender CineTV?", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("¿Querés vender LiveTV?", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Text("Convertite en distribuidor: comprás saldo y revendés a tus clientes al precio que quieras.",
                         color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
                     if (upPending) {
@@ -766,8 +769,6 @@ private fun roleLabel(r: String?) = when (r) {
 private fun SocialSection(vm: AppViewModel, type: String, id: String, title: String, allowList: Boolean) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var liked by remember(id) { mutableStateOf(false) }
-    var likes by remember(id) { mutableStateOf(0) }
     var inList by remember(id) { mutableStateOf(false) }
     var comments by remember(id) { mutableStateOf<List<Comment>>(emptyList()) }
     var draft by remember(id) { mutableStateOf("") }
@@ -776,30 +777,20 @@ private fun SocialSection(vm: AppViewModel, type: String, id: String, title: Str
     LaunchedEffect(id) {
         try {
             val r = Net.api.reactions(type, id)
-            liked = r.liked; likes = r.likes; comments = r.comments
+            comments = r.comments
         } catch (_: Exception) { /* sin reacciones */ }
     }
 
+    VoteButtons(type, id)
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
-        ActionBtn(
-            if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            if (likes > 0) likes.toString() else "Me gusta", if (liked) Red else Color.White
-        ) {
-            val was = liked
-            liked = !was; likes = if (was) (likes - 1).coerceAtLeast(0) else likes + 1
-            scope.launch {
-                try { val r = Net.api.toggleLike(ReactReq(type, id)); liked = r.liked; likes = r.likes }
-                catch (_: Exception) { liked = was; likes = if (was) likes + 1 else (likes - 1).coerceAtLeast(0) }
-            }
-        }
         if (allowList) {
             ActionBtn(Icons.Filled.Add, if (inList) "✓ Mi Lista" else "Mi Lista", if (inList) Red else Color.White) {
                 if (!inList) { id.toLongOrNull()?.let { vm.addFavorite(if (type == "serie") "serie" else "movie", it) }; inList = true }
             }
         }
         ActionBtn(Icons.Filled.Share, "Compartir", Color.White) {
-            val txt = if (type == "channel") "Mirá $title en vivo por CineTV 📺 https://live.cd.com.py"
-                      else "Mirá \"$title\" en CineTV 🎬 https://live.cd.com.py"
+            val txt = if (type == "channel") "Mirá $title en vivo por LiveTV 📺 https://live.cd.com.py"
+                      else "Mirá \"$title\" en LiveTV 🎬 https://live.cd.com.py"
             val i = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                 this.type = "text/plain"
                 putExtra(android.content.Intent.EXTRA_TEXT, txt)
@@ -933,7 +924,7 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
                         ) {
                             Icon(Icons.Filled.PlayArrow, null); Text("  Ver en vivo", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
-                        Text("Señal en vivo vía CineTV", color = Color(0xFF5C6879), fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 2.dp))
+                        Text("Señal en vivo vía LiveTV", color = Color(0xFF5C6879), fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 2.dp))
                         SocialSection(vm, "channel", c.id, c.displayTitle, allowList = false)
                     }
                 }
