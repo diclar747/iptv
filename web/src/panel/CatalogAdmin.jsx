@@ -1,3 +1,4 @@
+import YoutubeImporter from './YoutubeImporter.jsx';
 import MovieManager from './MovieManager.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
@@ -5,6 +6,7 @@ import { api } from '../api.js';
 // Super Admin — Gestión de películas y series: conexión con TheTVDB, importación
 // (start/stop/resume), sincronización, estadísticas y errores.
 export default function CatalogAdmin() {
+  const [mediaRevision,setMediaRevision]=useState(0);
   const [st, setSt] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [msg, setMsg] = useState(null);
@@ -35,7 +37,8 @@ export default function CatalogAdmin() {
 
   return (
     <div className="cat-admin">
-      <MovieManager />
+      <YoutubeImporter onPublished={()=>setMediaRevision(v=>v+1)} />
+      <MovieManager refreshToken={mediaRevision} />
       <div className="stat-grid compact">
         <Stat label="Películas" value={stats.movies} />
         <Stat label="Series" value={stats.series} />

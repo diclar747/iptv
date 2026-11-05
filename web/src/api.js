@@ -82,6 +82,12 @@ export const api = {
   watchStop: (sessionId) => post('/watch/stop', { sessionId }),
 
   // Catálogo de películas y series (metadatos TheTVDB + dominio público)
+  youtubeImports: () => get('/admin/youtube'),
+  youtubePreview: (url) => post('/admin/youtube/preview',{url}),
+  youtubeImport: (body) => post('/admin/youtube',body),
+  cancelYoutubeImport: (id) => post(`/admin/youtube/${id}/cancel`,{}),
+  mediaCategories: () => get('/admin/media-categories'),
+  createMediaCategory: (name) => post('/admin/media-categories',{name}),
   catalogHome: () => get('/catalog/home'),
   catalogMeta: () => get('/catalog/meta'),
   catalogSearch: (q) => get('/catalog/search', { q }),

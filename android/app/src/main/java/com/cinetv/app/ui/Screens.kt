@@ -109,9 +109,7 @@ private val Panel = Color(0xFF0A0B10)
 
 @Composable
 fun SplashLoading() {
-    Box(Modifier.fillMaxSize().background(Bg), contentAlignment = Alignment.Center) {
-        Text("LiveTV", color = Red, fontSize = 36.sp, fontWeight = FontWeight.Black)
-    }
+    LiveTVIntro()
 }
 
 @Composable
@@ -333,14 +331,15 @@ private fun Banner(vm: AppViewModel) {
 @Composable
 private fun MoviesTab(vm: AppViewModel) {
     var cat by remember { mutableStateOf<String?>(null) }
-    val cats = vm.meta?.categories.orEmpty()
+    var cats by remember{mutableStateOf<List<com.cinetv.app.data.MovieCategory>>(emptyList())}
+    LaunchedEffect(Unit){try{cats=Net.api.movieCategories().genres}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){}}
     GridTab(vm, key = cat, header = {
         Column {
             if (vm.featured.isNotEmpty()) Banner(vm)
             if (cats.isNotEmpty()) {
                 LazyRow(contentPadding = PaddingValues(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     item { Chip("Todas", cat == null) { cat = null } }
-                    items(cats) { c -> Chip(c.name ?: c.id ?: "", cat == c.id) { cat = c.id } }
+                    items(cats) { c -> Chip(c.label ?: c.value, cat == c.value) { cat = c.value } }
                 }
             }
         }
@@ -786,7 +785,11 @@ private fun DetailOverlay(vm: AppViewModel, detail: Detail) {
                             } else Text("Próximamente — sin fuente disponible", color = Muted, fontSize = 13.sp)
                         }
                         d.overview?.let { Text(it, color = Color(0xFFC7CBD4), fontSize = 14.sp, modifier = Modifier.padding(16.dp)) }
-                        Text("Metadatos por TheTVDB / TMDB", color = Color(0xFF5C6879), fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp))
+                        if(d.originUrl!=null){
+                            Text(d.creator?:"Autor",color=StudioAccent,fontSize=12.sp,modifier=Modifier.padding(horizontal=16.dp))
+                            d.license?.let{Text(it,color=Muted,fontSize=10.sp,modifier=Modifier.padding(horizontal=16.dp))}
+                            TextButton(onClick={ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(d.originUrl)))},modifier=Modifier.padding(horizontal=8.dp)){Text("Ver fuente original en YouTube ↗")}
+                        } else Text("Metadatos por TheTVDB / TMDB", color = Color(0xFF5C6879), fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp))
                         SocialSection(vm, "movie", d.id.toString(), d.title ?: "", allowList = true)
                     }
                 }

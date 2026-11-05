@@ -28,3 +28,7 @@ backup.sql
 
 
 /LiveTV*.apk
+
+# Downloaded media and local importer tools must never enter Git.
+/data/media/
+/server/.tools/

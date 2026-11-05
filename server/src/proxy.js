@@ -7,6 +7,7 @@
 // El navegador siempre habla con nuestro backend (mismo origen), así que no
 // hay bloqueo CORS y el reproductor no necesita conocer las cabeceras reales.
 
+import {tryLibraryProxy} from './media-library.js';
 import {radioSources,radioReferrer,RADIO_USER_AGENT} from './radio-sources.js';
 import {preferredRadioSource} from './radio-health.js';
 import { Readable } from 'node:stream';
@@ -77,6 +78,7 @@ export function streamHandler({request=fetch,lookupRadio=findRadio,connectTimeou
   if(Number.isFinite(expiry))scheduleExpiry();
   const attempts=[];let station;
   try{
+   if(await tryLibraryProxy(original,req,res))return;
    station=await lookupRadio(original);
    const candidates=station?radioSources({...station,preferredSource:preferredRadioSource(station.id)}):[original];
    for(const source of candidates){

@@ -198,6 +198,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
 
           {overview && !/^https?:\/\//i.test(overview.trim()) && <p className="vod-desc">{overview}</p>}
 
+          {d.originUrl&&<p className="vod-credit"><b>{d.creator||'Autor'}</b> · <a href={d.originUrl} target="_blank" rel="noreferrer">Fuente original en YouTube ↗</a>{d.license?' · '+d.license:''}</p>}
           {d.director?.length > 0 && <p className="vod-credit"><b>Dirección:</b> {d.director.join(', ')}</p>}
           {d.cast?.length > 0 && <p className="vod-credit"><b>Reparto:</b> {d.cast.map((c) => c.name).join(', ')}</p>}
 

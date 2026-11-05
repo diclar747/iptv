@@ -361,3 +361,37 @@ CREATE TABLE IF NOT EXISTS radio_directory_cache (
  items JSONB NOT NULL,
  checked_at TIMESTAMPTZ NOT NULL
 );
+
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS content_kind TEXT NOT NULL DEFAULT 'movie';
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS origin_url TEXT;
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS creator TEXT;
+
+CREATE TABLE IF NOT EXISTS media_categories (
+ name TEXT PRIMARY KEY CHECK (char_length(name) BETWEEN 1 AND 80),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO media_categories(name) VALUES ('Películas'),('Videos musicales'),('Documentales'),('Videos') ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS media_import_jobs (
+ id UUID PRIMARY KEY,
+ source_id TEXT NOT NULL,
+ source_url TEXT NOT NULL,
+ state TEXT NOT NULL DEFAULT 'queued',
+ progress INTEGER NOT NULL DEFAULT 0,
+ options JSONB NOT NULL DEFAULT '{}',
+ metadata JSONB,
+ error TEXT,
+ movie_id BIGINT REFERENCES movies(id) ON DELETE SET NULL,
+ created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_media_import_active ON media_import_jobs(source_id) WHERE state IN ('queued','downloading','publishing');
+CREATE TABLE IF NOT EXISTS media_assets (
+ id UUID PRIMARY KEY,
+ movie_id BIGINT NOT NULL UNIQUE REFERENCES movies(id) ON DELETE CASCADE,
+ video_name TEXT NOT NULL,
+ cover_name TEXT,
+ size_bytes BIGINT NOT NULL,
+ metadata JSONB NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

@@ -358,3 +358,38 @@ la APK 1.25. Validación: verify-trial.mjs comprueba registro, sesión, privileg
 24 horas exactas y vencimiento; verify-radio-cache.mjs guarda/restaura un resultado
 real en PostgreSQL. Las pruebas unitarias verifican restauración, concurrencia,
 continuidad del audio y caducidad de enlaces HLS. Compilaciones web y APK correctas.
+
+## LiveTV 1.26 — Biblioteca desde YouTube y nueva presentación
+
+Panel → Películas y Series incluye preparación e importación de un video de
+YouTube: metadatos reales, autor, descripción, portada, duración, categoría nueva
+o existente y tipo (película, musical, documental u otro video). Se registra la
+autorización del administrador; la accesibilidad pública del enlace no sustituye
+el permiso para almacenar y transmitir. Los datos se pueden corregir antes y
+después de importar. La fuente original y la licencia indicada se muestran en
+las fichas web y Android; no se inventa una biografía ni un año de estreno a
+partir de la fecha de subida.
+
+La cola guarda progreso, errores y cancelaciones en PostgreSQL. Los MP4 y
+portadas se almacenan fuera de Git y solo se publican en una transacción al
+completar la descarga. Se evitan duplicados por ID de YouTube y se limpian los
+archivos incompletos. La biblioteca privada admite Range/seek y respeta el
+bloqueo y la papelera de la película. Las películas se ordenan por fecha de
+incorporación, con lo recién agregado primero; Android usa las categorías reales
+de la biblioteca.
+
+La APK abre con una presentación propia: imagen de estudio, luces y ondas de
+señal, marca LiveTV y accesos visuales de TV, radio y cine. La verificación de
+sesión deja de esperar a todo el catálogo, sin agregar demoras artificiales a
+la animación. Adaptada a pantallas verticales y horizontales.
+
+Preparación del servidor: npm run setup:youtube, FFmpeg recomendado y carpeta
+persistente MEDIA_STORAGE_DIR; detalles en DEPLOY.md. El panel indica si faltan
+herramientas. Publicar backend, web y APK 1.26 juntos. Las tablas se crean al
+iniciar. Los archivos descargados no viajan con git push.
+
+Validación: verify-youtube.mjs prueba la cola, publicación, permisos, edición,
+metadatos, categorías, orden, Range/seek, bloqueo y cancelación con archivos de
+prueba. También se hizo una consulta y descarga real de Big Buck Bunny (Blender),
+con MP4 de aproximadamente 25 MB, portada y metadatos; se eliminó la copia de
+prueba y no se publicó en el catálogo. La web y APK se compilan correctamente.

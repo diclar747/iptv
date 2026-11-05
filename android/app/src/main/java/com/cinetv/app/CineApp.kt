@@ -20,6 +20,7 @@ class CineApp : Application(), ImageLoaderFactory {
     // disco (rápido y liviano), con crossfade al aparecer.
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this)
+            .okHttpClient(Net.okHttp)
             .crossfade(true)
             .memoryCache { MemoryCache.Builder(this).maxSizePercent(0.25).build() }
             .diskCache {

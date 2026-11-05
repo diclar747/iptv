@@ -61,6 +61,9 @@ interface Api {
     @GET("api/home")
     suspend fun channelsHome(): ChannelsHome
 
+    @GET("api/catalog/meta")
+    suspend fun movieCategories(): MovieCategoriesResp
+
     @GET("api/catalog/movies")
     suspend fun movies(
         @Query("search") search: String? = null,
@@ -248,3 +251,6 @@ data class RadioStation(val id: String, val name: String, val url: String, val c
 data class RadiosResp(val items: List<RadioStation> = emptyList(), val total: Int = 0, val hasMore: Boolean = false, val catalog: String? = null, val discovering: Boolean = false, val verified: Int = 0, val catalogTotal: Int = 0)
 
 data class ChannelHealth(val id: String, val status: String = "unchecked", val checkedAt: String? = null)
+
+data class MovieCategory(val value:String,val label:String?=null,val count:Int=0)
+data class MovieCategoriesResp(val genres:List<MovieCategory> = emptyList())

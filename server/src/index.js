@@ -1,4 +1,7 @@
 import './env.js'; // carga .env antes que nada (debe ir primero)
+import youtubeAdminRouter from './youtube-admin.js';
+import mediaLibraryRouter from './media-library.js';
+import {startYoutubeWorker} from './youtube-import.js';
 import {initRadioCache,startRadioMaintenance} from './radio-cache.js';
 import {queryPublicChannels} from './channelCatalog.js';
 import { applyOfficialChannelRepairs } from './officialChannelRepairs.js';
@@ -52,7 +55,7 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 26, versionName: '1.25', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 27, versionName: '1.26', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
@@ -65,6 +68,7 @@ app.use('/api', catalogAdminRouter);
 app.use('/api', manualChannelsRouter);
 app.use('/api', channelAdminRouter);
 app.use('/api', movieAdminRouter);
+app.use('/api',youtubeAdminRouter,mediaLibraryRouter);
 
 // Carga/refresca el cache de iptv-org antes de responder consultas de datos.
 async function withData(req, res, next) {
@@ -262,6 +266,7 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`[api] escuchando en http://localhost:${PORT}`);
     startRadioMaintenance();
+    startYoutubeWorker();
     // Precarga en segundo plano para que la primera consulta sea rápida.
     ensureLoaded()
       .then(async () => {console.log('[api] datos de iptv-org cargados');await applyOfficialChannelRepairs();})

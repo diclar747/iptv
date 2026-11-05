@@ -41,7 +41,7 @@ const seriesCard = (s) => ({
 async function movieRow(where = '', params = [], limit = 24) {
   const rows = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
-     WHERE NOT m.hidden AND ${MOVIE_AVAIL} ${where ? 'AND ' + where : ''} ORDER BY m.created_at DESC LIMIT ${limit}`,
+     WHERE NOT m.hidden AND ${MOVIE_AVAIL} ${where ? 'AND ' + where : ''} ORDER BY m.created_at DESC, m.id DESC LIMIT ${limit}`,
     params
   );
   return rows.map(movieCard);
@@ -72,16 +72,16 @@ router.get('/catalog/home', async (req, res) => {
   const [estrenos, populares] = await Promise.all([
     many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
           WHERE ${MODERN}
-          ORDER BY (m.trailer IS NOT NULL) DESC, m.year DESC NULLS LAST, m.popularity DESC LIMIT 24`, [HOME_HIDE]),
+          ORDER BY m.created_at DESC, m.id DESC LIMIT 24`, [HOME_HIDE]),
     many(`SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m
           WHERE ${MODERN}
           ORDER BY (m.trailer IS NOT NULL) DESC, m.popularity DESC LIMIT 24`, [HOME_HIDE]),
   ]);
 
   const rows = [];
-  if (estrenos.length) rows.push({ key: 'estrenos', title: 'Películas recientes del catálogo', nav: 'peliculas', items: estrenos.map(movieCard) });
+  if (estrenos.length) rows.push({ key: 'estrenos', title: 'Recién agregadas', nav: 'peliculas', items: estrenos.map(movieCard) });
   if (populares.length) rows.push({ key: 'populares', title: '🔥 Populares ahora', nav: 'peliculas', items: populares.map(movieCard) });
-  if (latestMovies.length) rows.push({ key: 'latest', title: 'Clásicos para ver ya', nav: 'peliculas', items: latestMovies });
+  if (latestMovies.length) rows.push({ key: 'latest', title: 'Más para disfrutar', nav: 'peliculas', items: latestMovies });
   if (series.length) rows.push({ key: 'series', title: 'Series', nav: 'series', items: series.map(seriesCard) });
   for (const c of topCats) {
     const items = await movieRow('m.category=$1', [c.category], 20);
@@ -98,10 +98,10 @@ router.get('/catalog/home', async (req, res) => {
        AND (m.backdrop IS NOT NULL OR m.poster IS NOT NULL)
        AND m.title !~* 'S *[0-9]+ *E *[0-9]+'
        AND (m.category IS NULL OR NOT (m.category = ANY($1)))
-     ORDER BY (m.trailer IS NOT NULL) DESC, (m.backdrop IS NOT NULL) DESC, m.year DESC NULLS LAST, m.popularity DESC LIMIT 6`,
+     ORDER BY m.created_at DESC, m.id DESC LIMIT 6`,
     [HOME_HIDE]
   );
-  res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
+  res.set('Cache-Control', 'private, no-cache');
   res.json({ featured: feat.map(movieCard), rows: rows.filter((r) => r.items.length) });
 });
 
@@ -117,7 +117,7 @@ router.get('/catalog/movies', async (req, res) => {
   params.push(ps, off);
   const rows = await many(
     `SELECT m.*, ${MOVIE_AVAIL} AS available FROM movies m WHERE ${where.join(' AND ')}
-     ORDER BY m.year DESC NULLS LAST, m.created_at DESC, m.id DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+     ORDER BY m.created_at DESC, m.id DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
   res.json(rows.map(movieCard));
@@ -177,12 +177,13 @@ router.get('/catalog/movies/:id', async (req, res) => {
     `SELECT url, user_agent, referrer FROM media_sources
      WHERE content_type='movie' AND content_id=$1 AND enabled ORDER BY id LIMIT 1`, [m.id]);
   const streamUrl = src?.url || m.stream_url || null;
-  const [credits, genres] = await Promise.all([creditsOf('movie', m.id), genresOf('movie', m.id)]);
+  const [credits, genres, asset] = await Promise.all([creditsOf('movie', m.id), genresOf('movie', m.id),one('SELECT metadata FROM media_assets WHERE movie_id=$1',[m.id])]);
   res.json({
     ...movieCard(m), originalTitle: m.original_title, overview: m.overview_es || m.description,
     runtime: m.runtime, country: m.country, trailer: m.trailer, genres, ...credits,
+    creator:m.creator,originUrl:m.origin_url,license:asset?.metadata?.license||null,contentKind:m.content_kind,
     available: Boolean(streamUrl), streamUrl,
-    streams: streamUrl ? [{ url: streamUrl, userAgent: src?.user_agent || null, referrer: src?.referrer || null }] : [],
+    streams: streamUrl ? [{ url: streamUrl, quality:asset?.metadata?.height?asset.metadata.height+'p':null,userAgent: src?.user_agent || null, referrer: src?.referrer || null }] : [],
   });
 });
 
@@ -214,7 +215,7 @@ router.get('/catalog/meta', async (req, res) => {
   const cats = await many(
     `SELECT category AS slug, count(*)::int n FROM movies m
      WHERE NOT m.hidden AND ${MOVIE_AVAIL} AND m.category IS NOT NULL
-     GROUP BY category ORDER BY n DESC LIMIT 30`);
+     GROUP BY category ORDER BY category`);
   res.json({
     attribution: p.attribution,
     providerConfigured: p.isConfigured(),

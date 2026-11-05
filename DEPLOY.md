@@ -105,3 +105,50 @@ pm2 restart senal
   no garantizada y sin derechos de retransmisión de señales premium.
 - Películas/series (VOD) están desactivadas por ahora; se reactivan descomentando
   el VOD en `server/src/index.js`.
+
+## Importar videos de YouTube al servidor
+
+El panel permite preparar metadatos y descargar un video individual propio o
+con permiso para guardarlo y distribuirlo. No importa listas completas, videos
+privados, contenido protegido ni usa cookies para eludir restricciones.
+
+1. Actualizar el repositorio e instalar dependencias como de costumbre.
+2. Instalar el descargador oficial sin permisos de administrador:
+   ```bash
+   npm run setup:youtube
+   ```
+   El instalador descarga la versión oficial de yt-dlp para Windows, Linux o
+   macOS, verifica SHA-256 y la guarda en server/.tools (ignorada por Git).
+   También se puede usar una instalación existente con YTDLP_BIN en .env.
+3. Para combinar audio y video de alta calidad, instalar FFmpeg. En Ubuntu/Debian:
+   ```bash
+   sudo apt-get install ffmpeg
+   ```
+   En otros sistemas instalar FFmpeg y agregarlo al PATH o configurar FFMPEG_BIN
+   con su ruta absoluta. Sin FFmpeg se ofrecen los formatos MP4 que ya incluyen
+   audio, cuya calidad puede ser menor según el video.
+4. Configurar PUBLIC_BASE_URL=https://live.cd.com.py y MEDIA_STORAGE_DIR con una
+   carpeta persistente y escribible por el servicio. Si el despliegue reemplaza
+   el checkout, la carpeta debe estar FUERA del checkout para no perder videos.
+   El valor por defecto data/media solo sirve si el servidor conserva esa carpeta.
+5. Ejecutar npm run build y reiniciar el backend. El inicio aplica las tablas
+   nuevas y reanuda la cola pendiente; una descarga interrumpida se marca como
+   error tras cinco minutos sin actividad y se puede volver a preparar.
+6. En Panel → Películas y Series → Importar un video, pegar el enlace, consultar
+   sus datos, corregir título/sinopsis/año, elegir tipo y categoría (o crearla),
+   indicar el permiso de uso y comenzar. Solo se publica al completar el archivo.
+
+MEDIA_MAX_BYTES limita cada archivo (2 GiB por defecto, hasta 10 GiB). Se
+comprueba espacio libre antes de descargar. Los trabajos son persistentes,
+se ejecutan de uno en uno y permiten cancelar. Actualizar yt-dlp con el mismo
+comando cuando YouTube cambie su formato; reiniciar el servicio al actualizar.
+
+Los archivos y herramientas no se envían a Git. Respaldar tanto PostgreSQL como
+MEDIA_STORAGE_DIR. El borrado habitual de una ficha es papelera y conserva su
+archivo para restaurarlo. Los medios locales requieren una sesión activa o un
+enlace firmado de Cast; admiten solicitudes Range para adelantar el video. El
+servidor debe atender conexiones de video largas (proxy_buffering off y tiempos
+de espera apropiados en Nginx/hosting). No es necesario exponer la carpeta como
+un directorio público.
+
+Referencia de la herramienta: https://github.com/yt-dlp/yt-dlp

@@ -69,11 +69,8 @@ class AppViewModel : ViewModel() {
 
     fun boot() {
         viewModelScope.launch {
-            try {
-                user = api.me().user
-                if (user != null) {scheduleAccessExpiry();loadHome()}
-            } catch (_: Exception) { /* sin sesión */ }
-            booting = false
+            try{user=api.me().user}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){}finally{booting=false}
+            if(user!=null){scheduleAccessExpiry();busy=true;try{loadHome()}finally{busy=false}}
         }
     }
 
