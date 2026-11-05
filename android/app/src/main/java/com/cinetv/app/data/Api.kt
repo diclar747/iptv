@@ -10,6 +10,9 @@ import retrofit2.http.Query
 
 
 interface Api {
+    @GET("api/channels/status")
+    suspend fun channelStatuses(@Query("ids") ids: String): List<ChannelHealth>
+
     @GET("api/radios")
     suspend fun radios(): RadiosResp
 
@@ -73,6 +76,7 @@ interface Api {
         @Query("prefer") prefer: String? = null,
         @Query("pageSize") pageSize: Int = 80,
         @Query("page") page: Int = 1,
+        @Query("status") status: String? = null,
     ): ChannelList
 
     @GET("api/channels/{id}/streams")
@@ -224,3 +228,5 @@ data class ReactionsResp(
 
 data class RadioStation(val id: String, val name: String, val url: String, val city: String = "", val tags: String = "", val codec: String = "", val source: String? = null, val logo: String? = null, val status: String = "checking", val checkedAt: String? = null)
 data class RadiosResp(val items: List<RadioStation> = emptyList(), val total: Int = 0)
+
+data class ChannelHealth(val id: String, val status: String = "unchecked", val checkedAt: String? = null)

@@ -23,7 +23,7 @@ export default function LiveRow({ title, channels, onOpen, onSeeAll, live = true
                 {c.logo ? <img src={c.logo} alt="" loading="lazy"
                   onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} /> : <span>{c.name[0]}</span>}
               </div>
-              <span className="live-name">{c.name}</span>
+              <span className="live-name">{c.name}</span><span className={`signal-status ${c.status||"unchecked"}`}>● {c.status==="online"?"ONLINE":c.status==="offline"?"OFFLINE":"SIN VERIFICAR"}</span>
             </button>
           ))}
         </div>

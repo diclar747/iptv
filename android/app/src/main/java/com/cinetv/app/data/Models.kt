@@ -43,6 +43,8 @@ data class Card(
     val country: String? = null,
     val rating: Double? = null,
     val available: Boolean? = null,
+    val status: String = "unchecked",
+    val checkedAt: String? = null,
 ) {
     val displayTitle: String get() = title ?: name ?: "—"
     val image: String? get() = poster ?: logo ?: backdrop

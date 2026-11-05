@@ -198,3 +198,30 @@ Comando: npm run import:radios:desdeparaguay. Los estados siguen siendo
 comprobaciones del servidor; la disponibilidad puede cambiar.
 
 Desplegar backend y APK 1.20 juntos para las radios con enlaces temporales.
+
+## LiveTV 1.21 — Administración del catálogo y señales
+
+Panel → Canales reúne el proveedor y los canales propios, con búsqueda, filtros
+por país/categoría/origen/estado, edición de metadatos y múltiples URLs, alta,
+bloqueo, papelera/restauración y restablecimiento de datos originales. Las
+correcciones se guardan en PostgreSQL y sobreviven a la actualización del proveedor.
+Panel → Películas y Series incluye la lista administrable de películas y sus fuentes.
+
+Se puede verificar un canal, el país/categoría seleccionado o todo el catálogo,
+con progreso y detención de la revisión. El verificador comprueba datos de medios,
+incluidos segmentos HLS, y rechaza páginas HTML que devuelven HTTP 200. La fuente
+comprobada como activa tiene prioridad. El estado dura 15 minutos; después aparece
+sin verificar. Paraguay se revisa al iniciar y cada 10 minutos. Los canales con
+restricciones pueden aparecer offline desde el servidor aunque estén al aire.
+Web y APK muestran estados; la APK actualiza los canales visibles periódicamente.
+La corrección inicial de C9N utiliza la señal publicada en su página oficial y
+solo se aplica si no existe una edición previa del administrador.
+
+Despliegue: actualizar el repositorio, instalar dependencias, ejecutar npm run build
+y reiniciar el backend. El inicio aplica las nuevas tablas/columnas automáticamente.
+Publicar también la APK 1.21 incluida en web/public/cinetv.apk; conserva el enlace
+de descarga y la firma de actualización. No es necesario volver a importar canales.
+
+Validación: node --test server/src/checker.test.js server/src/radio.test.js
+server/src/desdeparaguay.test.js. Prueba de administración con PostgreSQL disponible:
+node server/scripts/verify-management.mjs (crea y limpia únicamente sus fixtures).

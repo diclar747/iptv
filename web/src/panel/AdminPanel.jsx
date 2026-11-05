@@ -1,3 +1,4 @@
+import ChannelManager from './ChannelManager.jsx';
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import CatalogAdmin from './CatalogAdmin.jsx';
@@ -268,64 +269,7 @@ export default function AdminPanel() {
         </>
       )}
 
-      {tab === 'canales' && (
-        <>
-          <p className="muted small" style={{ margin: '2px 2px 8px' }}>
-            Canales cargados a mano (p. ej. <b>Tigo Sports</b> y deportes de Paraguay que iptv-org no trae).
-            En el stream podés pegar un <b>.m3u8 directo</b> o un <b>link de Twitch/YouTube/Facebook</b> en vivo
-            (el servidor lo resuelve solo). Aparecen en Inicio y en su categoría.
-          </p>
-          <div className="row-form wrap" style={{ marginBottom: 10, alignItems: 'center' }}>
-            <span className="muted small" style={{ marginRight: 4 }}>Rápido:</span>
-            {presetsPY.map((p) => (
-              <button key={p.name} type="button" onClick={() => usePreset(p)}>+ {p.name}</button>
-            ))}
-          </div>
-          <form className="row-form wrap" onSubmit={createManual}>
-            <input placeholder="nombre" value={nmc.name} required
-              onChange={(e) => setNmc({ ...nmc, name: e.target.value })} />
-            <input placeholder="URL .m3u8 o link de Twitch/YouTube/Facebook" value={nmc.streamUrl} required style={{ minWidth: 220, flex: 1 }}
-              onChange={(e) => setNmc({ ...nmc, streamUrl: e.target.value })} />
-            <input placeholder="URL del logo (opcional)" value={nmc.logoUrl} style={{ minWidth: 180, flex: 1 }}
-              onChange={(e) => setNmc({ ...nmc, logoUrl: e.target.value })} />
-            <input placeholder="User-Agent (opcional)" value={nmc.userAgent} style={{ minWidth: 160 }}
-              onChange={(e) => setNmc({ ...nmc, userAgent: e.target.value })} />
-            <input placeholder="Referer (opcional)" value={nmc.referrer} style={{ minWidth: 160 }}
-              onChange={(e) => setNmc({ ...nmc, referrer: e.target.value })} />
-            <input placeholder="país" value={nmc.country} style={{ width: 70 }}
-              onChange={(e) => setNmc({ ...nmc, country: e.target.value })} />
-            <select value={nmc.category} onChange={(e) => setNmc({ ...nmc, category: e.target.value })}>
-              <option value="sports">Deportes</option>
-              <option value="news">Noticias</option>
-              <option value="general">General</option>
-              <option value="movies">Películas</option>
-              <option value="entertainment">Entretenimiento</option>
-              <option value="kids">Infantil</option>
-              <option value="music">Música</option>
-              <option value="documentary">Documentales</option>
-            </select>
-            <button className="verify" type="submit">+ Canal</button>
-          </form>
-          <div className="table">
-            <div className="tr th">
-              <span>Canal</span><span>País</span><span>Categoría</span><span>Estado</span><span>Acciones</span>
-            </div>
-            {manual.map((c) => (
-              <div className="tr" key={c.id}>
-                <span className="strong" title={c.stream_url}>{c.name}</span>
-                <span className="mono">{c.country}</span>
-                <span>{c.category}</span>
-                <span><Badge ok={c.enabled}>{c.enabled ? 'activo' : 'off'}</Badge></span>
-                <span className="actions">
-                  <button onClick={() => toggleManual(c)}>{c.enabled ? 'Deshab.' : 'Activar'}</button>
-                  <button onClick={() => deleteManual(c)}>Eliminar</button>
-                </span>
-              </div>
-            ))}
-            {manual.length === 0 && <div className="tr empty">Sin canales manuales todavía.</div>}
-          </div>
-        </>
-      )}
+      {tab === 'canales' && <ChannelManager />}
     </div>
   );
 }

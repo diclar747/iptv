@@ -1,3 +1,7 @@
+import { applyOfficialChannelRepairs } from './officialChannelRepairs.js';
+import movieAdminRouter from './movieAdmin.js';
+import channelAdminRouter, { verifyChannel, startChannelChecks } from './channelAdmin.js';
+import { initChannelState } from './channelState.js';
 import './env.js'; // carga .env antes que nada (debe ir primero)
 import { exec } from 'node:child_process';
 import express from 'express';
@@ -46,7 +50,7 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 21, versionName: '1.20', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 22, versionName: '1.21', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
@@ -57,6 +61,8 @@ app.use('/api', radioRouter);
 app.use('/api', catalogAdminRouter);
 // Canales manuales cargados por el admin (CRUD admin).
 app.use('/api', manualChannelsRouter);
+app.use('/api', channelAdminRouter);
+app.use('/api', movieAdminRouter);
 
 // Carga/refresca el cache de iptv-org antes de responder consultas de datos.
 async function withData(req, res, next) {
@@ -136,7 +142,7 @@ app.get('/api/home', requireActiveViewer, withData, async (req, res) => {
   }
   rows.push({ key: 'documentary', title: 'Documentales', nav: 'documentales', items: chRow({ category: 'documentary', prefer: country }) });
 
-  res.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=600');
+  res.set('Cache-Control', 'private, no-cache');
   res.json({ country, rows: rows.filter((r) => r.items.length) });
 });
 
@@ -158,6 +164,7 @@ app.get('/api/channels', requireActiveViewer, withData, async (req, res) => {
     category: category || undefined,
     search: search || undefined,
     prefer: req.query.prefer || geoCountry(req),
+    status: req.query.status || undefined,
     page: pageN,
     pageSize: Math.min(100, Math.max(1, parseInt(pageSize, 10) || 40)),
     includeNsfw: includeNsfw === 'true',
@@ -170,6 +177,7 @@ app.get('/api/channels', requireActiveViewer, withData, async (req, res) => {
     let man = await manualCards({ country: country || undefined, category: category || undefined }).catch(() => []);
     const q = (search || '').trim().toLowerCase();
     if (q) man = man.filter((c) => c.name.toLowerCase().includes(q));
+    if(req.query.status)man=man.filter(c=>c.status===req.query.status);
     if (man.length) {
       if (pageN === 1) result.items = [...man, ...result.items];
       result.total += man.length;
@@ -222,10 +230,12 @@ app.get('/api/check', requireActiveViewer, async (req, res) => {
 
 // Verifica todos los streams de un canal y devuelve cuáles responden.
 app.get('/api/channels/:id/check', requireActiveViewer, withData, async (req, res) => {
-  const data = getChannelStreams(req.params.id);
-  if (!data) return res.status(404).json({ error: 'Canal no encontrado' });
-  const checked = await checkMany(data.streams, { concurrency: 6 });
-  res.json({ channel: data.channel, streams: checked });
+  try {
+    const data=isManualId(req.params.id)?await manualStreams(req.params.id):getChannelStreams(req.params.id);
+    if(!data)return res.status(404).json({error:'Canal no encontrado'});
+    const result=await verifyChannel(req.params.id);
+    res.json({channel:data.channel,streams:result.results,...result});
+  } catch(e){res.status(502).json({error:e.message});}
 });
 
 // Fuerza refresco del cache de iptv-org.
@@ -258,6 +268,7 @@ async function start() {
     await ensureSeed();
     await ensureVodSeed(); // contenido de dominio público (catálogo base reproducible)
     await retireMetadataOnlyMovies();
+    await initChannelState();
     await ensureManualSeed(); // canales manuales conocidos (p. ej. TVS por su Twitch)
     console.log('[api] PostgreSQL conectado y listo');
   } catch (e) {
@@ -270,8 +281,10 @@ async function start() {
     console.log(`[api] escuchando en http://localhost:${PORT}`);
     // Precarga en segundo plano para que la primera consulta sea rápida.
     ensureLoaded()
-      .then(() => console.log('[api] datos de iptv-org cargados'))
+      .then(async () => {console.log('[api] datos de iptv-org cargados');await applyOfficialChannelRepairs();startChannelChecks({country:'PY'}).catch(console.error);})
       .catch((e) => console.error('[api] error precargando:', e.message));
+    const healthTimer=setInterval(()=>startChannelChecks({country:'PY'}).catch(console.error),10*60*1000);
+    healthTimer.unref();
     // Sincronización incremental del catálogo (solo si hay API Key de TheTVDB).
 
   });

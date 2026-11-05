@@ -37,6 +37,12 @@ val StudioSurface = Color(0xFF0D1624)
 private val StudioLine = Color(0xFF203044)
 
 @Composable
+fun ChannelSignalBadge(status: String) {
+    val color=when(status){"online"->StudioAccent;"offline"->Color(0xFFFF8B9D);else->Color(0xFF94A8C2)}
+    Text("● "+when(status){"online"->"ONLINE";"offline"->"OFFLINE";else->"SIN VERIFICAR"},color=color,fontSize=8.sp,fontWeight=FontWeight.Bold,letterSpacing=.5.sp,modifier=Modifier.clip(RoundedCornerShape(20.dp)).background(color.copy(alpha=.1f)).padding(horizontal=7.dp,vertical=4.dp))
+}
+
+@Composable
 fun StudioChannelLogo(channel: Channel, modifier: Modifier) {
     Box(modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xFF192A3D)).padding(10.dp), contentAlignment = Alignment.Center) {
         SubcomposeAsyncImage(channel.logo ?: channel.image, channel.displayTitle, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit,
@@ -56,7 +62,7 @@ fun StudioChannelCard(channel: Channel, modifier: Modifier = Modifier, list: Boo
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(channel.displayTitle, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(listOfNotNull(channel.country, channel.category).joinToString(" · ").ifBlank { "Televisión en directo" }, color = Muted, fontSize = 11.sp, maxLines = 1)
-                Text("VER CANAL", color = StudioAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                ChannelSignalBadge(channel.status)
             }
             if(onDetails != null) IconButton(onClick = onDetails, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Info, "Información del canal", tint = Muted, modifier = Modifier.size(19.dp)) }
             Icon(Icons.Default.PlayCircle, "Reproducir", tint = StudioAccent, modifier = Modifier.size(30.dp))
@@ -65,7 +71,7 @@ fun StudioChannelCard(channel: Channel, modifier: Modifier = Modifier, list: Boo
         Column(surface.padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.LiveTv, null, tint = StudioAccent, modifier = Modifier.size(12.dp))
-                Text("  DIRECTO", color = StudioAccent, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                ChannelSignalBadge(channel.status)
                 Spacer(Modifier.weight(1f))
                 if(onDetails != null) IconButton(onClick = onDetails, modifier = Modifier.size(23.dp)) { Icon(Icons.Default.Info, "Información", tint = Muted, modifier = Modifier.size(16.dp)) }
             }
@@ -131,6 +137,7 @@ fun StudioLiveTab(vm: AppViewModel) {
     var country by remember(vm.geoCountry) { mutableStateOf(vm.geoCountry) }
     var category by remember { mutableStateOf<String?>(null) }
     var search by remember { mutableStateOf("") }
+    var signalFilter by remember { mutableStateOf<String?>(null) }
     var dropdown by remember { mutableStateOf(false) }
     var list by remember { mutableStateOf(false) }
     var channels by remember { mutableStateOf<List<Channel>>(emptyList()) }
@@ -144,8 +151,18 @@ fun StudioLiveTab(vm: AppViewModel) {
     val scope = rememberCoroutineScope()
     val countries = vm.meta?.countries.orEmpty()
     val selected = countries.firstOrNull { it.code == country }
-    suspend fun fetchPage(number: Int) = Net.api.channels(country = if(category == null) country else null, category = category, search = search, prefer = if(category != null) country else null, page = number)
-    LaunchedEffect(country,category,search,retry) {
+    LaunchedEffect(channels.map { it.id }.joinToString(",")) {
+        if(channels.isEmpty()) return@LaunchedEffect
+        while(true) {
+            delay(15000)
+            try {
+                val states=Net.api.channelStatuses(channels.take(100).joinToString(","){it.id}).associateBy{it.id}
+                channels=channels.filter { states[it.id]?.status !in listOf("blocked","deleted") }.map{c->states[c.id]?.let{c.copy(status=it.status,checkedAt=it.checkedAt)}?:c}
+            } catch(e: CancellationException){throw e} catch(_:Exception) { }
+        }
+    }
+    suspend fun fetchPage(number: Int) = Net.api.channels(country = if(category == null) country else null, category = category, search = search, prefer = if(category != null) country else null, page = number, status = signalFilter)
+    LaunchedEffect(country,category,search,retry,signalFilter) {
         generation++; loading = true; error = null
         delay(300)
         try { val result = fetchPage(1); channels = result.items.orEmpty(); total = result.total; page = 1 }
@@ -202,6 +219,11 @@ fun StudioLiveTab(vm: AppViewModel) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(listOf(null to "Todos", "sports" to "Deportes", "news" to "Noticias", "entertainment" to "Entretenimiento", "kids" to "Infantil", "music" to "Música")) { (id,label) ->
                         FilterChip(category == id,{ category = id },label = { Text(label,fontSize = 12.sp) },colors = FilterChipDefaults.filterChipColors(selectedContainerColor = StudioAccent.copy(alpha = .17f),selectedLabelColor = StudioAccent))
+                    }
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(listOf(null to "Todos los estados", "online" to "Online", "offline" to "Offline", "unchecked" to "Sin verificar")) { (id,label) ->
+                        FilterChip(signalFilter == id,{signalFilter = id},label = {Text(label,fontSize = 11.sp)},colors = FilterChipDefaults.filterChipColors(selectedContainerColor = StudioAccent.copy(alpha = .15f),selectedLabelColor = StudioAccent))
                     }
                 }
                 if(category != null) Text("Canales de todos los países, priorizando ${selected?.name ?: country}",color = Muted,fontSize = 10.sp)

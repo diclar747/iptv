@@ -1,3 +1,4 @@
+import MovieManager from './MovieManager.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 
@@ -34,6 +35,7 @@ export default function CatalogAdmin() {
 
   return (
     <div className="cat-admin">
+      <MovieManager />
       <div className="stat-grid compact">
         <Stat label="Películas" value={stats.movies} />
         <Stat label="Series" value={stats.series} />

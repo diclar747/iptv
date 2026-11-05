@@ -1,3 +1,4 @@
+import { managedCard, managedStreams, channelSettings, channelVisible, channelStatus } from './channelState.js';
 // Capa de datos de iptv-org: descarga, cachea en memoria y une
 // canales + streams. Fuente: https://iptv-org.github.io/api/
 //
@@ -130,7 +131,7 @@ export function getMeta() {
 // Normaliza un canal para enviarlo al frontend con su conteo de streams.
 function toDTO(ch) {
   const streams = state.streamsByChannel.get(ch.id) || [];
-  return {
+  return managedCard({
     id: ch.id,
     name: ch.name,
     altNames: ch.alt_names || [],
@@ -143,7 +144,7 @@ function toDTO(ch) {
     // propio channels.json (subido a https). Evita canales sin imagen.
     logo: state.logoByChannel.get(ch.id) || httpsLogo(ch.logo) || null,
     streamCount: streams.length,
-  };
+  }, normalizedStreams(ch.id));
 }
 
 // Relevancia de un canal frente al texto buscado (menor = mejor):
@@ -172,17 +173,20 @@ export function queryChannels({
   search,
   prefer, // país a priorizar (sale primero) cuando no se filtra por país
   onlyWithStreams = true,
+  includeHidden = false,
+  status,
   includeNsfw = false,
   page = 1,
   pageSize = 40,
 } = {}) {
   const q = (search || '').trim().toLowerCase();
-  let list = state.channels;
+  let list = state.channels.map(c => {const s=channelSettings(c.id);return {...c,name:s.name||c.name,country:s.country||c.country,categories:s.category?[s.category]:c.categories};});
+  if(!includeHidden) list=list.filter(c=>channelVisible(c.id));
 
   if (!includeNsfw) list = list.filter((c) => !c.is_nsfw);
   if (country) list = list.filter((c) => c.country === country);
   if (category) list = list.filter((c) => (c.categories || []).includes(category));
-  if (onlyWithStreams) list = list.filter((c) => state.streamsByChannel.has(c.id));
+  if (onlyWithStreams) list = list.filter((c) => normalizedStreams(c.id).length > 0);
   if (q) {
     list = list.filter((c) => {
       if (c.name.toLowerCase().includes(q)) return true;
@@ -210,6 +214,7 @@ export function queryChannels({
     return a.name.localeCompare(b.name);
   });
 
+  if(status) list=list.filter(c=>channelStatus(c.id,normalizedStreams(c.id)).status===status);
   const total = list.length;
   const start = (page - 1) * pageSize;
   const items = list.slice(start, start + pageSize).map(toDTO);
@@ -218,7 +223,8 @@ export function queryChannels({
 
 // Streams de un canal, ordenados por calidad descendente.
 const QUALITY_ORDER = { '2160p': 5, '1080p': 4, '720p': 3, '576p': 2, '480p': 1, '360p': 0 };
-export function getChannelStreams(id) {
+export function getChannelStreams(id, { includeHidden = false } = {}) {
+  if(!includeHidden && !channelVisible(id)) return null;
   const ch = state.channelById.get(id);
   if (!ch) return null;
   const streams = (state.streamsByChannel.get(id) || [])
@@ -230,9 +236,14 @@ export function getChannelStreams(id) {
       userAgent: s.user_agent || null,
       referrer: s.referrer || null,
     }));
-  return { channel: toDTO(ch), streams };
+  return { channel: toDTO(ch), streams: managedStreams(id,streams) };
 }
 
 export function getState() {
   return state;
+}
+
+function normalizedStreams(id) {
+ const streams=(state.streamsByChannel.get(id)||[]).map(s=>({url:s.url,quality:s.quality||null,userAgent:s.user_agent||null,referrer:s.referrer||null}));
+ return managedStreams(id,streams);
 }

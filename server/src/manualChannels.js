@@ -1,3 +1,4 @@
+import { managedCard, managedStreams, channelVisible } from './channelState.js';
 // Canales manuales: los que el admin carga a mano (Tigo Sport y otros deportes
 // de Paraguay que iptv-org no trae con señal). Se guardan en PostgreSQL, se
 // inyectan en los listados de canales y se reproducen por el mismo proxy
@@ -19,7 +20,7 @@ function httpsLogo(url) {
 // DTO con la MISMA forma que toDTO() de iptvSource, para que el frontend y la
 // APK lo traten igual que un canal normal.
 function toCard(row) {
-  return {
+  return managedCard({
     id: PREFIX + row.id,
     name: row.name,
     altNames: [],
@@ -31,21 +32,14 @@ function toCard(row) {
     logo: httpsLogo(row.logo_url),
     streamCount: 1,
     manual: true,
-  };
+  }, [{url:row.stream_url,quality:null,userAgent:row.user_agent||null,referrer:row.referrer||null}]);
 }
 
 // Canales habilitados que coinciden con el filtro (para inyectar en listados).
 // country/category opcionales; si se pasan, deben coincidir.
 export async function manualCards({ country, category } = {}) {
-  const where = ['enabled'];
-  const params = [];
-  if (country) { params.push(country); where.push(`country = $${params.length}`); }
-  if (category) { params.push(category); where.push(`category = $${params.length}`); }
-  const rows = await many(
-    `SELECT * FROM manual_channels WHERE ${where.join(' AND ')} ORDER BY sort ASC, id ASC`,
-    params
-  );
-  return rows.map(toCard);
+  const rows=await many('SELECT * FROM manual_channels WHERE enabled ORDER BY sort,id');
+  return rows.filter(r=>channelVisible(PREFIX+r.id)).map(toCard).filter(c=>(!country||c.country===country)&&(!category||c.categories.includes(category)));
 }
 
 // Siembra canales manuales conocidos (con su link oficial de plataforma) para
@@ -74,13 +68,14 @@ export async function ensureManualSeed() {
 
 // Streams de un canal manual ("man:<n>") con la forma de getChannelStreams.
 export async function manualStreams(publicId) {
+  if(!channelVisible(publicId)) return null;
   const n = parseInt(String(publicId).slice(PREFIX.length), 10);
   if (!Number.isFinite(n)) return null;
   const row = await one(`SELECT * FROM manual_channels WHERE id = $1 AND enabled`, [n]);
   if (!row) return null;
   return {
     channel: toCard(row),
-    streams: [{ url: row.stream_url, quality: null, userAgent: row.user_agent || null, referrer: row.referrer || null }],
+    streams: managedStreams(publicId,[{ url: row.stream_url, quality: null, userAgent: row.user_agent || null, referrer: row.referrer || null }]),
   };
 }
 

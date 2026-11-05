@@ -108,6 +108,15 @@ class AppViewModel : ViewModel() {
         error = err
     }
 
+    suspend fun refreshSignalStates() {
+        try {
+            val ids=channelRows.flatMap { it.items.orEmpty() }.map { it.id }.distinct().take(100)
+            if(ids.isEmpty())return
+            val states=api.channelStatuses(ids.joinToString(",")).associateBy { it.id }
+            channelRows=channelRows.map { row -> row.copy(items=row.items?.filter { states[it.id]?.status !in listOf("blocked","deleted") }?.map { c -> states[c.id]?.let { c.copy(status=it.status,checkedAt=it.checkedAt) } ?: c }) }
+        } catch(e: kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) { }
+    }
+
     fun refreshHome() { viewModelScope.launch { loadHome() } }
 
     // Abrir una tarjeta: película/serie -> ficha; canal -> reproducir directo.

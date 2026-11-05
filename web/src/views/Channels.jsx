@@ -7,6 +7,7 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
   const [country, setCountry] = useState(defaultCountry);
   const [category, setCategory] = useState(fixedCategory || '');
   const [search, setSearch] = useState('');
+  const [status,setStatus] = useState('');
   const [data, setData] = useState(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState(null);
@@ -19,11 +20,11 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
   useEffect(() => { api.meta().then(setMeta).catch(handleErr); }, []);
   useEffect(() => {
     const t = setTimeout(() => {
-      api.channels({ country, category: fixedCategory || category, search, page, pageSize: 48 })
+      api.channels({ country, category: fixedCategory || category, search, status, page, pageSize: 48 })
         .then(setData).catch(handleErr);
     }, 250);
     return () => clearTimeout(t);
-  }, [country, category, search, page, fixedCategory]);
+  }, [country, category, search, status, page, fixedCategory]);
 
   return (
     <div className="view">
@@ -40,6 +41,7 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
               {meta?.categories.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.count})</option>)}
             </select>
           )}
+          <select value={status} onChange={e=>{setPage(1);setStatus(e.target.value);}}><option value="">Todos los estados</option><option value="online">Online</option><option value="offline">Offline</option><option value="unchecked">Sin verificar</option></select>
           <input className="search" type="search" placeholder="Buscar canal…"
             value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
         </div>
@@ -55,7 +57,7 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
                   {c.logo ? <img src={c.logo} alt="" loading="lazy"
                     onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} /> : <span>{c.name[0]}</span>}
                 </div>
-                <div className="chan-name">{c.name}</div>
+                <div className="chan-name">{c.name}</div><span className={`signal-status ${c.status||"unchecked"}`}>● {c.status==="online"?"ONLINE":c.status==="offline"?"OFFLINE":"SIN VERIFICAR"}</span>
               </button>
             ))}
           </div>

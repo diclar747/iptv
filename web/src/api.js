@@ -29,6 +29,20 @@ const put = (p, body) => req('PUT', p, { body });
 const del = (p, params) => req('DELETE', p, { params });
 
 export const api = {
+  adminChannels: p => get('/admin/channels',p),
+  adminChannel: id => get('/admin/channels/'+encodeURIComponent(id)),
+  editAdminChannel: (id,b) => patch('/admin/channels/'+encodeURIComponent(id),b),
+  deleteAdminChannel: id => del('/admin/channels/'+encodeURIComponent(id)),
+  restoreAdminChannel: id => post('/admin/channels/'+encodeURIComponent(id)+'/restore',{}),
+  resetAdminChannel: id => post('/admin/channels/'+encodeURIComponent(id)+'/reset',{}),
+  verifyAdminChannel: id => post('/admin/channels/'+encodeURIComponent(id)+'/verify',{}),
+  verifyAdminChannels: b => post('/admin/channels/verify',b),
+  stopAdminChannelChecks: () => post('/admin/channels/stop',{}),
+  adminMovies: p => get('/admin/movies',p),
+  adminMovie: id => get('/admin/movies/'+id),
+  saveAdminMovie: (id,b) => id ? put('/admin/movies/'+id,b) : post('/admin/movies',b),
+  stateAdminMovie: (id,b) => patch('/admin/movies/'+id+'/state',b),
+  verifyAdminMovie: id => post('/admin/movies/'+id+'/verify',{}),
   // Catálogo / visor
   home: () => get('/home'),
   geo: () => get('/geo'),

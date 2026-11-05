@@ -119,6 +119,7 @@ fun LoginScreen(vm: AppViewModel) { StudioLoginScreen(vm) }
 
 @Composable
 fun MainScreen(vm: AppViewModel) {
+    LaunchedEffect(Unit) { while(true) { delay(30000); vm.refreshSignalStates() } }
     var tab by remember { mutableStateOf(0) }
     var searchOpen by remember { mutableStateOf(false) }
     var panelOpen by remember { mutableStateOf(false) }

@@ -328,3 +328,12 @@ CREATE INDEX IF NOT EXISTS idx_manual_channels_cc ON manual_channels(country, ca
 -- Un voto por usuario y contenido: positivo o negativo.
 
 ALTER TABLE content_likes ADD COLUMN IF NOT EXISTS value SMALLINT NOT NULL DEFAULT 1 CHECK (value IN (-1,1));
+
+CREATE TABLE IF NOT EXISTS channel_overrides (
+  channel_id TEXT PRIMARY KEY, settings JSONB NOT NULL DEFAULT '{}', updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS channel_health (
+  channel_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, status TEXT NOT NULL,
+  checked_at TIMESTAMPTZ NOT NULL DEFAULT now(), details JSONB NOT NULL DEFAULT '[]'
+);
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS deleted BOOLEAN NOT NULL DEFAULT false;
