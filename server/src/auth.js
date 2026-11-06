@@ -2,8 +2,8 @@
 // y middlewares de autorización por rol y por suscripción activa.
 // Los datos de usuario viven en PostgreSQL (ver pg.js / schema.sql).
 
-import { scryptSync, randomBytes, timingSafeEqual, randomUUID } from 'node:crypto';
-import { one } from './pg.js';
+import { scryptSync, randomBytes, timingSafeEqual, createHash } from 'node:crypto';
+import { one,query } from './pg.js';
 
 // ---------- Contraseñas ----------
 export function hashPassword(password) {
@@ -17,21 +17,26 @@ export function verifyPassword(password, salt, hash) {
   return key.length === ref.length && timingSafeEqual(key, ref);
 }
 
-// ---------- Sesiones (en memoria) ----------
-const sessions = new Map(); // token -> { userId, at }
+// ---------- Sesiones persistentes (solo se guarda el hash del token) ----------
+const tokenHash=token=>createHash('sha256').update(String(token)).digest('hex');
 
-export function createSession(userId) {
-  const token = randomUUID().replace(/-/g, '') + randomBytes(8).toString('hex');
-  sessions.set(token, { userId, at: Date.now() });
+export async function createSession(userId) {
+  const token = randomBytes(32).toString('hex');
+  await query('INSERT INTO app_sessions(token_hash,user_id) VALUES($1,$2)',[tokenHash(token),userId]);
   return token;
 }
-export function destroySession(token) {
-  sessions.delete(token);
+export async function destroySession(token) {
+  if(token)await query('DELETE FROM app_sessions WHERE token_hash=$1',[tokenHash(token)]);
 }
 export async function userFromToken(token) {
-  const s = token && sessions.get(token);
-  if (!s) return null;
-  return one("SELECT * FROM users WHERE id = $1 AND status='active'", [s.userId]);
+  if(typeof token!=='string'||token.length>200||token.length<32)return null;
+  return one("SELECT u.* FROM app_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.status='active' AND u.deleted_at IS NULL",[tokenHash(token)]);
+}
+const seenWrites=new Map();
+export async function markUserSeen(id){
+ const now=Date.now();if(now-(seenWrites.get(String(id))||0)<45000)return;
+ seenWrites.set(String(id),now);if(seenWrites.size>10000)seenWrites.delete(seenWrites.keys().next().value);
+ await query('UPDATE users SET last_seen_at=now() WHERE id=$1',[id]);
 }
 
 // ---------- Cookies ----------
@@ -86,6 +91,7 @@ export function publicUser(u) {
     parentId: u.parent_id,
     note: u.note || null,
     displayName: u.display_name || null,
+    firstName:u.first_name||null,lastName:u.last_name||null,email:u.email||null,
     logoUrl: u.logo_url || null,
     phone: u.phone || null,
     address: u.address || null,
@@ -108,6 +114,7 @@ export function publicUser(u) {
 export async function attachUser(req, res, next) {
   try {
     req.user = await userFromToken(tokenFromReq(req));
+    if(req.user&&(!req.path.startsWith('/api/notifications')||req.query.foreground==='1'))await markUserSeen(req.user.id);
   } catch (e) {
     req.user = null;
   }

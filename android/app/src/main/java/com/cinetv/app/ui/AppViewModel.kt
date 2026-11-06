@@ -99,6 +99,7 @@ class AppViewModel : ViewModel() {
     }
 
     fun logout() {
+        Net.logout()
         accessExpiryJob?.cancel();closePlayer()
         user = null; featured = emptyList(); channelRows = emptyList(); movieRows = emptyList(); detail = null; play = null
     }

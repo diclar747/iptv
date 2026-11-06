@@ -9,7 +9,7 @@ const stamp=Date.now(),users=[];let comment;
 const app=express();app.use(express.json(),attachUser);app.use('/api',catalog);
 const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
 const base='http://127.0.0.1:'+server.address().port+'/api/catalog';
-async function req(path,user,method='GET',body,status=200){const r=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(user?{cookie:'sid='+createSession(user.id)}:{})},body:body===undefined?undefined:JSON.stringify(body)});const data=await r.json();assert.equal(r.status,status,JSON.stringify(data));return data;}
+async function req(path,user,method='GET',body,status=200){const r=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(user?{cookie:'sid='+await createSession(user.id)}:{})},body:body===undefined?undefined:JSON.stringify(body)});const data=await r.json();assert.equal(r.status,status,JSON.stringify(data));return data;}
 try {
  for(let i=0;i<2;i++) users.push(await one("INSERT INTO users(username,pass_hash,pass_salt,role,expires_at) VALUES($1,'test','test','client',now()+interval '1 day') RETURNING id",['social-fixture-'+stamp+'-'+i]));
  const [a,b]=users,id='social-fixture-'+stamp;

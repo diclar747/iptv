@@ -33,8 +33,11 @@ import com.cinetv.app.ui.SplashLoading
 // AppCompatActivity (= FragmentActivity): necesario para que el diálogo del
 // botón de Chromecast (MediaRouteButton) pueda abrirse sin crashear.
 class MainActivity : AppCompatActivity() {
+    private var walletRequested by mutableStateOf(false)
+    override fun onNewIntent(intent:Intent){super.onNewIntent(intent);setIntent(intent);if(intent.getBooleanExtra("open_wallet",false))walletRequested=true}
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        walletRequested=intent.getBooleanExtra("open_wallet",false)
         // Permiso de notificaciones (Android 13+): para la notificación de
         // reproducción. Si se niega, la app sigue igual, solo sin notificación.
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -68,7 +71,7 @@ class MainActivity : AppCompatActivity() {
                     when {
                         vm.booting -> SplashLoading()
                         vm.user == null -> LoginScreen(vm)
-                        else -> MainScreen(vm)
+                        else -> MainScreen(vm,walletRequested){walletRequested=false}
                     }
                     val target = vm.play
                     if (target != null) PlayerScreen(target) { vm.closePlayer() }

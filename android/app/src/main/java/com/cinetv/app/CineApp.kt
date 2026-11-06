@@ -12,6 +12,7 @@ class CineApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         Net.init(this)
+        AccountNotificationJob.schedule(this)
         // Inicializa Google Cast (si el dispositivo tiene Play Services).
         runCatching { CastContext.getSharedInstance(this) }
     }

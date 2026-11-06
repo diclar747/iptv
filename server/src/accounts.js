@@ -2,6 +2,7 @@
 // y control de conexiones simultáneas. Expone un router Express montado en /api.
 
 import express from 'express';
+import {bankFingerprint} from './payment-files.js';
 import { query, one, many, tx } from './pg.js';
 import {
   hashPassword,
@@ -126,7 +127,7 @@ router.post(
       throw httpError(401, 'Usuario o contraseña incorrectos');
     }
     if (u.status !== 'active') throw httpError(403, 'Cuenta deshabilitada');
-    const token = createSession(u.id);
+    const token = await createSession(u.id);
     setSessionCookie(res, token);
     res.json({ user: publicUser(u) });
   })
@@ -150,33 +151,34 @@ router.post(
     let parentId = null;
     const ref = typeof req.body?.ref==='string'?req.body.ref.trim().slice(0,100):'';
     if (ref) {
-      const r = await one("SELECT id FROM users WHERE username=$1 AND role<>'admin' AND status='active'", [ref]);
+      const r = await one("SELECT u.id FROM users u LEFT JOIN affiliate_referral_aliases a ON a.user_id=u.id WHERE (u.username=$1 OR u.affiliate_code::text=$1 OR a.alias=$1) AND u.role<>'admin' AND u.status='active' AND u.deleted_at IS NULL LIMIT 1", [ref]);
       if (r) parentId = r.id;
     }
+    if(await one('SELECT user_id FROM affiliate_referral_aliases WHERE alias=$1',[username]))throw httpError(409,'Ese nombre de usuario ya está reservado');
     const { salt, hash } = hashPassword(password);
     let row;
     try {
       row = await one(
-        `INSERT INTO users (username, pass_hash, pass_salt, role, parent_id, created_by, expires_at, max_connections, package_name)
-         VALUES ($1,$2,$3,'client',$4,$4, now() + ($5 || ' hours')::interval, 1, $6) RETURNING *`,
+        `WITH created AS (INSERT INTO users (username, pass_hash, pass_salt, role, parent_id, created_by, expires_at, max_connections, package_name)
+         VALUES ($1,$2,$3,'client',$4,$4, now() + ($5 || ' hours')::interval, 1, $6) RETURNING *), alias AS (INSERT INTO affiliate_referral_aliases(alias,user_id) SELECT username,id FROM created RETURNING alias) SELECT * FROM created`,
         [username, hash, salt, parentId, TRIAL_HOURS, `Prueba gratis ${TRIAL_HOURS}h`]
       );
     } catch (e) {
       if (e.code === '23505') throw httpError(409, 'Ese usuario ya existe, probá con otro');
       throw e;
     }
-    const token = createSession(row.id);
+    const token = await createSession(row.id);
     setSessionCookie(res, token);
     res.status(201).json({ user: publicUser(row) });
   })
 );
 
-router.post('/auth/logout', (req, res) => {
+router.post('/auth/logout', h(async(req, res) => {
   const t = tokenFromReq(req);
-  if (t) destroySession(t);
+  if (t) await destroySession(t);
   clearSessionCookie(res);
   res.json({ ok: true });
-});
+}));
 
 router.get('/auth/me', (req, res) => {
   res.json({ user: publicUser(req.user) });
@@ -192,6 +194,12 @@ function profileDTO(u) {
 router.get('/profile', requireAuth, h(async (req, res) => {
   res.json(profileDTO(req.user));
 }));
+router.post('/profile/password',requireAuth,h(async(req,res)=>{
+ const {currentPassword,password}=req.body||{};
+ if(typeof currentPassword!=='string'||typeof password!=='string'||password.length<8||password.length>128)throw httpError(400,'La nueva contraseña debe tener entre 8 y 128 caracteres');
+ await tx(async c=>{const u=(await c.query('SELECT * FROM users WHERE id=$1 FOR UPDATE',[req.user.id])).rows[0];if(!verifyPassword(currentPassword,u.pass_salt,u.pass_hash))throw httpError(403,'Tu contraseña actual no es correcta');const {salt,hash}=hashPassword(password);await c.query('UPDATE users SET pass_salt=$1,pass_hash=$2 WHERE id=$3',[salt,hash,u.id]);await c.query('DELETE FROM app_sessions WHERE user_id=$1',[u.id]);});
+ setSessionCookie(res,await createSession(req.user.id));res.json({ok:true});
+}));
 
 router.patch(
   '/profile',
@@ -199,15 +207,17 @@ router.patch(
   h(async (req, res) => {
     const b = {displayName:req.user.display_name,logoUrl:req.user.logo_url,phone:req.user.phone,address:req.user.address,bankName:req.user.bank_name,bankHolder:req.user.bank_holder,bankAccount:req.user.bank_account,bankAlias:req.user.bank_alias,bankDoc:req.user.bank_doc,...(req.body || {})};
     const { displayName, logoUrl, phone, address } = b;
+    if(b.email&&(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.email))||String(b.email).length>160))throw httpError(400,'Correo inválido');
     if (logoUrl && String(logoUrl).length > 300000) throw httpError(400, 'La imagen es muy grande (máx ~200KB)');
     const cut = (v, n) => (v == null || v === '' ? null : String(v).slice(0, n));
     const row = await one(
       `UPDATE users SET display_name=$1, logo_url=$2, phone=$3, address=$4,
-         bank_name=$5, bank_holder=$6, bank_account=$7, bank_alias=$8, bank_doc=$9
+         bank_name=$5, bank_holder=$6, bank_account=$7, bank_alias=$8, bank_doc=$9,
+         first_name=$11,last_name=$12,email=$13
        WHERE id=$10 RETURNING *`,
       [cut(displayName, 80), logoUrl || null, cut(phone, 40), cut(address, 200),
        cut(b.bankName, 80), cut(b.bankHolder, 120), cut(b.bankAccount, 60), cut(b.bankAlias, 80), cut(b.bankDoc, 40),
-       req.user.id]
+       req.user.id,cut(b.firstName??req.user.first_name,80),cut(b.lastName??req.user.last_name,80),cut(b.email??req.user.email,160)]
     );
     res.json(profileDTO(row));
   })
@@ -235,6 +245,7 @@ router.get(
       bankAccount: provider.bank_account || null,
       bankAlias: provider.bank_alias || null,
       bankDoc: provider.bank_doc || null,
+      qrAvailable:!!(await one('SELECT id FROM billing_qr_asset WHERE id=1 AND bank_fingerprint=$1',[bankFingerprint(provider)])),
     });
   })
 );

@@ -13,6 +13,7 @@ import AffiliatePanel from './panel/AffiliatePanel.jsx';
 import Radios from './views/Radios.jsx';
 import TitleModal from './ui/TitleModal.jsx';
 import Icon from './ui/Icon.jsx';
+import Notifications from './ui/Notifications.jsx';
 
 const roleLabel = (r) => ({ admin: 'Admin', reseller: 'Afiliado', client: 'Afiliado' }[r] || r);
 // Tiempo restante legible: horas si falta poco (prueba 24h), si no días.
@@ -98,7 +99,8 @@ export default function App() {
   );
   if (!user) return <Landing />;
 
-  if(window.location.pathname==='/afiliados') return <div className='aff-standalone'>{user.role==='admin'?<Panel user={user}/>:<AffiliatePanel/>}</div>;
+  if(window.location.pathname==='/afiliados') return <div className='aff-standalone'><div className="aff-standalone-nav"><a href="/">LiveTV</a><a href="/perfil">Mi perfil</a><Notifications/></div>{user.role==='admin'?<Panel user={user}/>:<AffiliatePanel/>}</div>;
+  if(window.location.pathname==='/perfil')return <div className="aff-standalone"><a href="/afiliados">← Afiliados y billetera</a><Perfil user={user} onLogout={logout} onNavigate={()=>window.location.assign('/afiliados')}/></div>;
   const isStaff = true;
   const sub = user.subscription;
   const subInactive = user.role !== 'admin' && sub && !sub.active;
@@ -180,7 +182,7 @@ export default function App() {
               <Icon name="fullscreen" size={20} />
             </button>
             <div className="account">
-              <button className="account-btn" aria-expanded={account} aria-label="Mi cuenta" onClick={() => setAccount((v) => !v)}>
+              <Notifications/><button className="account-btn" aria-expanded={account} aria-label="Mi cuenta" onClick={() => setAccount((v) => !v)}>
                 <span className="avatar">{user.username[0].toUpperCase()}</span>
                 <span className="account-name">{user.username}</span>
                 <span className="caret">▾</span>

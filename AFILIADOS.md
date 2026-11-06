@@ -21,3 +21,17 @@ Cada solicitud lleva una identificación única. Las aprobaciones y retiros util
 `node server/scripts/verify-affiliates.mjs` crea un esquema temporal aislado, copia la estructura de usuarios y prueba mensualidades repetidas, aprobaciones simultáneas, planes vencidos, retiros concurrentes, rechazos, datos bancarios e idempotencia. Elimina exclusivamente ese esquema temporal al terminar. No modifica las cuentas ni el dinero reales.
 
 En Android, el botón **Afiliados y billetera** abre el mismo flujo de la web dentro de una vista autenticada del propio dominio. Se mantiene accesible con un plan vencido para renovar y consultar las ganancias ya generadas. Al cerrar, se actualiza el estado de la cuenta nativa.
+
+## Comprobantes y cuentas bancarias
+
+En **Pagar o renovar mi plan** se muestran los datos del administrador y, si está configurado y corresponde a la cuenta vigente, su QR. El usuario adjunta una imagen JPG, PNG o WebP de hasta 8 MB, mediante archivos o cámara. Las imágenes se guardan fuera del directorio público, en `MEDIA_STORAGE_DIR/_payments`; solo su dueño y los administradores pueden consultarlas. Los datos bancarios y el QR real de producción no se incluyen en Git.
+
+En **Solicitudes** se revisan tanto pagos de planes como retiros. Aprobar un pago registra su referencia confirmada, extiende la vigencia y acredita una única comisión del 50% cuando el referente cumple las condiciones. Una cortesía administrativa no genera comisiones. El administrador puede activar 1, 2, 3, 6 o 12 meses y debe distinguir pago verificado de cortesía.
+
+El afiliado puede guardar hasta diez cuentas bancarias, elegir una al pedir un retiro y consultar el destino registrado. Quitar una cuenta no altera las solicitudes anteriores. El perfil conserva sus datos personales, avatar y cambio de contraseña; cambiarla revoca las otras sesiones.
+
+## Avisos propios
+
+Los avisos de activación, comisión, pago observado, nuevo contenido y retiros se guardan dentro de la misma transacción que la operación. La campana web los consulta cada 15 segundos mientras la página está visible. La APK consulta directamente al servidor Node mediante JobScheduler de Android, sin Firebase, OneSignal ni otro intermediario. Android impone un intervalo mínimo de 15 minutos y puede demorar tareas por ahorro de batería; una aplicación detenida forzosamente debe volver a abrirse. No se promete entrega inmediata con la APK cerrada. Las transferencias bancarias continúan siendo manuales: el aviso indica que el administrador registró el pago, no que la aplicación transfirió dinero.
+
+`node server/scripts/verify-payment-flow.mjs` verifica por HTTP sesiones persistentes, permisos, comprobantes privados, cuentas bancarias, pago repetido, comisión única, avisos, activaciones de varios meses y papelera en un esquema temporal aislado. No usar datos financieros de prueba en producción.

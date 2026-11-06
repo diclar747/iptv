@@ -6,6 +6,12 @@ import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebChromeClient
+import android.webkit.ValueCallback
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -28,9 +34,17 @@ fun AffiliateScreen(onClose: () -> Unit) {
     val context = LocalContext.current
     var view by remember { mutableStateOf<WebView?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var fileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+    var cameraUri by remember { mutableStateOf<Uri?>(null) }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        fileCallback?.onReceiveValue(if(ok) cameraUri?.let{arrayOf(it)} else null);fileCallback=null
+    }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        fileCallback?.onReceiveValue(uri?.let { arrayOf(it) }); fileCallback = null
+    }
     BackHandler { if (view?.canGoBack() == true) view?.goBack() else onClose() }
     DisposableEffect(Unit) {
-        onDispose { view?.stopLoading(); view?.destroy(); view = null }
+        onDispose { fileCallback?.onReceiveValue(null);fileCallback=null;view?.stopLoading(); view?.destroy(); view = null }
     }
     Column(Modifier.fillMaxSize().background(Color(0xFF080E17))) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -47,6 +61,19 @@ fun AffiliateScreen(onClose: () -> Unit) {
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
                 settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                webChromeClient = object : WebChromeClient() {
+                    override fun onShowFileChooser(v: WebView, callback: ValueCallback<Array<Uri>>, params: FileChooserParams): Boolean {
+                        fileCallback?.onReceiveValue(null);fileCallback=callback
+                        if(params.isCaptureEnabled){
+                            runCatching {
+                                val dir=File(context.cacheDir,"receipts").apply{mkdirs()}
+                                dir.listFiles()?.filter{it.lastModified()<System.currentTimeMillis()-86400000}?.forEach{it.delete()}
+                                val uri=FileProvider.getUriForFile(context,context.packageName+".receipts",File.createTempFile("receipt-",".jpg",dir));cameraUri=uri;camera.launch(uri)
+                            }.onFailure{picker.launch("image/*")}
+                        }else picker.launch("image/*")
+                        return true
+                    }
+                }
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
                         val uri = request.url

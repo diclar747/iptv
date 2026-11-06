@@ -1,6 +1,10 @@
 import './env.js'; // carga .env antes que nada (debe ir primero)
 import landingRouter from './landing.js';
 import affiliatesRouter from './affiliates.js';
+import paymentFilesRouter from './payment-files.js';
+import notificationsRouter from './notifications.js';
+import bankAccountsRouter from './bank-accounts.js';
+import affiliateAdminRouter from './affiliate-admin.js';
 import youtubeAdminRouter from './youtube-admin.js';
 import mediaTransfersRouter,{startTransferMaintenance} from './media-transfers.js';
 import mediaLibraryRouter from './media-library.js';
@@ -58,11 +62,13 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 31, versionName: '1.30', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 32, versionName: '1.31', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
 app.use('/api', landingRouter);
+app.use('/api',paymentFilesRouter,notificationsRouter,bankAccountsRouter);
+app.use('/api',affiliateAdminRouter);
 app.use('/api', affiliatesRouter);
 app.use('/api', accountsRouter);
 // Paired computers authenticate with their own scoped token, before the catalog's session guard.

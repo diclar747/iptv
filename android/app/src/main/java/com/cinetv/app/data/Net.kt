@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit
 //  · okHttpMedia -> reproductor (ExoPlayer): read largo + sin callTimeout +
 //                   ping, para que un stream en vivo que titubea no se corte.
 object Net {
+    private lateinit var appContext:Context
     const val BASE = "https://live.cd.com.py/"
     fun artworkUrl(value: String?): String? = value?.takeIf { it.isNotBlank() }?.let {
         if (it.startsWith("/") && !it.startsWith("//")) BASE.trimEnd('/') + it else it
@@ -32,6 +33,7 @@ object Net {
 
     fun init(ctx: Context) {
         if (::okHttp.isInitialized) return
+        appContext=ctx.applicationContext
         val jar = PrefsCookieJar(ctx.applicationContext)
         okHttp = OkHttpClient.Builder()
             .cookieJar(jar)
@@ -54,6 +56,17 @@ object Net {
             .create(Api::class.java)
     }
 
+    fun logout(){
+        val old=BASE.toHttpUrlOrNull()?.let{okHttp.cookieJar.loadForRequest(it).find{c->c.name=="sid"}?.value}
+        (okHttp.cookieJar as? PrefsCookieJar)?.clear()
+        android.webkit.CookieManager.getInstance().removeAllCookies(null)
+        val manager=appContext.getSystemService(android.app.NotificationManager::class.java)
+        manager.activeNotifications.filter{it.notification.channelId=="account"}.forEach{manager.cancel(it.id)}
+        if(old!=null)okHttp.newBuilder().cookieJar(CookieJar.NO_COOKIES).build().newCall(okhttp3.Request.Builder().url(BASE+"api/auth/logout").header("Cookie","sid="+old).post(okhttp3.RequestBody.create(null,byteArrayOf())).build()).enqueue(object:okhttp3.Callback{
+            override fun onFailure(call:okhttp3.Call,e:java.io.IOException){}
+            override fun onResponse(call:okhttp3.Call,response:okhttp3.Response){response.close()}
+        })
+    }
     // URL de reproducción por el proxy (resuelve cabeceras y auth de sesión).
     fun proxied(rawUrl: String, ua: String? = null, ref: String? = null): String {
         val sb = StringBuilder(BASE).append("api/stream?url=").append(enc(rawUrl))
@@ -81,6 +94,7 @@ object Net {
 private class PrefsCookieJar(ctx: Context) : CookieJar {
     private val prefs = ctx.getSharedPreferences("cinetv_cookies", Context.MODE_PRIVATE)
     private val store = mutableListOf<Cookie>()
+    @Synchronized fun clear(){store.clear();prefs.edit().remove("cookies").apply()}
 
     init {
         val base = Net.BASE.toHttpUrlOrNull()

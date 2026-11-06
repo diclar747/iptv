@@ -6,7 +6,7 @@ import library from '../src/media-library.js';import adminRouter from '../src/yo
 await initSchema();const admin=await one("SELECT id FROM users WHERE role='admin' LIMIT 1");assert.ok(admin);
 const stamp=Date.now(),ids=[],movieIds=[],sourceIds=[],category='Fixture videos '+stamp;
 const app=express();app.use(express.json(),attachUser);app.use('/api',library,adminRouter,movies,catalog);app.get('/api/stream',requireActiveViewer,streamHandler());
-const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port,cookie='sid='+createSession(admin.id);
+const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port,cookie='sid='+await createSession(admin.id);
 async function request(url,method='GET',body,status=200){const r=await fetch(base+url,{method,headers:{cookie,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});const data=await r.json();assert.equal(r.status,status,JSON.stringify(data));return data;}
 const source=()=>randomUUID().replaceAll('-','').slice(0,11);
 async function job(input={}){const id=source();sourceIds.push(id);const result=await createYoutubeJob({url:'https://www.youtube.com/watch?v='+id,title:'Fixture reciente '+stamp,category,kind:'music',year:1980,authorized:true,rightsBasis:'owner',...input},admin.id,{schedule:false});ids.push(result.id);return result;}

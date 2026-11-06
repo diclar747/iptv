@@ -12,7 +12,7 @@ import {ensureLoaded,getState,getChannelStreams,queryChannels} from '../src/iptv
 await initSchema();await initChannelState();await ensureLoaded();
 const admin=await one("SELECT id FROM users WHERE role='admin' LIMIT 1");
 assert.ok(admin,'Se necesita una cuenta admin local');
-const cookie='sid='+createSession(admin.id),fixture='Fixture-'+Date.now()+'.py';
+const cookie='sid='+await createSession(admin.id),fixture='Fixture-'+Date.now()+'.py';
 let movieId,manualId;
 const app=express();app.use(express.json(),attachUser);
 app.get('/fixture/error',(req,res)=>res.type('html').send('<html>Error</html>'));

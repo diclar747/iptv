@@ -1,3 +1,4 @@
+import {notify} from './notifications.js';
 import express from 'express';
 import {checkLibraryFile} from './media-library.js';
 import { many,one,query,tx } from './pg.js';
@@ -33,6 +34,7 @@ async function save(input,id){
   if(!row)throw Object.assign(Error('Película no encontrada'),{status:404});
   await client.query("DELETE FROM media_sources WHERE content_type='movie' AND content_id=$1",[row.id]);
   for(const s of sources)await client.query("INSERT INTO media_sources(content_type,content_id,url,kind,quality,user_agent,referrer) VALUES('movie',$1,$2,$3,$4,$5,$6)",[row.id,s.url,s.kind||(/\.m3u8/i.test(s.url)?'hls':'mp4'),s.quality||null,s.userAgent||null,s.referrer||null]);
+  if(!id)await notify(client,null,'content','Nuevo contenido en LiveTV',title,'movie:'+row.id);
   return row;
  });
 }

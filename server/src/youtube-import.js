@@ -1,3 +1,4 @@
+import {notify} from './notifications.js';
 import {randomUUID} from 'node:crypto';import {rm} from 'node:fs/promises';
 import {many,one,query,tx} from './pg.js';
 import {downloadYoutube,assetDirectory,PUBLIC_BASE,parseYoutubeUrl} from './youtube-downloader.js';
@@ -28,6 +29,7 @@ export async function publishYoutubeJob(job,download){
   const m=download.metadata,o=job.options,video=PUBLIC_BASE+'/api/library/'+job.id+'/'+download.video,cover=download.cover?PUBLIC_BASE+'/api/library/'+job.id+'/'+download.cover:m.thumbnail;
   await client.query('INSERT INTO media_categories(name) VALUES($1) ON CONFLICT DO NOTHING',[o.category]);
   const movie=(await client.query("INSERT INTO movies(title,year,poster,description,overview_es,category,stream_url,provider,runtime,content_kind,origin_url,creator) VALUES($1,$2,$3,$4,$4,$5,$6,$11,$7,$8,$9,$10) RETURNING id",[cleanImportedTitle(o.title||m.title),o.year||m.year,cover,cleanImportedOverview(o.description||m.description),o.category,video,m.duration?Math.ceil(m.duration/60):null,o.kind,provider==='youtube'?job.source_url:null,m.creator,provider])).rows[0];
+  await notify(client,null,'content','Nuevo contenido en LiveTV',cleanImportedTitle(o.title||m.title),'movie:'+movie.id);
   await client.query('INSERT INTO media_assets(id,movie_id,video_name,cover_name,size_bytes,metadata) VALUES($1,$2,$3,$4,$5,$6)',[job.id,movie.id,download.video,download.cover,download.size,m]);
   if(provider==='youtube')await client.query("INSERT INTO external_ids(provider,content_type,external_id,internal_id) VALUES('youtube','movie',$1,$2)",[job.source_id,movie.id]);
   await client.query("UPDATE media_import_jobs SET state='done',progress=100,metadata=$2,movie_id=$3,error=NULL,updated_at=now() WHERE id=$1",[job.id,m,movie.id]);return movie;

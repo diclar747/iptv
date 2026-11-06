@@ -29,6 +29,20 @@ const put = (p, body) => req('PUT', p, { body });
 const del = (p, params) => req('DELETE', p, { params });
 
 export const api = {
+  changePassword:b=>post('/profile/password',b),
+  affiliateList:p=>get('/admin/affiliates',p),
+  affiliateDetail:id=>get('/admin/affiliates/'+id),
+  createAffiliate:b=>post('/admin/affiliates',b),
+  editAffiliate:(id,b)=>patch('/admin/affiliates/'+id,b),
+  deleteAffiliate:id=>del('/admin/affiliates/'+id),
+  restoreAffiliate:id=>post('/admin/affiliates/'+id+'/restore',{}),
+  activateAffiliate:(id,b)=>post('/admin/affiliates/'+id+'/activate',b),
+  notifications:()=>get('/notifications'),
+  readNotifications:id=>post('/notifications/read',{id}),
+  bankAccounts:()=>get('/affiliate/bank-accounts'),
+  addBankAccount:b=>post('/affiliate/bank-accounts',b),
+  removeBankAccount:id=>del('/affiliate/bank-accounts/'+id),
+  uploadPaymentReceipt:async file=>{if(file.size>8*1024*1024)throw Error('El comprobante debe pesar hasta 8 MB');const r=await fetch('/api/affiliate/receipts',{method:'POST',credentials:'include',headers:{'Content-Type':'application/octet-stream'},body:file});const d=await r.json();if(!r.ok)throw Error(d.error||'No se pudo enviar el comprobante');return d;},
   affiliateMe:()=>get('/affiliate/me'),
   affiliatePayment:b=>post('/affiliate/payments',b),
   affiliateWithdraw:b=>post('/affiliate/withdrawals',b),

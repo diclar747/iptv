@@ -1,4 +1,5 @@
 import express from 'express';
+import {notify} from './notifications.js';
 import {many,one,tx} from './pg.js';
 import {requireAuth,requireRole} from './auth.js';
 import {MONTHLY_PLAN,commissionEligible,commissionAmount,wholeGs} from './affiliate-policy.js';
@@ -27,20 +28,21 @@ export async function approvePayment(c,id,adminId,reference){
  if(ref&&String(ref.id)!==String(user.id)){
   const earned=commissionEligible(ref,new Date(approvedAt).getTime()),amount=commissionAmount(p.amount_gs);
   const commission=(await c.query(`INSERT INTO affiliate_commissions(payment_id,affiliate_id,referred_id,amount_gs,state,reason) VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,[p.id,ref.id,user.id,amount,earned?'earned':'lost',earned?null:'Plan del afiliado inactivo al aprobarse el pago'])).rows[0];
-  if(earned)await c.query(`INSERT INTO affiliate_ledger(user_id,amount_gs,kind,commission_id) VALUES($1,$2,'commission',$3)`,[ref.id,amount,commission.id]);
+  if(earned){await c.query(`INSERT INTO affiliate_ledger(user_id,amount_gs,kind,commission_id) VALUES($1,$2,'commission',$3)`,[ref.id,amount,commission.id]);await notify(c,ref.id,'commission','Recibiste una comisión','Gs. '+amount.toLocaleString('es-PY')+' por el pago de '+user.username,'commission:'+p.id);}
  }
  await c.query(`UPDATE users SET expires_at=GREATEST(COALESCE(expires_at,clock_timestamp()),clock_timestamp())+($1::int*interval '1 day'),package_name=$2,max_connections=1 WHERE id=$3`,[p.duration_days,MONTHLY_PLAN.name,user.id]);
+ await notify(c,user.id,'plan','Tu plan fue activado','Se agregaron '+p.duration_days+' días a tu plan LiveTV.','plan:'+p.id);
  return (await c.query(`UPDATE subscription_payments SET status='approved',approved_reference=$1,resolved_by=$2,resolved_at=clock_timestamp() WHERE id=$3 RETURNING *`,[approvedReference,adminId,p.id])).rows[0];
 }
-export async function requestWithdrawal(c,userId,amount,key){
+export async function requestWithdrawal(c,userId,amount,key,bankAccountId){
  amount=wholeGs(amount);uuid(key);
  const u=(await c.query('SELECT * FROM users WHERE id=$1 FOR UPDATE',[userId])).rows[0];
  const prior=(await c.query('SELECT * FROM affiliate_withdrawals WHERE user_id=$1 AND request_key=$2',[userId,key])).rows[0];if(prior)return prior;
- const bank=bankOf(u);if(!bank.bankName||!bank.bankHolder||(!bank.bankAccount&&!bank.bankAlias))throw fail(400,'Completá banco, titular y cuenta o alias en tus datos bancarios');
+ let bank=bankOf(u);if(bankAccountId&&bankAccountId!=='profile'){uuid(bankAccountId);const saved=(await c.query('SELECT data FROM affiliate_bank_accounts WHERE id=$1 AND user_id=$2 AND NOT disabled FOR SHARE',[bankAccountId,userId])).rows[0];if(!saved)throw fail(400,'Cuenta bancaria no encontrada');bank=saved.data;}if(!bank.bankName||!bank.bankHolder||(!bank.bankAccount&&!bank.bankAlias))throw fail(400,'Completá banco, titular y cuenta o alias en tus datos bancarios');
  const balance=Number((await c.query('SELECT COALESCE(sum(amount_gs),0) AS n FROM affiliate_ledger WHERE user_id=$1',[userId])).rows[0].n);
  if(balance<amount)throw fail(409,'El monto supera tu dinero disponible');
  const w=(await c.query('INSERT INTO affiliate_withdrawals(user_id,amount_gs,request_key,bank_snapshot) VALUES($1,$2,$3,$4) RETURNING *',[userId,amount,key,JSON.stringify(bank)])).rows[0];
- await c.query(`INSERT INTO affiliate_ledger(user_id,amount_gs,kind,withdrawal_id) VALUES($1,$2,'withdrawal',$3)`,[userId,-amount,w.id]);return w;
+ await c.query(`INSERT INTO affiliate_ledger(user_id,amount_gs,kind,withdrawal_id) VALUES($1,$2,'withdrawal',$3)`,[userId,-amount,w.id]);const admins=(await c.query("SELECT id FROM users WHERE role='admin' AND status='active'")).rows;for(const a of admins)await notify(c,a.id,'withdrawal','Nuevo retiro solicitado',u.username+' solicitó Gs. '+amount.toLocaleString('es-PY'),'withdrawal:'+w.id+':'+a.id);return w;
 }
 export async function resolveWithdrawal(c,id,adminId,status,reference,note){
  const w=(await c.query('SELECT * FROM affiliate_withdrawals WHERE id=$1 FOR UPDATE',[id])).rows[0];if(!w)throw fail(404,'Retiro no encontrado');
@@ -49,6 +51,7 @@ export async function resolveWithdrawal(c,id,adminId,status,reference,note){
  if(status==='paid'&&!text(reference,120))throw fail(400,'Ingresá la referencia de la transferencia realizada');
  if(!['paid','rejected'].includes(status))throw fail(400,'Estado inválido');
  if(status==='rejected')await c.query(`INSERT INTO affiliate_ledger(user_id,amount_gs,kind,withdrawal_id) VALUES($1,$2,'release',$3)`,[w.user_id,w.amount_gs,w.id]);
+ await notify(c,w.user_id,'withdrawal',status==='paid'?'Tu retiro fue marcado como pagado':'Tu retiro fue rechazado',status==='paid'?'Se registró la transferencia de Gs. '+Number(w.amount_gs).toLocaleString('es-PY')+'. Revisá tu cuenta bancaria.':'El dinero fue devuelto a tu billetera. '+text(note),'withdrawal-resolved:'+w.id);
  return (await c.query('UPDATE affiliate_withdrawals SET status=$1,payment_reference=$2,note=$3,resolved_by=$4,resolved_at=clock_timestamp() WHERE id=$5 RETURNING *',[status,text(reference,120)||null,text(note)||null,adminId,id])).rows[0];
 }
 router.get('/affiliate/me',requireAuth,h(async(req,res)=>{
@@ -59,17 +62,17 @@ router.get('/affiliate/me',requireAuth,h(async(req,res)=>{
   many(`SELECT id,username,display_name,created_at,expires_at,status,(SELECT count(*) FROM subscription_payments p WHERE p.user_id=u.id AND p.status='approved') AS payments FROM users u WHERE parent_id=$1 ORDER BY created_at DESC LIMIT 200`,[id]),
   many(`SELECT c.*,u.username AS referred FROM affiliate_commissions c JOIN users u ON u.id=c.referred_id WHERE c.affiliate_id=$1 ORDER BY c.id DESC LIMIT 100`,[id]),
   many("SELECT * FROM affiliate_withdrawals WHERE user_id=$1 ORDER BY (status='pending') DESC,id DESC LIMIT 100",[id]),
-  many('SELECT * FROM subscription_payments WHERE user_id=$1 ORDER BY id DESC LIMIT 100',[id]),
+  many('SELECT p.*,(SELECT id FROM payment_receipts r WHERE r.payment_id=p.id) AS receipt_id FROM subscription_payments p WHERE user_id=$1 ORDER BY id DESC LIMIT 100',[id]),
   many('SELECT * FROM affiliate_ledger WHERE user_id=$1 ORDER BY id DESC LIMIT 100',[id]),
   one(`SELECT COALESCE(sum(amount_gs) FILTER(WHERE status='pending'),0) AS pending,COALESCE(sum(amount_gs) FILTER(WHERE status='paid'),0) AS paid FROM affiliate_withdrawals WHERE user_id=$1`,[id])
  ]);
- res.set('Cache-Control','private, no-store').json({available:Number(balance.available),earned:Number(totals.earned),lost:Number(totals.lost),withdrawalTotals,eligible:commissionEligible(req.user),expiresAt:req.user.expires_at,referralUrl:(process.env.PUBLIC_BASE_URL||'https://live.cd.com.py').replace(/\/$/,'')+'/?ref='+encodeURIComponent(req.user.username),plan:MONTHLY_PLAN,referrals,commissions,withdrawals,payments,movements});
+ res.set('Cache-Control','private, no-store').json({available:Number(balance.available),earned:Number(totals.earned),lost:Number(totals.lost),withdrawalTotals,eligible:commissionEligible(req.user),expiresAt:req.user.expires_at,referralUrl:(process.env.PUBLIC_BASE_URL||'https://live.cd.com.py').replace(/\/$/,'')+'/?ref='+encodeURIComponent(req.user.affiliate_code||req.user.username),plan:MONTHLY_PLAN,referrals,commissions,withdrawals,payments,movements});
 }));
 router.post('/affiliate/payments',requireAuth,h(async(req,res)=>{
  const key=uuid(req.body?.requestKey),reference=text(req.body?.reference,120);if(!reference)throw fail(400,'Ingresá la referencia de tu pago');
- const p=await tx(async c=>{await c.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[req.user.id]);const old=(await c.query('SELECT * FROM subscription_payments WHERE user_id=$1 AND request_key=$2',[req.user.id,key])).rows[0];if(old)return old;return (await c.query('INSERT INTO subscription_payments(user_id,amount_gs,duration_days,reference,request_key) VALUES($1,$2,$3,$4,$5) RETURNING *',[req.user.id,MONTHLY_PLAN.amount,MONTHLY_PLAN.durationDays,reference,key])).rows[0];});res.status(201).json(p);
+ const p=await tx(async c=>{await c.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[req.user.id]);const old=(await c.query('SELECT * FROM subscription_payments WHERE user_id=$1 AND request_key=$2',[req.user.id,key])).rows[0];if(old)return old;const receiptId=uuid(req.body?.receiptId);const receipt=(await c.query('SELECT id FROM payment_receipts WHERE id=$1 AND user_id=$2 AND payment_id IS NULL FOR UPDATE',[receiptId,req.user.id])).rows[0];if(!receipt)throw fail(400,'Adjuntá tu comprobante de pago');const payment=(await c.query('INSERT INTO subscription_payments(user_id,amount_gs,duration_days,reference,request_key) VALUES($1,$2,$3,$4,$5) RETURNING *',[req.user.id,MONTHLY_PLAN.amount,MONTHLY_PLAN.durationDays,reference,key])).rows[0];await c.query('UPDATE payment_receipts SET payment_id=$1 WHERE id=$2',[payment.id,receiptId]);const admins=(await c.query("SELECT id FROM users WHERE role='admin' AND status='active'")).rows;for(const a of admins)await notify(c,a.id,'payment','Nuevo comprobante de pago',req.user.username+' informó un pago de Gs. 27.500.','payment:'+payment.id+':'+a.id);return payment;});res.status(201).json(p);
 }));
-router.post('/affiliate/withdrawals',requireAuth,h(async(req,res)=>res.status(201).json(await tx(c=>requestWithdrawal(c,req.user.id,req.body?.amount,req.body?.requestKey)))));
+router.post('/affiliate/withdrawals',requireAuth,h(async(req,res)=>res.status(201).json(await tx(c=>requestWithdrawal(c,req.user.id,req.body?.amount,req.body?.requestKey,req.body?.bankAccountId)))));
 router.get('/admin/affiliates',requireRole('admin'),h(async(req,res)=>{
  const search='%'+text(req.query.search,80)+'%';res.set('Cache-Control','private, no-store').json(await many(`SELECT u.id,u.username,u.display_name,u.status,u.expires_at,u.created_at,
  (SELECT count(*)::int FROM users r WHERE r.parent_id=u.id) AS referrals,
@@ -83,14 +86,14 @@ router.patch('/admin/affiliates/:id',requireRole('admin'),h(async(req,res)=>{
 }));
 router.get('/admin/affiliate-requests',requireRole('admin'),h(async(req,res)=>{
  const [payments,withdrawals,summary]=await Promise.all([
-  many("SELECT p.*,u.username FROM subscription_payments p JOIN users u ON u.id=p.user_id ORDER BY (p.status='pending') DESC,p.id DESC LIMIT 300"),
+  many("SELECT p.*,u.username,(SELECT id FROM payment_receipts r WHERE r.payment_id=p.id) AS receipt_id FROM subscription_payments p JOIN users u ON u.id=p.user_id ORDER BY (p.status='pending') DESC,p.id DESC LIMIT 300"),
   many("SELECT w.*,u.username FROM affiliate_withdrawals w JOIN users u ON u.id=w.user_id ORDER BY (w.status='pending') DESC,w.id DESC LIMIT 300"),
   one(`SELECT (SELECT COALESCE(sum(amount_gs),0) FROM affiliate_ledger) AS available,(SELECT COALESCE(sum(amount_gs),0) FROM affiliate_withdrawals WHERE status='pending') AS pending,(SELECT COALESCE(sum(amount_gs),0) FROM affiliate_withdrawals WHERE status='paid') AS paid,(SELECT COALESCE(sum(amount_gs),0) FROM affiliate_commissions WHERE state='earned') AS earned`)
  ]);res.set('Cache-Control','private, no-store').json({payments,withdrawals,summary});
 }));
 router.post('/admin/affiliate-payments/:id/approve',requireRole('admin'),h(async(req,res)=>res.json(await tx(c=>approvePayment(c,req.params.id,req.user.id,req.body?.reference)))));
 router.post('/admin/affiliate-payments/:id/reject',requireRole('admin'),h(async(req,res)=>{
- const row=await one(`UPDATE subscription_payments SET status='rejected',note=$1,resolved_at=now(),resolved_by=$2 WHERE id=$3 AND status='pending' RETURNING *`,[text(req.body?.note),req.user.id,req.params.id]);if(!row)throw fail(409,'La solicitud ya fue resuelta');res.json(row);
+ const row=await tx(async c=>{const p=(await c.query(`UPDATE subscription_payments SET status='rejected',note=$1,resolved_at=now(),resolved_by=$2 WHERE id=$3 AND status='pending' RETURNING *`,[text(req.body?.note),req.user.id,req.params.id])).rows[0];if(!p)throw fail(409,'La solicitud ya fue resuelta');await notify(c,p.user_id,'payment','Tu pago necesita revisión',text(req.body?.note)||'Contactá al administrador para revisar el comprobante.','payment-rejected:'+p.id);return p;});res.json(row);
 }));
 router.post('/admin/affiliate-withdrawals/:id/resolve',requireRole('admin'),h(async(req,res)=>res.json(await tx(c=>resolveWithdrawal(c,req.params.id,req.user.id,req.body?.status,req.body?.reference,req.body?.note)))));
 // Credits remain archived; old endpoints cannot mint money or activate plans.

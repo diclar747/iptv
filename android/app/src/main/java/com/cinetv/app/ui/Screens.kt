@@ -116,9 +116,10 @@ fun SplashLoading() {
 fun LoginScreen(vm: AppViewModel) { StudioLoginScreen(vm) }
 
 @Composable
-fun MainScreen(vm: AppViewModel) {
+fun MainScreen(vm: AppViewModel,openWallet:Boolean=false,onWalletOpened:()->Unit={}) {
     var tab by remember { mutableStateOf(0) }
     var panelOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(openWallet){if(openWallet){panelOpen=true;onWalletOpened()}}
     val foreground=rememberForeground()
     val expiry=vm.user?.expiresAt
     var expiredByClock by remember(expiry){mutableStateOf(expiry?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()<=System.currentTimeMillis()}.getOrDefault(false)}?:false)}
