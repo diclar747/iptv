@@ -7,3 +7,4 @@
 .aff-edit-dialog{max-height:88dvh;overflow:auto;width:min(820px,100%);padding:22px;background:#122131;border:1px solid #ffffff20;border-radius:18px}.aff-edit-dialog form{max-width:none;padding:0;border:0;width:100%}.aff-review>form{max-height:88dvh;overflow:auto}.aff-panel select{color-scheme:dark;background:#091421;color:#e7f0f5;padding:12px;border:1px solid #ffffff22;border-radius:10px;min-height:44px;width:100%}
 
 .aff-standalone-nav{display:flex;align-items:center;justify-content:flex-end;gap:20px;padding:12px 24px;border-bottom:1px solid #ffffff15}.aff-standalone-nav>a:first-child{margin-right:auto;color:#fff;font-weight:800}.aff-standalone-nav a{color:#56e2c0;text-decoration:none}.notification-wrap>button{display:flex;align-items:center;gap:5px}
+.aff-table table{min-width:980px}.aff-table td{vertical-align:middle}.aff-table td:last-child .aff-actions{min-width:220px}.aff-table td small{max-width:180px}
