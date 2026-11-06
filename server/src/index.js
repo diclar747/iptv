@@ -1,4 +1,5 @@
 import './env.js'; // carga .env antes que nada (debe ir primero)
+import landingRouter from './landing.js';
 import youtubeAdminRouter from './youtube-admin.js';
 import mediaTransfersRouter,{startTransferMaintenance} from './media-transfers.js';
 import mediaLibraryRouter from './media-library.js';
@@ -60,6 +61,7 @@ app.get('/api/app/version', (req, res) => {
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
+app.use('/api', landingRouter);
 app.use('/api', accountsRouter);
 // Paired computers authenticate with their own scoped token, before the catalog's session guard.
 app.use('/api', mediaTransfersRouter);
