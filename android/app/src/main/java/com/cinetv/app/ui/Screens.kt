@@ -141,7 +141,7 @@ fun MainScreen(vm: AppViewModel) {
     var panelOpen by remember { mutableStateOf(false) }
     val tabs = listOf(
         "Inicio" to Icons.Filled.Home, "Pelis" to Icons.Filled.Movie,
-        "Series" to Icons.Filled.Tv, "En Vivo" to Icons.Filled.LiveTv, "Radios" to Icons.Filled.Radio, "Perfil" to Icons.Filled.Person,
+        "En Vivo" to Icons.Filled.LiveTv, "Radios" to Icons.Filled.Radio, "Perfil" to Icons.Filled.Person,
     )
     Scaffold(
         containerColor = Bg,
@@ -160,7 +160,7 @@ fun MainScreen(vm: AppViewModel) {
         }
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
-            if (tab != 5) TopBar(vm.user, onSearch = { searchOpen = true }, onProfile = { tab = 5 })
+            if (tab != 4) TopBar(vm.user, onSearch = { searchOpen = true }, onProfile = { tab = 4 })
             if (vm.busy) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp), color = StudioAccent)
             vm.error?.let { message ->
                 Row(Modifier.fillMaxWidth().background(Color(0xFF2B2020)).padding(start = 16.dp),verticalAlignment = Alignment.CenterVertically) {
@@ -171,9 +171,8 @@ fun MainScreen(vm: AppViewModel) {
             when (tab) {
                 0 -> HomeTab(vm) { tab = it }
                 1 -> MoviesTab(vm)
-                2 -> GridTab(vm) { page -> Net.api.seriesList(page=page) }
-                3 -> LiveTab(vm)
-                4 -> RadiosTab(vm)
+                2 -> LiveTab(vm)
+                3 -> RadiosTab(vm)
                 else -> ProfileScreen(vm, onOpenPanel = { panelOpen = true })
             }
         }
@@ -331,19 +330,14 @@ private fun Banner(vm: AppViewModel) {
 @Composable
 private fun MoviesTab(vm: AppViewModel) {
     var cat by remember { mutableStateOf<String?>(null) }
+    var query by remember { mutableStateOf("") }
+    var search by remember { mutableStateOf("") }
+    LaunchedEffect(query){delay(350);search=query.trim()}
     var cats by remember{mutableStateOf<List<com.cinetv.app.data.MovieCategory>>(emptyList())}
     LaunchedEffect(Unit){try{cats=Net.api.movieCategories().genres}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){}}
-    GridTab(vm, key = cat, header = {
-        Column {
-            if (vm.featured.isNotEmpty()) Banner(vm)
-            if (cats.isNotEmpty()) {
-                LazyRow(contentPadding = PaddingValues(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { Chip("Todas", cat == null) { cat = null } }
-                    items(cats) { c -> Chip(c.label ?: c.value, cat == c.value) { cat = c.value } }
-                }
-            }
-        }
-    }) { page -> Net.api.movies(category = cat,page=page) }
+    GridTab(vm, key = cat to search, minCell=140.dp,header = {
+        MovieBrowseHeader(vm.featured.firstOrNull{it.kind=="movie"},cats,query,cat,{query=it},{cat=it},{vm.openCard(it)})
+    }) { page -> Net.api.movies(search=search.ifBlank{null},category = cat,page=page) }
 }
 
 @Composable
@@ -373,7 +367,7 @@ private fun GridTab(vm: AppViewModel, key: Any? = Unit, minCell: Dp = 112.dp, he
     var generation by remember { mutableIntStateOf(0) }
     val scope=rememberCoroutineScope()
     LaunchedEffect(key) {
-        generation++;loading=true
+        generation++;loading=true;error=null
         try{val r=loader(1);cards=r;hasMore=r.size==10;page=1}
         catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="No se pudo cargar la lista"}
         finally{loading=false}
@@ -398,6 +392,7 @@ private fun GridTab(vm: AppViewModel, key: Any? = Unit, minCell: Dp = 112.dp, he
             TextButton(onClick={more()},enabled=!loadingMore){Text(if(loadingMore)"Cargando…" else error?:"Cargar más")}
         }
         if(error!=null&&!hasMore)item(span={GridItemSpan(maxLineSpan)}){Text(error!!,color=Muted)}
+        if(!loading&&cards.isEmpty()&&error==null)item(span={GridItemSpan(maxLineSpan)}){Text("No encontramos películas con estos filtros. Probá otro título o categoría.",color=Muted,fontSize=13.sp,modifier=Modifier.padding(20.dp))}
     }
 }
 
@@ -413,12 +408,12 @@ private fun PosterCard(card: Card, modifier: Modifier = Modifier.width(118.dp), 
     Column(modifier.clickable { onClick() }) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(10.dp)).background(Surface)) {
             if (card.image != null) {
-                AsyncImage(card.image, card.displayTitle, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                SubcomposeAsyncImage(card.image, card.displayTitle, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize(),error={Box(Modifier.fillMaxSize().background(StudioSurface),contentAlignment=Alignment.Center){Icon(Icons.Filled.Movie,null,tint=StudioAccent,modifier=Modifier.size(32.dp))}})
             } else {
                 Text(card.displayTitle, color = Muted, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
             }
         }
-        Text(card.displayTitle, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 5.dp))
+        Text(card.displayTitle, color = Color.White, fontSize = 13.sp,lineHeight=17.sp,fontWeight=FontWeight.Medium,minLines=2, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
     }
 }
 
@@ -465,13 +460,13 @@ private fun SearchOverlay(vm: AppViewModel, onClose: () -> Unit) {
         kotlinx.coroutines.delay(300)
         results = try {
             val r = Net.api.search(q)
-            (r.movies.orEmpty() + r.series.orEmpty())
+            r.movies.orEmpty()
         } catch (_: Exception) { emptyList() }
     }
     Box(Modifier.fillMaxSize().background(Bg)) {
         Column {
             Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(q, { q = it }, placeholder = { Text("Buscar películas, series…") }, singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(q, { q = it }, placeholder = { Text("Buscar películas…") }, singleLine = true, modifier = Modifier.weight(1f))
                 IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Cerrar", tint = Color.White) }
             }
             LazyVerticalGrid(

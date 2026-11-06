@@ -125,7 +125,7 @@ fun StudioChannelShowcase(channels: List<Channel>, onPlay: (Channel) -> Unit, on
 @Composable
 fun StudioShortcuts(onNavigate: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        listOf(Triple(3,"En vivo",Icons.Default.LiveTv), Triple(4,"Radios",Icons.Default.Radio), Triple(1,"Películas",Icons.Default.Movie)).forEach { (tab,label,icon) ->
+        listOf(Triple(2,"En vivo",Icons.Default.LiveTv), Triple(3,"Radios",Icons.Default.Radio), Triple(1,"Películas",Icons.Default.Movie)).forEach { (tab,label,icon) ->
             Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(StudioSurface).border(1.dp, StudioLine, RoundedCornerShape(18.dp)).clickable { onNavigate(tab) }.padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Icon(icon, label, tint = StudioAccent, modifier = Modifier.size(22.dp))
                 Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)

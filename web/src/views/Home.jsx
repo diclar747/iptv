@@ -34,7 +34,7 @@ export default function Home({ onOpen, onNavigate, onAuthError }) {
         {cont.length > 0 && <Row title="Seguir viendo" items={cont.map(toChannel)} onOpen={onOpen} />}
         {fav.length > 0 && <Row title="Mi Lista" items={fav} onOpen={onOpen} onSeeAll={() => onNavigate('milista')} />}
 
-        {cine.rows.map((r) => (
+        {cine.rows.filter(r=>r.nav!=='series'&&r.key!=='series').map((r) => (
           <Row key={r.key} title={r.title} items={r.items} onOpen={onOpen}
             onSeeAll={r.nav ? () => onNavigate(r.nav) : undefined} />
         ))}

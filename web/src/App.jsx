@@ -28,7 +28,6 @@ const timeLeft = (e) => {
 const NAV = [
   { k: 'inicio', label: 'Inicio', icon: 'home' },
   { k: 'peliculas', label: 'Películas', icon: 'film' },
-  { k: 'series', label: 'Series', icon: 'series' },
   { k: 'tv', label: 'TV en Vivo', icon: 'live' },
   { k: 'radios', label: 'Radios', icon: 'live' },
   { k: 'deportes', label: 'Deportes', icon: 'sports' },
@@ -40,7 +39,6 @@ const NAV = [
 const BOTTOM = [
   { k: 'inicio', label: 'Inicio', icon: 'home' },
   { k: 'peliculas', label: 'Pelis', icon: 'film' },
-  { k: 'series', label: 'Series', icon: 'series' },
   { k: 'tv', label: 'En Vivo', icon: 'live' },
   { k: 'radios', label: 'Radios', icon: 'live' },
 ];
@@ -214,4 +212,3 @@ export default function App() {
     </div>
   );
 }
-

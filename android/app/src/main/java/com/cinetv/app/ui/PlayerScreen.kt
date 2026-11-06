@@ -53,6 +53,7 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.mediarouter.app.MediaRouteButton
 import com.cinetv.app.PlaybackHolder
 import com.cinetv.app.PlaybackService
@@ -246,7 +247,12 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     useController = true
+                    controllerShowTimeoutMs = 3000
+                    controllerHideOnTouch = true
+                    controllerAutoShow = false
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                     setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility -> controlsVisible = visibility == View.VISIBLE })
+                    showController()
                     keepScreenOn = true // no apagar la pantalla mirando TV
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
                     layoutParams = ViewGroup.LayoutParams(
@@ -286,7 +292,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
             }
         }
 
-        Row(Modifier.align(Alignment.TopEnd).padding(8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xB30D1928)), verticalAlignment = Alignment.CenterVertically) {
+        if (target.isAudio || controlsVisible) Row(Modifier.align(Alignment.TopEnd).padding(8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xB30D1928)), verticalAlignment = Alignment.CenterVertically) {
             if (castContext != null) {
                 AndroidView(
                     modifier = Modifier.size(40.dp),
