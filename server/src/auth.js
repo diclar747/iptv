@@ -65,7 +65,8 @@ export function tokenFromReq(req) {
 // Opera sobre una fila de la tabla users (snake_case).
 export function subscriptionStatus(user) {
   if (user.status !== 'active') return { active: false, reason: 'disabled' };
-  if (user.role !== 'client') return { active: true, reason: null };
+  if (user.role === 'admin') return { active: true, reason: null };
+  if (!user.expires_at) return { active: false, reason: 'expired' };
   if (user.expires_at && new Date(user.expires_at).getTime() <= Date.now()) {
     return { active: false, reason: 'expired' };
   }
@@ -94,8 +95,7 @@ export function publicUser(u) {
     bankAlias: u.bank_alias || null,
     bankDoc: u.bank_doc || null,
   };
-  if (u.role === 'reseller') base.credits = u.credits || 0;
-  if (u.role === 'client') {
+  if (u.role !== 'admin') {
     base.expiresAt = u.expires_at || null;
     base.maxConnections = u.max_connections || 1;
     base.packageName = u.package_name || null;

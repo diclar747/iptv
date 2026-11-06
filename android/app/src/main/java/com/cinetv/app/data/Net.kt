@@ -71,7 +71,7 @@ object Net {
     )
     fun isHls(rawUrl: String?): Boolean {
         if (rawUrl.isNullOrBlank()) return false
-        return rawUrl.contains(".m3u8", true) || PLATFORMS.containsMatchIn(rawUrl)
+        return rawUrl.contains(".m3u8", true) || rawUrl.contains("desdepylabs.com/External/tvaccion/npy",true) || PLATFORMS.containsMatchIn(rawUrl)
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")

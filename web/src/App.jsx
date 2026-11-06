@@ -9,11 +9,12 @@ import Channels from './views/Channels.jsx';
 import Search from './views/Search.jsx';
 import Perfil from './views/Perfil.jsx';
 import Panel from './panel/Panel.jsx';
+import AffiliatePanel from './panel/AffiliatePanel.jsx';
 import Radios from './views/Radios.jsx';
 import TitleModal from './ui/TitleModal.jsx';
 import Icon from './ui/Icon.jsx';
 
-const roleLabel = (r) => ({ admin: 'Admin', reseller: 'Reseller', client: 'Cliente' }[r] || r);
+const roleLabel = (r) => ({ admin: 'Admin', reseller: 'Afiliado', client: 'Afiliado' }[r] || r);
 // Tiempo restante legible: horas si falta poco (prueba 24h), si no días.
 const timeLeft = (e) => {
   if (!e) return null;
@@ -57,6 +58,9 @@ export default function App() {
     try { return localStorage.getItem('cinetv:nav') === '1'; } catch { return false; }
   });
   const [fs, setFs] = useState(false); // pantalla completa
+  const [apkVersion,setApkVersion]=useState('');
+  useEffect(()=>{fetch('/api/app/version').then(r=>r.json()).then(v=>setApkVersion(v.versionName||'')).catch(()=>{});},[]);
+  const apkDownload='/cinetv.apk'+(apkVersion?'?v='+encodeURIComponent(apkVersion):'');
 
   useEffect(() => subscribePwa(setPwa), []);
   useEffect(() => {
@@ -94,22 +98,23 @@ export default function App() {
   );
   if (!user) return <Landing />;
 
-  const isStaff = user.role === 'admin' || user.role === 'reseller';
+  if(window.location.pathname==='/afiliados') return <div className='aff-standalone'>{user.role==='admin'?<Panel user={user}/>:<AffiliatePanel/>}</div>;
+  const isStaff = true;
   const sub = user.subscription;
-  const subInactive = user.role === 'client' && sub && !sub.active;
+  const subInactive = user.role !== 'admin' && sub && !sub.active;
 
-  const nav = [...NAV, ...(isStaff ? [{ k: 'panel', label: 'Panel', icon: 'gear' }] : [])];
+  const nav = [...NAV, ...(isStaff ? [{ k: 'panel', label: user.role==='admin'?'Panel':'Afiliados', icon: 'gear' }] : [])];
 
   // Al navegar, cerrar el reproductor abierto (si no, el canal sigue sonando por detrás).
   function go(v, p = {}) { setView(v); setParams(p); setModal(null); setDrawer(false); setAccount(false); if (v !== 'buscar') setQuery(''); }
   function onOpen(item) { setModal(item); }
   function onSearch(q) { setQuery(q); setView(q ? 'buscar' : 'inicio'); }
 
-  const content = subInactive ? (
+  const content = view==='panel' ? <Panel user={user}/> : view==='perfil' ? <Perfil user={user} onLogout={logout} onNavigate={go} onAuthError={refresh}/> : subInactive ? (
     <div className="sub-blocked">
       <div className="offair-label" style={{ color: 'var(--bad)' }}>{sub.reason === 'expired' ? 'VENCIDA' : 'INACTIVA'}</div>
-      <p>Tu suscripción {sub.reason === 'expired' ? 'venció' : 'está deshabilitada'}.<br />Contactá a tu proveedor.</p>
-      <button className="hero-play" onClick={logout}>Salir</button>
+      <p>Tu suscripción {sub.reason === 'expired' ? 'venció' : 'está deshabilitada'}.<br />Renová tu plan desde Afiliados y billetera.</p>
+      <button className="hero-play" onClick={()=>go('panel')}>Renovar mi plan</button>
     </div>
   ) : view === 'inicio' ? <Home onOpen={onOpen} onNavigate={go} onAuthError={refresh} />
     : view === 'peliculas' ? <Catalog mode="movies" title="Películas" onOpen={onOpen} onAuthError={refresh} />
@@ -146,6 +151,9 @@ export default function App() {
           ))}
         </nav>
         <div className="side-foot">
+          <a className="side-item apk-download" href={apkDownload} download title={'Descargar APK '+apkVersion}>
+            <span className="si-icon"><Icon name="download" size={22}/></span><span className="si-label">Descargar APK{apkVersion?' v'+apkVersion:''}</span>
+          </a>
           {pwa.canInstall && !pwa.installed && (
             <button className="side-item" onClick={promptInstall} title="Instalar app">
               <span className="si-icon"><Icon name="download" size={22} /></span><span className="si-label">Instalar app</span>
@@ -183,11 +191,11 @@ export default function App() {
                     <strong>{user.username}</strong>
                     <span className="u-role">{roleLabel(user.role)}</span>
                   </div>
-                  {user.role === 'reseller' && <div className="am-line">{user.credits} créditos</div>}
                   {user.role === 'client' && user.expiresAt && (
                     <div className="am-line">Vence en {timeLeft(user.expiresAt)}</div>
                   )}
-                  {isStaff && <button onClick={() => go('panel')}>Panel de gestión</button>}
+                  {isStaff && <button onClick={() => go('panel')}>Afiliados y billetera</button>}
+                  <a className="account-download" href={apkDownload} download>↓ Descargar APK{apkVersion?' v'+apkVersion:''}</a>
                   <button onClick={logout}>Cerrar sesión</button>
                 </div>
               )}

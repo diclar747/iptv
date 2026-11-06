@@ -66,7 +66,7 @@ export async function ensureSeed() {
       "INSERT INTO users (username, pass_hash, pass_salt, role) VALUES ('admin', $1, $2, 'admin')",
       [hash, salt]
     );
-    console.log(`[seed] usuario admin creado -> admin / ${pass}`);
+    console.log('[seed] usuario administrador creado');
   }
   // Seguridad: si ADMIN_PASSWORD está definido, sincroniza la clave del admin en
   // cada arranque. Permite cambiarla desde las variables de entorno del hosting.
@@ -74,32 +74,6 @@ export async function ensureSeed() {
     const { salt, hash } = hashPassword(process.env.ADMIN_PASSWORD);
     await query("UPDATE users SET pass_hash=$1, pass_salt=$2 WHERE role='admin'", [hash, salt]);
   }
-  // Reseller de prueba con saldo (solo si no hay ninguno). Cambiá la clave luego.
-  const anyReseller = await one("SELECT id FROM users WHERE role = 'reseller' LIMIT 1");
-  if (!anyReseller) {
-    const adminRow = await one("SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 1");
-    const pass = process.env.RESELLER_PASSWORD || 'vendedor123';
-    const credits = 100;
-    const { salt, hash } = hashPassword(pass);
-    const r = await one(
-      `INSERT INTO users (username, pass_hash, pass_salt, role, credits, created_by)
-       VALUES ('vendedor', $1, $2, 'reseller', $3, $4) RETURNING id`,
-      [hash, salt, credits, adminRow?.id || null]
-    );
-    await query(
-      `INSERT INTO transactions (type, amount, reseller_id, by_user_id, note)
-       VALUES ('allocate', $1, $2, $3, 'Créditos de prueba')`,
-      [credits, r.id, adminRow?.id || null]
-    );
-    console.log(`[seed] reseller de prueba -> vendedor / ${pass} (${credits} créditos)`);
-  }
-  // Seguridad: si RESELLER_PASSWORD está definido, sincroniza la clave del
-  // vendedor de prueba en cada arranque.
-  if (process.env.RESELLER_PASSWORD) {
-    const { salt, hash } = hashPassword(process.env.RESELLER_PASSWORD);
-    await query("UPDATE users SET pass_hash=$1, pass_salt=$2 WHERE username='vendedor'", [hash, salt]);
-  }
-
   // Retire the old shared unlimited account; public access now uses personal trials.
   await query("UPDATE users SET status='disabled',credits=0 WHERE username='demo' AND role='reseller' AND created_by IS NULL");
 
@@ -176,7 +150,7 @@ router.post(
     let parentId = null;
     const ref = typeof req.body?.ref==='string'?req.body.ref.trim().slice(0,100):'';
     if (ref) {
-      const r = await one("SELECT id FROM users WHERE username=$1 AND role='reseller' AND status='active'", [ref]);
+      const r = await one("SELECT id FROM users WHERE username=$1 AND role<>'admin' AND status='active'", [ref]);
       if (r) parentId = r.id;
     }
     const { salt, hash } = hashPassword(password);
@@ -211,7 +185,7 @@ router.get('/auth/me', (req, res) => {
 // --- Perfil (datos de marca/contacto; el vendedor edita el suyo) ---
 function profileDTO(u) {
   const out = publicUser(u);
-  if (u.role === 'reseller') out.affiliateCode = u.username;
+  if (u.role !== 'admin') out.affiliateCode = u.username;
   return out;
 }
 
@@ -223,7 +197,7 @@ router.patch(
   '/profile',
   requireAuth,
   h(async (req, res) => {
-    const b = req.body || {};
+    const b = {displayName:req.user.display_name,logoUrl:req.user.logo_url,phone:req.user.phone,address:req.user.address,bankName:req.user.bank_name,bankHolder:req.user.bank_holder,bankAccount:req.user.bank_account,bankAlias:req.user.bank_alias,bankDoc:req.user.bank_doc,...(req.body || {})};
     const { displayName, logoUrl, phone, address } = b;
     if (logoUrl && String(logoUrl).length > 300000) throw httpError(400, 'La imagen es muy grande (máx ~200KB)');
     const cut = (v, n) => (v == null || v === '' ? null : String(v).slice(0, n));
@@ -247,9 +221,7 @@ router.get(
   requireAuth,
   h(async (req, res) => {
     let provider = null;
-    if (req.user.parent_id) {
-      provider = await one('SELECT * FROM users WHERE id=$1', [req.user.parent_id]);
-    }
+
     if (!provider) {
       provider = await one("SELECT * FROM users WHERE role='admin' ORDER BY id LIMIT 1");
     }
@@ -324,7 +296,7 @@ router.post(
     if (!sub.active) throw httpError(403, 'Suscripción inactiva', { reason: sub.reason });
 
     const sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    if (u.role === 'client') {
+    if (u.role !== 'admin') {
       const active = activeConnections(u.id);
       if (active >= (u.max_connections || 1)) {
         throw httpError(429, 'Límite de conexiones alcanzado', {

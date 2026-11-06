@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -241,7 +244,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.displayCutout)) {
         if (!target.isAudio) AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
@@ -250,7 +253,8 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
                     controllerShowTimeoutMs = 3000
                     controllerHideOnTouch = true
                     controllerAutoShow = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    // Keep the entire broadcast visible, including station logos and clocks.
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility -> controlsVisible = visibility == View.VISIBLE })
                     showController()
                     keepScreenOn = true // no apagar la pantalla mirando TV

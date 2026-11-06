@@ -29,6 +29,15 @@ const put = (p, body) => req('PUT', p, { body });
 const del = (p, params) => req('DELETE', p, { params });
 
 export const api = {
+  affiliateMe:()=>get('/affiliate/me'),
+  affiliatePayment:b=>post('/affiliate/payments',b),
+  affiliateWithdraw:b=>post('/affiliate/withdrawals',b),
+  affiliates:search=>get('/admin/affiliates',{search}),
+  affiliateRequests:()=>get('/admin/affiliate-requests'),
+  affiliateStatus:(id,status)=>patch('/admin/affiliates/'+id,{status}),
+  approveAffiliatePayment:(id,b)=>post('/admin/affiliate-payments/'+id+'/approve',b),
+  rejectAffiliatePayment:(id,b)=>post('/admin/affiliate-payments/'+id+'/reject',b),
+  resolveAffiliateWithdrawal:(id,b)=>post('/admin/affiliate-withdrawals/'+id+'/resolve',b),
   resolveLibrary:items=>post('/catalog/resolve',{items}),
   mediaDevices:()=>get('/admin/media-devices'),
   pairMediaDevice:()=>post('/admin/media-devices/pair',{}),

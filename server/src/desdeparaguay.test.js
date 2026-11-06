@@ -8,6 +8,13 @@ test('reconoce páginas de emisoras y rechaza dominios similares', () => {
   assert.equal(isDesdeParaguay('https://desdeparaguay.com.evil.test/730'),false);
   assert.equal(isDesdeParaguay('https://www.desdeparaguay.com/'),false);
 });
+
+test('reconoce solamente el reproductor oficial de NPY y conserva su enlace temporal',()=>{
+ assert.equal(isDesdeParaguay('https://www.desdepylabs.com/External/tvaccion/npy'),true);
+ assert.equal(isDesdeParaguay('https://www.desdepylabs.com.evil.test/External/tvaccion/npy'),false);
+ assert.equal(isDesdeParaguay('https://www.desdepylabs.com/External/otro'),false);
+ assert.equal(parseDesdeStream("src: 'https://cdn.desdeparaguay.net/npy/playlist.m3u8?k=public-test&exp=123'"),'https://cdn.desdeparaguay.net/npy/playlist.m3u8?k=public-test&exp=123');
+});
 test('extrae la señal sin ejecutar scripts ni inventar un enlace', () => {
   assert.equal(parseDesdeStream('var dsdpyStream0="https://radio.example/live/playlist.m3u8?k=example&exp=1";'),'https://radio.example/live/playlist.m3u8?k=example&exp=1');
   assert.throws(()=>parseDesdeStream('<html>No hay señal</html>'),/no publica/);

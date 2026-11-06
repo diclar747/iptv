@@ -72,7 +72,7 @@ export function streamHandler({request=fetch,lookupRadio=findRadio,connectTimeou
   // IncomingMessage.close can fire after the request has been read; only a
   // response disconnect means the viewer has actually stopped streaming.
   res.on('close',close);
-  const expiry=Math.min(req.user?.role==='client'&&req.user.expires_at?new Date(req.user.expires_at).getTime():Infinity,tokenExpiresAt(req.query.t)??Infinity);
+  const expiry=Math.min(req.user?.role!=='admin'&&req.user?.expires_at?new Date(req.user.expires_at).getTime():Infinity,tokenExpiresAt(req.query.t)??Infinity);
   let expiryTimer;let expired=false;
   function scheduleExpiry(){expiryTimer=setTimeout(()=>{if(Date.now()<expiry){scheduleExpiry();return;}expired=true;controller.abort();if(!res.headersSent&&!res.destroyed)res.status(403).json({error:'Tu acceso venció',reason:'expired'});else if(!res.writableEnded)res.destroy();},Math.max(0,Math.min(expiry-Date.now(),2147483647)));}
   if(Number.isFinite(expiry))scheduleExpiry();

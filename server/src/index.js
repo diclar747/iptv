@@ -1,5 +1,6 @@
 import './env.js'; // carga .env antes que nada (debe ir primero)
 import landingRouter from './landing.js';
+import affiliatesRouter from './affiliates.js';
 import youtubeAdminRouter from './youtube-admin.js';
 import mediaTransfersRouter,{startTransferMaintenance} from './media-transfers.js';
 import mediaLibraryRouter from './media-library.js';
@@ -57,11 +58,12 @@ app.use(attachUser);
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 30, versionName: '1.29', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.json({ versionCode: 31, versionName: '1.30', url: 'https://live.cd.com.py/cinetv.apk' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
 app.use('/api', landingRouter);
+app.use('/api', affiliatesRouter);
 app.use('/api', accountsRouter);
 // Paired computers authenticate with their own scoped token, before the catalog's session guard.
 app.use('/api', mediaTransfersRouter);
@@ -200,7 +202,7 @@ app.get('/api/cast-url', requireActiveViewer, (req, res) => {
   const qs = new URLSearchParams({ url });
   if (ua) qs.set('ua', ua);
   if (ref) qs.set('ref', ref);
-  const expiry=Math.min(Date.now()+24*60*60*1000,req.user.role==='client'&&req.user.expires_at?new Date(req.user.expires_at).getTime():Infinity);
+  const expiry=Math.min(Date.now()+24*60*60*1000,req.user.role!=='admin'&&req.user.expires_at?new Date(req.user.expires_at).getTime():Infinity);
   qs.set('t', streamToken(url,expiry));
   // El sitio se sirve por HTTPS (detrás de Cloudflare). req.protocol a veces
   // queda en 'http' aunque el borde sea https; si la URL de cast sale en http,

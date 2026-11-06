@@ -58,7 +58,7 @@ class AppViewModel : ViewModel() {
     private var accessExpiryJob: kotlinx.coroutines.Job? = null
     private fun scheduleAccessExpiry(){
         accessExpiryJob?.cancel()
-        val deadline=user?.takeIf{it.role=="client"}?.expiresAt?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()}.getOrNull()}?:return
+        val deadline=user?.takeIf{it.role!="admin"}?.expiresAt?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()}.getOrNull()}?:return
         accessExpiryJob=viewModelScope.launch{kotlinx.coroutines.delay((deadline-System.currentTimeMillis()).coerceAtLeast(0));closePlayer()}
     }
     private var radioJob: kotlinx.coroutines.Job? = null

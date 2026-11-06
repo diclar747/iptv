@@ -118,6 +118,7 @@ fun LoginScreen(vm: AppViewModel) { StudioLoginScreen(vm) }
 @Composable
 fun MainScreen(vm: AppViewModel) {
     var tab by remember { mutableStateOf(0) }
+    var panelOpen by remember { mutableStateOf(false) }
     val foreground=rememberForeground()
     val expiry=vm.user?.expiresAt
     var expiredByClock by remember(expiry){mutableStateOf(expiry?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()<=System.currentTimeMillis()}.getOrDefault(false)}?:false)}
@@ -126,19 +127,19 @@ fun MainScreen(vm: AppViewModel) {
         val deadline=runCatching{java.time.Instant.parse(expiry).toEpochMilli()}.getOrNull()?:return@LaunchedEffect
         while(true){val remaining=deadline-System.currentTimeMillis();if(remaining<=0){expiredByClock=true;vm.closePlayer();break};delay(minOf(remaining,60000))}
     }
-    if(vm.user?.role=="client"&&(expiredByClock||vm.user?.subscription?.active==false)){
+    if(vm.user?.role!="admin"&&(expiredByClock||vm.user?.subscription?.active==false)){
         val context=LocalContext.current
         Column(Modifier.fillMaxSize().background(Bg).padding(28.dp),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally){
             Text(if(vm.user?.packageName?.startsWith("Prueba")==true)"Terminó tu prueba gratis" else "Tu suscripción venció",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Bold)
             Text("Podés renovar por Gs. 27.500 al mes y seguir disfrutando de LiveTV.",color=Muted,modifier=Modifier.padding(vertical=18.dp))
-            Button(onClick={context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("https://wa.me/595994860527?text="+android.net.Uri.encode("Quiero renovar LiveTV. Usuario: "+vm.user?.username))))}){Text("Renovar por WhatsApp")}
+            Button(onClick={panelOpen=true}){Text("Mi plan, afiliados y billetera")}
             TextButton(onClick={vm.logout()}){Text("Cerrar sesión")}
         }
+        if(panelOpen) AffiliateScreen { panelOpen=false;vm.boot() }
         return
     }
     LaunchedEffect(tab,foreground) { if(tab==0&&foreground)while(true) { delay(30000); vm.refreshSignalStates() } }
     var searchOpen by remember { mutableStateOf(false) }
-    var panelOpen by remember { mutableStateOf(false) }
     val tabs = listOf(
         "Inicio" to Icons.Filled.Home, "Pelis" to Icons.Filled.Movie,
         "En Vivo" to Icons.Filled.LiveTv, "Radios" to Icons.Filled.Radio, "Perfil" to Icons.Filled.Person,
@@ -178,7 +179,7 @@ fun MainScreen(vm: AppViewModel) {
         }
     }
     if (searchOpen) SearchOverlay(vm) { searchOpen = false }
-    if (panelOpen) ResellerPanelScreen(onClose = { panelOpen = false })
+    if (panelOpen) AffiliateScreen(onClose = { panelOpen = false;vm.boot() })
     vm.detail?.let { DetailOverlay(vm, it) }
 }
 
@@ -484,7 +485,7 @@ private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
     val scope = rememberCoroutineScope()
     val isReseller = u.role == "reseller"
     val isAdmin = u.role == "admin"
-    val staff = isReseller || isAdmin
+    val staff = true
     var favs by remember { mutableStateOf<List<Card>>(emptyList()) }
     var prof by remember { mutableStateOf<Profile?>(null) }
     var provider by remember { mutableStateOf<ProviderBilling?>(null) }
@@ -495,9 +496,6 @@ private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
         favs = try { Net.api.favorites() } catch (_: Exception) { emptyList() }
         prof = try { Net.api.profile() } catch (_: Exception) { null }
         if (!isAdmin) provider = try { Net.api.billingProvider() } catch (_: Exception) { null }
-        if (u.role == "client") upPending = try {
-            Net.api.myCreditRequests().any { it.kind == "upgrade" && it.status == "pending" }
-        } catch (_: Exception) { false }
     }
 
     // Formulario de datos (incluye bancarios); se inicializa al llegar el perfil.
@@ -540,7 +538,6 @@ private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
         item {
             Column(Modifier.padding(horizontal = 16.dp)) {
                 if (isReseller) {
-                    InfoRow("Saldo", (u.credits ?: 0).toString())
                     InfoRow("Enlace de afiliado", "live.cd.com.py/?ref=${u.username}")
                 }
                 if (u.role == "client") {
@@ -555,19 +552,18 @@ private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
                 if (staff) {
                     Button(
                         onClick = {
-                            if (isReseller) onOpenPanel()
-                            else runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://live.cd.com.py"))) }
+                            onOpenPanel()
                         },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Red)
-                    ) { Text("Panel de gestión", fontWeight = FontWeight.Bold) }
+                    ) { Text(if(isAdmin) "Administración" else "Afiliados y billetera", fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.height(16.dp))
                 }
 
                 // Datos + datos bancarios (staff)
                 if (staff) {
                     Text("Datos bancarios", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text(if (isAdmin) "Tus distribuidores los ven para pagarte." else "Tus clientes los ven para pagarte.",
+                    Text(if (isAdmin) "Los usuarios los ven para pagar el plan." else "Se utilizan para recibir los retiros de tus ganancias.",
                         color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
                     ProfileField("Nombre / Negocio", displayName) { displayName = it }
                     ProfileField("Teléfono / WhatsApp", phone) { phone = it }
@@ -585,7 +581,7 @@ private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
                 if (!isAdmin) {
                     val p = provider
                     val hasBank = p != null && (!p.bankName.isNullOrBlank() || !p.bankAccount.isNullOrBlank() || !p.bankAlias.isNullOrBlank())
-                    Text(if (isReseller) "Cómo pagar tu saldo" else "Cómo pagar", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Cómo pagar mi plan", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     if (hasBank) {
                         Text("Transferí a ${p!!.displayName ?: p.username ?: "tu proveedor"} y enviá el comprobante.",
                             color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
@@ -602,19 +598,6 @@ private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
                     Spacer(Modifier.height(16.dp))
                 }
 
-                // Cliente: convertirse en distribuidor
-                if (u.role == "client") {
-                    Text("¿Querés vender LiveTV?", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text("Convertite en distribuidor: comprás saldo y revendés a tus clientes al precio que quieras.",
-                        color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
-                    if (upPending) {
-                        Text("Solicitud enviada ⏳ — esperando aprobación.", color = Red, fontSize = 13.sp)
-                    } else {
-                        Button(onClick = { askUpgrade() }, modifier = Modifier.fillMaxWidth().height(46.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("Quiero ser distribuidor", fontWeight = FontWeight.Bold) }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
 
                 msg?.let { Text(it, color = Red, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp)) }
                 Button(
@@ -653,7 +636,7 @@ private fun ProfileField(label: String, value: String, onChange: (String) -> Uni
 }
 
 private fun roleLabel(r: String?) = when (r) {
-    "admin" -> "Administrador"; "reseller" -> "Vendedor"; "client" -> "Cliente"; else -> r ?: ""
+    "admin" -> "Administrador"; "reseller" -> "Afiliado"; "client" -> "Afiliado"; else -> r ?: ""
 }
 
 // Sección social compartida (backend): Me gusta con contador, Mi Lista (solo

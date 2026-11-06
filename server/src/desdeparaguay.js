@@ -1,7 +1,8 @@
 const cache=new Map(),pending=new Map();
-export function isDesdeParaguay(value){try{const u=new URL(value);return /^(www\.)?desdeparaguay\.com$/.test(u.hostname)&&/^\/[a-z0-9-]+\/?$/i.test(u.pathname);}catch{return false;}}
+export function isDesdeParaguay(value){try{const u=new URL(value);return /^(www\.)?desdeparaguay\.com$/.test(u.hostname)&&/^\/[a-z0-9-]+\/?$/i.test(u.pathname)||/^(www\.)?desdepylabs\.com$/.test(u.hostname)&&/^\/External\/tvaccion\/npy\/?$/i.test(u.pathname);}catch{return false;}}
 export function parseDesdeStreams(html){
- const urls=[...new Set([...html.matchAll(/dsdpyStream(?:0|1|0_alta|0_med)\s*=\s*"([^"\r\n]+)"/g)].map(m=>m[1].replaceAll('\\/','/').replaceAll('&amp;','&')).filter(u=>/^https?:\/\//.test(u)&&/\.m3u8(?:\?|$)/i.test(u)))];
+ const matches=[...html.matchAll(/dsdpyStream(?:0|1|0_alta|0_med)\s*=\s*"([^"\r\n]+)"/g),...html.matchAll(/src\s*:\s*['"](https:\/\/[^'"\r\n]+\.m3u8\?[^'"\r\n]+)['"]/g)];
+ const urls=[...new Set(matches.map(m=>m[1].replaceAll('\\/','/').replaceAll('&amp;','&')).filter(u=>/^https?:\/\//.test(u)&&/\.m3u8(?:\?|$)/i.test(u)))];
  if(!urls.length)throw Object.assign(Error('Esta emisora no publica una señal disponible'),{code:'RADIO_NO_STREAM'});
  return urls;
 }

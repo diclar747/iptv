@@ -1,4 +1,5 @@
 import { isResolvable, resolvePlatform } from './resolver.js';
+import {isDesdeParaguay,resolveDesdeStream} from './desdeparaguay.js';
 export function mediaBytes(bytes) {
  if(!bytes?.length) return false;
  const signature=new TextDecoder().decode(bytes.slice(0,12));
@@ -8,7 +9,7 @@ export async function checkStream({url,userAgent,referrer}={}, request=fetch) {
  if(!/^https?:\/\//i.test(url||'')) return {ok:false,error:'URL inválida'};
  const started=Date.now(), controller=new AbortController(), timer=setTimeout(()=>controller.abort(),10000);
  try {
-  let target=isResolvable(url)?await resolvePlatform(url):url;
+  let target=isDesdeParaguay(url)?await resolveDesdeStream(url,request):isResolvable(url)?await resolvePlatform(url):url;
   const headers={'User-Agent':userAgent||'Mozilla/5.0 LiveTV/1.21',...(referrer?{Referer:referrer}:{})};
   for(let depth=0;depth<4;depth++) {
    const response=await request(target,{headers,signal:controller.signal,redirect:'follow'});
