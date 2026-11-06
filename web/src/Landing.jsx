@@ -8,7 +8,7 @@ import LandingShowcase from './LandingShowcase.jsx';
 // plataforma de streaming y abre el modal de login/registro real. El acceso
 // registro ofrece una prueba personal de 24 horas.
 
-const WA_NUMBER = '595994860527'; // +595 994 860 527
+const WA_NUMBER = '595994854167'; // +595 994 854 167
 const WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('¡Hola! Quiero suscribirme a LiveTV 📺')}`;
 // APK servido desde nuestro propio servidor (web/public/cinetv.apk).
 const APK_URL = '/cinetv.apk';
@@ -74,9 +74,6 @@ function AuthModal({ open, mode, onMode, onClose, prefill }) {
           {isReg?'Ya tengo cuenta · Iniciar sesión':'Crear mi cuenta · 24 horas gratis'}
         </button>
 
-        <a className="lp-auth-wa" href={WA_LINK} target="_blank" rel="noopener noreferrer">
-          ¿Querés suscribirte? Escribinos por WhatsApp
-        </a>
       </form>
     </div>
   );

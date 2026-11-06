@@ -18,7 +18,7 @@ export default function LandingShowcase({openAuth,whatsapp,apk,share}){
  useEffect(()=>{const c=new AbortController();fetch('/api/public/showcase?v=20261106',{signal:c.signal}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(d=>{setData(d);setLoaded(true);}).catch(()=>setLoaded(true));fetch('/api/app/version',{signal:c.signal}).then(r=>r.json()).then(d=>setVersion(d.versionName||'')).catch(()=>{});return()=>c.abort();},[]);
  const register=()=>openAuth('register');
  const hero=data.movies.filter(m=>m.poster).slice(0,4);
- const partner=`https://wa.me/595994860527?text=${encodeURIComponent('¡Hola! Quiero conocer el programa de socios de LiveTV y la comisión del 50%.')}`;
+ const partner=`https://wa.me/595994854167?text=${encodeURIComponent('¡Hola! Quiero conocer el programa de socios de LiveTV y la comisión del 50%.')}`;
  return <div className="lp lp-modern">
   <header className="lp-nav solid"><div className="lp-nav-in"><a className="lp-logo" href="#inicio" aria-label="LiveTV inicio"><span className="lp-playmark">▶</span>LiveTV</a><nav className="lp-nav-links" aria-label="Secciones"><a href="#television">TV en vivo</a><a href="#peliculas">Películas</a><a href="#radios">Radios</a><a href="#socios">Ser socio</a></nav><button className="lp-btn lp-btn-ghost" onClick={()=>openAuth('login')}>Ingresar <span aria-hidden="true">↗</span></button></div></header>
   <main>
