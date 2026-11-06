@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import {useVisibleSignals} from '../useVisibleSignals.js';
+import ChannelArtwork from '../ui/ChannelArtwork.jsx';
 
 // Grilla de canales en vivo para TV en Vivo / Deportes / Documentales.
 export default function Channels({ title, fixedCategory, defaultCountry = 'PY', onOpen, onAuthError }) {
@@ -56,8 +57,7 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
             {data.items.map((c) => (
               <button key={c.id} data-signal-id={c.id} className="chan-card" onClick={() => onOpen({ type: 'channel', ...c })}>
                 <div className="chan-logo">
-                  {c.logo ? <img src={c.logo} alt="" loading="lazy"
-                    onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} /> : <span>{c.name[0]}</span>}
+                  <ChannelArtwork channel={c}/>
                 </div>
                 <div className="chan-name">{c.name}</div><span className={`signal-status ${c.status||"unchecked"}`}>● {c.status==="online"?"ONLINE":c.status==="offline"?"OFFLINE":"SIN VERIFICAR"}</span>
               </button>

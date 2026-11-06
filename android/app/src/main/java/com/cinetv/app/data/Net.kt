@@ -17,6 +17,9 @@ import java.util.concurrent.TimeUnit
 //                   ping, para que un stream en vivo que titubea no se corte.
 object Net {
     const val BASE = "https://live.cd.com.py/"
+    fun artworkUrl(value: String?): String? = value?.takeIf { it.isNotBlank() }?.let {
+        if (it.startsWith("/") && !it.startsWith("//")) BASE.trimEnd('/') + it else it
+    }
 
     lateinit var okHttp: OkHttpClient
         private set

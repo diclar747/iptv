@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { many, query } from './pg.js';
+import {channelArtwork} from './channel-art.js';
 const overrides = new Map(), health = new Map();
 let revision=0;
 export const channelSettingsVersion=()=>revision;
@@ -30,7 +31,7 @@ export function managedCard(card,streams) {
   const s=channelSettings(card.id);
   const effective=streams?managedStreams(card.id,streams):undefined;
   return {...card,category:card.category||card.categories?.[0]||'general',...(s.name?{name:s.name}:{}),...(s.country?{country:s.country}:{}),...(s.category?{categories:[s.category],category:s.category}:{}),
-    ...(s.logoUrl!==undefined?{logo:s.logoUrl}:{}),...(s.website!==undefined?{website:s.website}:{}),
+    logo:channelArtwork(card.id,s.logoUrl!==undefined?s.logoUrl:card.logo),...(s.website!==undefined?{website:s.website}:{}),
     ...(effective?{streamCount:effective.length}:{}),...channelStatus(card.id,effective)};
 }
 export async function saveChannelSettings(id,patch) {

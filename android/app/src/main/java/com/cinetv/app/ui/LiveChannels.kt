@@ -47,9 +47,9 @@ fun ChannelSignalBadge(status: String) {
 @Composable
 fun StudioChannelLogo(channel: Channel, modifier: Modifier) {
     Box(modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xFF192A3D)).padding(10.dp), contentAlignment = Alignment.Center) {
-        SubcomposeAsyncImage(channel.logo ?: channel.image, channel.displayTitle, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit,
+        SubcomposeAsyncImage(Net.artworkUrl(channel.logo ?: channel.image), channel.displayTitle, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit,
             loading = { Icon(Icons.Default.LiveTv, null, tint = StudioAccent, modifier = Modifier.padding(8.dp)) },
-            error = { Icon(Icons.Default.LiveTv, null, tint = StudioAccent, modifier = Modifier.padding(8.dp)) })
+            error = { Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Text(channel.displayTitle.take(2).uppercase(),color=StudioAccent,fontSize=22.sp,fontWeight=FontWeight.Bold) } })
     }
 }
 
