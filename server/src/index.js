@@ -1,6 +1,8 @@
 import './env.js'; // carga .env antes que nada (debe ir primero)
+import channelFavoritesRouter from './channelFavorites.js';
+import {prioritizeChannels} from './channelPriority.js';
 import landingRouter from './landing.js';
-import affiliatesRouter from './affiliates.js';
+import affiliatesRouter, {renewWalletSession,startWalletRenewals} from './affiliates.js';
 import paymentFilesRouter from './payment-files.js';
 import notificationsRouter from './notifications.js';
 import bankAccountsRouter from './bank-accounts.js';
@@ -13,7 +15,7 @@ import {initRadioCache,startRadioMaintenance} from './radio-cache.js';
 import {queryPublicChannels} from './channelCatalog.js';
 import { applyOfficialChannelRepairs } from './officialChannelRepairs.js';
 import movieAdminRouter from './movieAdmin.js';
-import channelAdminRouter, { verifyChannel } from './channelAdmin.js';
+import channelAdminRouter, { checkOnOpen, verifyChannel } from './channelAdmin.js';
 import { initChannelState } from './channelState.js';
 import { exec } from 'node:child_process';
 import express from 'express';
@@ -33,10 +35,12 @@ import { streamToken, validToken } from './streamToken.js';
 import { initSchema, ping } from './pg.js';
 import { attachUser, requireAuth, requireActiveViewer } from './auth.js';
 import accountsRouter, { ensureSeed } from './accounts.js';
+import googleAuthRouter from './google-auth.js';
 import catalogRouter from './catalog.js';
 import radioRouter from './radio.js';
 import catalogAdminRouter from './catalog-admin.js';
 import manualChannelsRouter, { manualCards, manualStreams, isManualId, ensureManualSeed } from './manualChannels.js';
+import { plutoCards, plutoCineCards, plutoStreams, isPlutoId } from './pluto.js';
 import { ensureVodSeed } from './vod.js';
 import { retireMetadataOnlyMovies } from './catalog/cleanup.js';
 
@@ -56,13 +60,15 @@ app.use(cors());
 app.use(express.json({limit:'512kb'}));
 // Adjunta req.user (desde la cookie de sesión) en todas las rutas.
 app.use(attachUser);
+app.get('/api/auth/me',renewWalletSession);
+app.use('/api/channel-favorites',channelFavoritesRouter);
 
 // Versión disponible del APK (para el auto-update de la app nativa). Público,
 // definido ANTES de los routers que exigen sesión. Subir versionCode/versionName
 // en cada release nueva del APK.
 app.get('/api/app/version', (req, res) => {
-  res.set('Cache-Control', 'public, max-age=300');
-  res.json({ versionCode: 32, versionName: '1.31', url: 'https://live.cd.com.py/cinetv.apk' });
+  res.set('Cache-Control', 'no-store');
+  res.json({ versionCode: 39, versionName: '1.38', url: 'https://live.cd.com.py/cinetv.apk?v=39' });
 });
 
 // Rutas de cuentas/negocio (login, admin, reseller, paquetes, watch).
@@ -71,6 +77,7 @@ app.use('/api',paymentFilesRouter,notificationsRouter,bankAccountsRouter);
 app.use('/api',affiliateAdminRouter);
 app.use('/api', affiliatesRouter);
 app.use('/api', accountsRouter);
+app.use('/api', googleAuthRouter);
 // Paired computers authenticate with their own scoped token, before the catalog's session guard.
 app.use('/api', mediaTransfersRouter);
 // Catálogo de películas y series (metadatos TheTVDB) + panel admin.
@@ -149,7 +156,7 @@ app.get('/api/home', requireActiveViewer, withData, async (req, res) => {
   ]);
 
   const rows = [
-    { key: 'pais', title: `TV en Vivo · ${names.get(country) || country}`, nav: 'tv', items: [...manPais, ...chRow({ country })] },
+    { key: 'pais', title: `TV en Vivo · ${names.get(country) || country}`, nav: 'tv', items: prioritizeChannels([...manPais, ...chRow({ country })]) },
     { key: 'sports', title: 'Deportes', nav: 'deportes', items: [...manSports, ...chRow({ category: 'sports', prefer: country })] },
     { key: 'news', title: 'Noticias', items: chRow({ category: 'news', prefer: country }) },
   ];
@@ -160,6 +167,14 @@ app.get('/api/home', requireActiveViewer, withData, async (req, res) => {
     if (items.length) { rows.push({ key: 'c-' + cc, title: names.get(cc) || cc, items }); extras++; }
   }
   rows.push({ key: 'documentary', title: 'Documentales', nav: 'documentales', items: chRow({ category: 'documentary', prefer: country }) });
+
+  // Pluto TV (FAST gratuito): fila de cine 24/7 y una selección general.
+  const [plutoCine, plutoAll] = await Promise.all([
+    plutoCineCards().catch(() => []),
+    plutoCards().catch(() => []),
+  ]);
+  if (plutoCine.length) rows.push({ key: 'pluto-cine', title: 'Cine 24/7 · Pluto TV', nav: 'pluto', items: plutoCine });
+  if (plutoAll.length) rows.push({ key: 'pluto', title: 'Pluto TV', nav: 'pluto', items: plutoAll.slice(0, 30) });
 
   res.set('Cache-Control', 'private, no-cache');
   res.json({ country, rows: rows.filter((r) => r.items.length) });
@@ -179,6 +194,18 @@ app.get('/api/channels', requireActiveViewer, withData, async (req, res) => {
   } = req.query;
   const pageN = Math.max(1, parseInt(page, 10) || 1);
 
+  // Pluto TV: lista propia (todo el lineup o solo cine), con búsqueda y paginación.
+  if (req.query.source === 'pluto') {
+    let list = await plutoCards().catch(() => []);
+    if (category) list = list.filter((c) => c.categories.includes(category));
+    const q = (search || '').trim().toLowerCase();
+    if (q) list = list.filter((c) => (c.name || '').toLowerCase().includes(q));
+    const ps = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 40));
+    const start = (pageN - 1) * ps;
+    res.set('Cache-Control', 'private, no-store');
+    return res.json({ total: list.length, page: pageN, pageSize: ps, pages: Math.ceil(list.length / ps), items: list.slice(start, start + ps) });
+  }
+
   const result=await queryPublicChannels({country:country||undefined,category:category||undefined,search:search||undefined,prefer:req.query.prefer||geoCountry(req),status:req.query.status||undefined,page:pageN,pageSize,includeNsfw:includeNsfw==='true',onlyWithStreams:onlyWithStreams!=='false'});
   res.set('Cache-Control','private, no-store');
   res.json(result);
@@ -189,8 +216,11 @@ app.get('/api/channels/:id/streams', requireActiveViewer, withData, async (req, 
   try {
     const data = isManualId(req.params.id)
       ? await manualStreams(req.params.id)
+      : isPlutoId(req.params.id)
+      ? await plutoStreams(req.params.id)
       : getChannelStreams(req.params.id);
     if (!data) return res.status(404).json({ error: 'Canal no encontrado' });
+    if (!isPlutoId(req.params.id)) checkOnOpen(req.params.id, data.streams);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: 'No se pudo obtener el canal', detail: err.message });
@@ -281,6 +311,7 @@ async function start() {
     startRadioMaintenance();
     startYoutubeWorker();
     startTransferMaintenance();
+    startWalletRenewals();
     // Precarga en segundo plano para que la primera consulta sea rápida.
     ensureLoaded()
       .then(async () => {console.log('[api] datos de iptv-org cargados');await applyOfficialChannelRepairs();})
