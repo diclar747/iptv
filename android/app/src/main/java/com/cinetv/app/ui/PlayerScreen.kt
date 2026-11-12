@@ -70,6 +70,7 @@ import kotlinx.coroutines.launch
 @OptIn(UnstableApi::class)
 @Composable
 fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
+    androidx.activity.compose.BackHandler{onClose()}
     val context = LocalContext.current
     val activity = context.findActivity()
     val castContext = remember { runCatching { CastContext.getSharedInstance(context) }.getOrNull() }
@@ -96,21 +97,9 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
             .setMediaMetadata(MediaMetadata.Builder().setTitle(target.title).build())
             .build()
 
-    val exoPlayer = remember {
-        val ds = OkHttpDataSource.Factory(Net.okHttpMedia)
-        // Buffer afinado para vivo: arranque rápido y menos re-buffering.
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
-            .build()
-        ExoPlayer.Builder(context)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(ds))
-            .setLoadControl(loadControl)
-            .build()
-            .apply {
-                // Mantiene CPU + WiFi activos aunque la pantalla se atenúe.
-                setWakeMode(C.WAKE_MODE_NETWORK)
-            }
-    }
+    val exoPlayer = remember { PlaybackService.obtainPlayer(context) }
+    val foreground=rememberForeground()
+    LaunchedEffect(foreground){if(!foreground&&!com.cinetv.app.AppSettings.background)exoPlayer.pause()}
     val castPlayer = remember(castContext) { castContext?.let { CastPlayer(it) } }
     var currentPlayer by remember { mutableStateOf<Player>(exoPlayer) }
 
@@ -138,55 +127,17 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
     // Reintento automático: cuando el stream falla o termina (en vivo no debería
     // terminar), se re-prepara solo con backoff creciente y vuelve al borde en
     // directo. Para película, se reintenta pocas veces y no se repite al acabar.
-    val listener = remember {
-        object : Player.Listener {
-            private fun reprepare() {
-                exoPlayer.setMediaItem(mediaItem)
-                exoPlayer.prepare()
-                if (target.isLive) exoPlayer.seekToDefaultPosition() // borde en vivo
-                exoPlayer.playWhenReady = true
-            }
-            override fun onPlayerError(error: PlaybackException) {
-                if (currentPlayer !== exoPlayer) return // la TV maneja su propia sesión
-                if (!target.isLive && attempt >= 5) { reconnecting = false; return }
-                reconnecting = true
-                val backoff = minOf(8_000L, 500L * (1L shl minOf(attempt, 4))) // 0.5s→8s
-                attempt++
-                retryJob?.cancel()
-                retryJob = scope.launch {
-                    delay(backoff)
-                    reprepare()
-                }
-            }
-            override fun onPlaybackStateChanged(state: Int) {
-                if (currentPlayer !== exoPlayer) return
-                if (state == Player.STATE_READY) { reconnecting = false; attempt = 0 }
-                if (state == Player.STATE_ENDED && target.isLive) reprepare()
-            }
-        }
-    }
-
     // Carga inicial: reproduce en el teléfono enseguida; en paralelo pide la URL
     // firmada de cast y, si ya hay sesión en la TV, proyecta con esa URL.
     LaunchedEffect(target) {
-        exoPlayer.setMediaItem(mediaItem)
-        exoPlayer.prepare()
-        if (castPlayer?.isCastSessionAvailable != true) exoPlayer.playWhenReady = true
+        PlaybackHolder.target=target
+        if(exoPlayer.currentMediaItem?.localConfiguration?.uri.toString()!=target.url){exoPlayer.setMediaItem(mediaItem);exoPlayer.prepare();if (castPlayer?.isCastSessionAvailable != true) exoPlayer.playWhenReady = true}
         castUri = runCatching { Net.api.castUrl(target.rawUrl, target.ua, target.ref).url }.getOrNull()
         if (castPlayer?.isCastSessionAvailable == true) {
             castPlayer.setMediaItem(castMediaItem())
             castPlayer.playWhenReady = true
             exoPlayer.playWhenReady = false
             currentPlayer = castPlayer
-        }
-    }
-
-    // Registra el listener de reintentos sobre el reproductor del teléfono.
-    DisposableEffect(exoPlayer) {
-        exoPlayer.addListener(listener)
-        onDispose {
-            retryJob?.cancel()
-            exoPlayer.removeListener(listener)
         }
     }
 
@@ -228,8 +179,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
             context.startService(Intent(context, PlaybackService::class.java))
         }
         onDispose {
-            runCatching { context.stopService(Intent(context, PlaybackService::class.java)) }
-            PlaybackHolder.player = null
+            // El servicio conserva el reproductor al minimizar o recrear la pantalla.
         }
     }
 
@@ -237,7 +187,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
         activity?.requestedOrientation = if (target.isAudio) ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         activity?.window?.decorView?.let { hideSystemBars(it) }
         onDispose {
-            exoPlayer.release()
+            // Solo la acción Cerrar detiene el servicio.
             castPlayer?.release()
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             activity?.window?.decorView?.let { showSystemBars(it) }
@@ -257,7 +207,7 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility -> controlsVisible = visibility == View.VISIBLE })
                     showController()
-                    keepScreenOn = true // no apagar la pantalla mirando TV
+                    keepScreenOn = com.cinetv.app.AppSettings.keepScreenOn // no apagar la pantalla mirando TV
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
@@ -274,10 +224,8 @@ fun PlayerScreen(target: PlayTarget, onClose: () -> Unit) {
                 else { if(currentPlayer.playbackState == Player.STATE_IDLE) currentPlayer.prepare(); currentPlayer.play() }
             })
         }
-        if (!target.isAudio && controlsVisible && target.reactionId.isNotBlank()) {
-            Box(Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 86.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xB30D1928))) {
-                SocialActions(target)
-            }
+        if (!target.isAudio && target.reactionId.isNotBlank()) {
+            SocialActions(target, Modifier.align(Alignment.CenterEnd).padding(end = 8.dp), overlay = true)
         }
 
         // Aviso de reconexión (solo cuando estamos reintentando tras un corte).

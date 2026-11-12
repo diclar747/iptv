@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -34,26 +33,42 @@ private val reactionEmojis=listOf("👍","👎")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SocialActions(target: PlayTarget) {
+fun SocialActions(target: PlayTarget, modifier: Modifier = Modifier, overlay: Boolean = false) {
  var show by remember(target.reactionId) { mutableStateOf(false) }
  val context=LocalContext.current
- Column {
-  VoteButtons(target.reactionType,target.reactionId)
-  Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-   TextButton(onClick={show=true}) { Icon(Icons.Default.ChatBubbleOutline,"Comentarios",Modifier.size(18.dp)); Text(" Conversar",color=Color.White) }
-   TextButton(onClick={
+ val share = {
     val link=Net.BASE+"?type="+Uri.encode(target.reactionType)+"&play="+Uri.encode(target.reactionId)
     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type="text/plain";putExtra(Intent.EXTRA_TEXT,"${target.title} · LiveTV\n$link") },"Compartir en…"))
-   }) { Icon(Icons.Default.Share,"Compartir",Modifier.size(18.dp));Text(" Compartir",color=Color.White) }
+ }
+ Column(modifier, horizontalAlignment = if (overlay) Alignment.CenterHorizontally else Alignment.Start) {
+  VoteButtons(target.reactionType, target.reactionId, iconsOnly = overlay)
+  if (overlay) {
+   IconButton(onClick = { show = true }) {
+    Icon(Icons.Default.ChatBubbleOutline, "Comentarios", Modifier.size(24.dp), tint = Color.White)
+   }
+   IconButton(onClick = share) {
+    Icon(Icons.Default.Share, "Compartir", Modifier.size(24.dp), tint = Color.White)
+   }
+  } else {
+   Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    TextButton(onClick = { show = true }) {
+     Icon(Icons.Default.ChatBubbleOutline, "Comentarios", Modifier.size(18.dp))
+     Text(" Conversar", color = Color.White)
+    }
+    TextButton(onClick = share) {
+     Icon(Icons.Default.Share, "Compartir", Modifier.size(18.dp))
+     Text(" Compartir", color = Color.White)
+    }
+   }
   }
  }
- if(show) ModalBottomSheet(onDismissRequest={show=false},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),modifier=Modifier.fillMaxHeight(.94f),containerColor=Color(0xFF0D1828)) {
-  LiveConversation(target,Modifier.fillMaxWidth().weight(1f))
+ if(show) ModalBottomSheet(onDismissRequest={show=false},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),modifier=Modifier.fillMaxHeight(if (overlay) .82f else .94f),sheetMaxWidth=520.dp,containerColor=Color(0xFF0D1828)) {
+  LiveConversation(target,Modifier.fillMaxWidth().weight(1f),onClose={show=false})
  }
 }
 
 @Composable
-private fun LiveConversation(target: PlayTarget,modifier:Modifier) {
+private fun LiveConversation(target: PlayTarget, modifier: Modifier, onClose: () -> Unit) {
  var comments by remember(target.reactionId) { mutableStateOf<List<Comment>>(emptyList()) }
  var draft by remember { mutableStateOf("") }
  var busy by remember { mutableStateOf(false) }
@@ -75,8 +90,13 @@ private fun LiveConversation(target: PlayTarget,modifier:Modifier) {
   scope.launch {try{block()}catch(e:CancellationException){throw e}catch(e:Exception){error=if(e is retrofit2.HttpException && e.code()==429)"Esperá unos segundos para enviar otro saludo." else "No se guardó. Volvé a intentar."}finally{busy=false}}
  }
  Column(modifier.navigationBarsPadding().imePadding().padding(horizontal=14.dp)) {
-  Text("Conversación en vivo",color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold)
-  Text(target.title,color=SocialMint,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+  Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+   Column(Modifier.weight(1f)) {
+    Text(if (target.isLive) "Conversación en vivo" else "Comentarios", color=Color.White, fontSize=19.sp, fontWeight=FontWeight.Bold)
+    Text(target.title, color=Color(0xFFB4C4D9), fontSize=11.sp, maxLines=1, overflow=TextOverflow.Ellipsis)
+   }
+   IconButton(onClick = onClose) { Icon(Icons.Default.Close, "Cerrar comentarios", tint = Color.White) }
+  }
   error?.let { Text(it,color=Color(0xFFFF8295),fontSize=11.sp) }
   LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top=10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
    if(comments.isEmpty())item{Text("¡Mandá el primer saludo! 👋",color=Color(0xFF9CADC3),fontSize=13.sp)}

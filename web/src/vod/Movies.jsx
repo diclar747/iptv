@@ -92,13 +92,10 @@ export default function Movies({ onAuthError }) {
                 </div>
                 <button className="close" onClick={() => setSel(null)} aria-label="Cerrar">✕</button>
               </div>
-              <Player url={proxyUrl({ url: sel.streamUrl })} />
-              {sel.description && <p className="vod-desc">{sel.description}</p>}
               <WatchActions
-                contentId={`movie:${sel.id}`} title={sel.title}
-                streams={[{ url: sel.streamUrl }]} activeStream={{ url: sel.streamUrl }}
-                onSelectStream={() => {}} user={user} kind="pelicula"
-              />
+                key={sel.id} contentId={`movie:${sel.id}`} title={sel.title} user={user}
+              ><Player url={proxyUrl({ url: sel.streamUrl })} title={sel.title} /></WatchActions>
+              {sel.description && <p className="vod-desc">{sel.description}</p>}
             </>
           )}
         </aside>

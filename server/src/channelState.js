@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { many, query } from './pg.js';
 import {channelArtwork} from './channel-art.js';
 const overrides = new Map(), health = new Map();
+const minute = 60 * 1000;
 let revision=0;
 export const channelSettingsVersion=()=>revision;
 export async function initChannelState() {
@@ -14,18 +15,31 @@ export const channelVisible = id => { const s=channelSettings(id); return !s.blo
 export function managedStreams(id,streams) {
   const s=channelSettings(id);
   const effective=s.streams||streams, result=health.get(id);
-  if(!result||Date.now()-new Date(result.checked_at).getTime()>15*60*1000)return effective;
-  const active=new Set(result.details.filter(r=>r.ok).map(r=>r.url));
-  return effective.slice().sort((a,b)=>Number(active.has(b.url))-Number(active.has(a.url)));
+  if (!result || Date.now() - new Date(result.checked_at).getTime() > 15 * 60 * 1000 ||
+      result.fingerprint !== streamFingerprint(effective)) return effective;
+  const active = new Map(result.details.filter(r => r.ok).map(r => [r.url, r.format]));
+  const annotated = effective.map(stream => active.get(stream.url) ? { ...stream, format: active.get(stream.url) } : stream);
+  return annotated.sort((a,b)=>Number(active.has(b.url))-Number(active.has(a.url)));
 }
 export function streamFingerprint(streams) { return createHash('sha256').update(JSON.stringify(streams.map(s=>({url:s.url,userAgent:s.userAgent||null,referrer:s.referrer||null})).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))).digest('hex'); }
 export const channelCheckDetails = id => health.get(id)?.details || [];
+function matchingCheck(id, streams) {
+  const result = health.get(id);
+  return result && (!streams || result.fingerprint === streamFingerprint(streams)) ? result : null;
+}
+export function needsChannelCheck(id, streams, { opening = false } = {}) {
+  if (!channelVisible(id) || !streams.length) return false;
+  const result = matchingCheck(id, streams);
+  const age = result?.status === 'offline' ? (opening ? 30 * 1000 : 2 * minute) : 15 * minute;
+  return !result || Date.now() - Date.parse(result.checked_at) >= age;
+}
 export function channelStatus(id,streams) {
   const settings=channelSettings(id), result=health.get(id);
   if(settings.deleted) return {status:'deleted',checkedAt:result?.checked_at || null};
   if(settings.blocked) return {status:'blocked',checkedAt:result?.checked_at || null};
-  const fresh=result && Date.now()-new Date(result.checked_at).getTime()<15*60*1000 && (!streams || result.fingerprint===streamFingerprint(streams));
-  return {status:fresh?result.status:'unchecked',checkedAt:result?.checked_at || null};
+  const matching=matchingCheck(id,streams);
+  const recent=matching && Date.now()-Date.parse(matching.checked_at)<60*minute;
+  return {status:recent?matching.status:'unchecked',checkedAt:matching?.checked_at || null};
 }
 export function managedCard(card,streams) {
   const s=channelSettings(card.id);

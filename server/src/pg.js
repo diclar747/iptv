@@ -58,6 +58,7 @@ export async function initSchema() {
   const sql = readFileSync(path.resolve(__dirname, '../db/schema.sql'), 'utf8');
   await pool.query(sql);
   await pool.query(readFileSync(path.resolve(__dirname, '../db/affiliates.sql'),'utf8'));
+  await pool.query(readFileSync(path.resolve(__dirname, '../db/categories.sql'),'utf8'));
 }
 
 export async function ping() {

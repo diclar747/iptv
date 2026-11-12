@@ -181,12 +181,12 @@ router.post('/auth/logout', h(async(req, res) => {
 }));
 
 router.get('/auth/me', (req, res) => {
-  res.json({ user: publicUser(req.user) });
+  res.set('Cache-Control','private, no-store').json({ user: publicUser(req.user, { self: true }) });
 });
 
 // --- Perfil (datos de marca/contacto; el vendedor edita el suyo) ---
 function profileDTO(u) {
-  const out = publicUser(u);
+  const out = publicUser(u, { self: true });
   if (u.role !== 'admin') out.affiliateCode = u.username;
   return out;
 }

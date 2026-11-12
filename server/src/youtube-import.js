@@ -26,8 +26,7 @@ export async function publishYoutubeJob(job,download){
   const provider=job.execution==='upload'?'upload':'youtube';
   await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[provider+':'+job.source_id]);
   if(provider==='youtube'&&(await client.query("SELECT 1 FROM external_ids WHERE provider='youtube' AND content_type='movie' AND external_id=$1",[job.source_id])).rowCount)throw Error('El video ya se importó');
-  const m=download.metadata,o=job.options,video=PUBLIC_BASE+'/api/library/'+job.id+'/'+download.video,cover=download.cover?PUBLIC_BASE+'/api/library/'+job.id+'/'+download.cover:m.thumbnail;
-  await client.query('INSERT INTO media_categories(name) VALUES($1) ON CONFLICT DO NOTHING',[o.category]);
+  const m=download.metadata,o=row.options,video=PUBLIC_BASE+'/api/library/'+job.id+'/'+download.video,cover=download.cover?PUBLIC_BASE+'/api/library/'+job.id+'/'+download.cover:m.thumbnail;
   const movie=(await client.query("INSERT INTO movies(title,year,poster,description,overview_es,category,stream_url,provider,runtime,content_kind,origin_url,creator) VALUES($1,$2,$3,$4,$4,$5,$6,$11,$7,$8,$9,$10) RETURNING id",[cleanImportedTitle(o.title||m.title),o.year||m.year,cover,cleanImportedOverview(o.description||m.description),o.category,video,m.duration?Math.ceil(m.duration/60):null,o.kind,provider==='youtube'?job.source_url:null,m.creator,provider])).rows[0];
   await notify(client,null,'content','Nuevo contenido en LiveTV',cleanImportedTitle(o.title||m.title),'movie:'+movie.id);
   await client.query('INSERT INTO media_assets(id,movie_id,video_name,cover_name,size_bytes,metadata) VALUES($1,$2,$3,$4,$5,$6)',[job.id,movie.id,download.video,download.cover,download.size,m]);

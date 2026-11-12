@@ -5,11 +5,24 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
 
 interface Api {
+    @GET("api/channel-favorites")
+    suspend fun channelFavorites(): List<Card>
+    @PUT("api/channel-favorites/{id}")
+    suspend fun addChannelFavorite(@Path("id") id: String)
+    @DELETE("api/channel-favorites/{id}")
+    suspend fun removeChannelFavorite(@Path("id") id: String)
+    @GET("api/notifications")
+    suspend fun notifications(): NotificationInbox
+    @POST("api/notifications/read")
+    suspend fun readNotifications(@Body body: NotificationRead)
+    @PATCH("api/notifications/settings")
+    suspend fun notificationSettings(@Body body: NotificationPreference)
     @GET("api/channels/status")
     suspend fun channelStatuses(@Query("ids") ids: String): List<ChannelHealth>
 
@@ -24,6 +37,12 @@ interface Api {
 
     @POST("api/auth/login")
     suspend fun login(@Body body: LoginReq): UserResp
+
+    @GET("api/auth/google/status")
+    suspend fun googleLoginStatus(): GoogleLoginStatus
+
+    @POST("api/auth/google/mobile")
+    suspend fun finishGoogleLogin(@Body body: GoogleLoginProof): UserResp
 
     @POST("api/auth/register")
     suspend fun register(@Body body: LoginReq): UserResp

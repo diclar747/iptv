@@ -99,26 +99,43 @@ router.post('/companion/pair',h(async(req,res)=>{
 }));
 router.use('/companion',h(deviceAuth));
 router.post('/companion/claim',h(async(req,res)=>{
- const {worker,exclude=[],limit=3}=req.body||{};
+ const {worker,exclude=[],limit=3,version}=req.body||{};
  if(!/^[a-f0-9]{32}$/.test(worker||'')||!Array.isArray(exclude)||exclude.length>10||exclude.some(id=>!ID.test(id))||!Number.isInteger(limit)||limit<1||limit>3)throw fail('Solicitud de cola inválida');
  const jobs=await tx(async c=>{
   await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',['device:'+req.mediaDevice.id]);
-  const claimed=(await c.query(`SELECT * FROM media_import_jobs WHERE device_id=$1 AND state IN ('downloading','uploading') AND NOT(id=ANY($2::uuid[]))
-   AND (claim_id=$3 OR claim_until<now() OR (claim_id IS NULL AND updated_at<now()-interval '30 seconds'))
-   ORDER BY CASE WHEN state='uploading' THEN 0 ELSE 1 END,created_at LIMIT $4 FOR UPDATE`,[req.mediaDevice.id,exclude,worker,limit])).rows;
-  const active=(await c.query("SELECT count(*)::int n FROM media_import_jobs WHERE device_id=$1 AND state IN ('downloading','uploading','publishing')",[req.mediaDevice.id])).rows[0].n;
-  const room=Math.min(limit-claimed.length,Math.max(0,6-active));
-  if(room>0)claimed.push(...(await c.query("SELECT * FROM media_import_jobs WHERE device_id=$1 AND state='awaiting_device' ORDER BY created_at LIMIT $2 FOR UPDATE SKIP LOCKED",[req.mediaDevice.id,room])).rows);
-  for(const j of claimed)await c.query("UPDATE media_import_jobs SET state=CASE WHEN state='awaiting_device' THEN 'downloading' ELSE state END,claim_id=$2,claim_until=now()+interval '90 seconds',updated_at=now() WHERE id=$1",[j.id,worker]);
-  return claimed;
+  if(version===2)await c.query(`WITH recoverable AS (
+    SELECT DISTINCT ON (j.source_id) j.id FROM media_import_jobs j
+    WHERE j.device_id=$1 AND j.state='error' AND j.auto_retry_count=0
+      AND (j.error ~* '(\\[PYI-|decompression resulted|no space left on device)'
+        OR (j.upload_bytes=j.upload_size AND j.error='El archivo debe ser un video MP4 o MKV válido'))
+      AND NOT EXISTS (SELECT 1 FROM external_ids e WHERE e.provider='youtube' AND e.content_type='movie' AND e.external_id=j.source_id)
+      AND NOT EXISTS (SELECT 1 FROM media_import_jobs k WHERE k.source_id=j.source_id
+        AND k.state IN ('queued','awaiting_device','downloading','uploading','publishing'))
+    ORDER BY j.source_id,j.created_at,j.id
+  )
+  UPDATE media_import_jobs SET state='awaiting_device',error=NULL,auto_retry_count=1,claim_id=NULL,claim_until=NULL,updated_at=now()
+  WHERE id IN (SELECT id FROM recoverable)`,[req.mediaDevice.id]);
+  const active=(await c.query(`SELECT *, (claim_id=$2 OR claim_until<=now() OR
+    (claim_id IS NULL AND updated_at<now()-interval '30 seconds')) AS reclaimable
+    FROM media_import_jobs WHERE device_id=$1 AND state IN ('downloading','uploading','publishing')
+    ORDER BY CASE state WHEN 'publishing' THEN 0 WHEN 'uploading' THEN 1 ELSE 2 END,created_at,id
+    LIMIT 1 FOR UPDATE`,[req.mediaDevice.id,worker])).rows[0];
+  if(active && (active.state==='publishing'||exclude.includes(active.id)||!active.reclaimable))return [];
+  const job=active||(await c.query(`SELECT * FROM media_import_jobs WHERE device_id=$1 AND state='awaiting_device'
+    AND (retry_after IS NULL OR retry_after<=now()) ORDER BY created_at,id LIMIT 1 FOR UPDATE`,[req.mediaDevice.id])).rows[0];
+  if(!job)return [];
+  await c.query(`UPDATE media_import_jobs SET state=CASE WHEN upload_size IS NULL THEN 'downloading' ELSE 'uploading' END,
+    claim_id=$2,claim_until=now()+interval '90 seconds',retry_after=NULL,error=NULL,updated_at=now() WHERE id=$1`,[job.id,worker]);
+  return [job];
  });
  res.json({jobs:jobs.map(j=>({id:j.id,url:j.source_url,sourceId:j.source_id,title:j.options.title,quality:j.options.quality||720,state:j.state}))});
 }));
 router.get('/companion/next',h(async(req,res)=>{
  const j=await tx(async c=>{await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',['device:'+req.mediaDevice.id]);
- let j=(await c.query("SELECT * FROM media_import_jobs WHERE device_id=$1 AND state IN ('downloading','uploading') AND (claim_id IS NULL OR claim_until<now()) ORDER BY created_at LIMIT 1 FOR UPDATE",[req.mediaDevice.id])).rows[0];
+ let j=(await c.query("SELECT * FROM media_import_jobs WHERE device_id=$1 AND state IN ('downloading','uploading','publishing') ORDER BY CASE WHEN state='publishing' THEN 0 ELSE 1 END,created_at,id LIMIT 1 FOR UPDATE",[req.mediaDevice.id])).rows[0];
+ if(j&&(j.state==='publishing'||(j.claim_id&&new Date(j.claim_until)>new Date())))return null;
  if(j?.claim_id)await c.query('UPDATE media_import_jobs SET claim_id=NULL,claim_until=NULL WHERE id=$1',[j.id]);
- if(!j)j=(await c.query("UPDATE media_import_jobs SET state='downloading',error=NULL,updated_at=now() WHERE id=(SELECT id FROM media_import_jobs WHERE device_id=$1 AND state='awaiting_device' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *",[req.mediaDevice.id])).rows[0];
+ if(!j)j=(await c.query("UPDATE media_import_jobs SET state=CASE WHEN upload_size IS NULL THEN 'downloading' ELSE 'uploading' END,retry_after=NULL,error=NULL,updated_at=now() WHERE id=(SELECT id FROM media_import_jobs WHERE device_id=$1 AND state='awaiting_device' AND (retry_after IS NULL OR retry_after<=now()) ORDER BY created_at,id LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *",[req.mediaDevice.id])).rows[0];
  return j;});res.json({job:j?{id:j.id,url:j.source_url,sourceId:j.source_id,title:j.options.title,quality:j.options.quality||720,state:j.state}:null});
 }));
 router.post('/companion/jobs/:id/progress',h(async(req,res)=>{
@@ -126,7 +143,13 @@ router.post('/companion/jobs/:id/progress',h(async(req,res)=>{
 }));
 router.post('/companion/jobs/:id/error',h(async(req,res)=>{
  const j=await access(req,req.params.id);const message=String(req.body.message||'La computadora no pudo completar el trabajo').slice(0,600);
- await query("UPDATE media_import_jobs SET state='error',error=$2,updated_at=now() WHERE id=$1 AND state IN ('downloading','uploading')",[j.id,message]);res.json({ok:true});
+ await query(`UPDATE media_import_jobs SET
+   state=CASE WHEN $3 AND auto_retry_count<2 THEN 'awaiting_device' ELSE 'error' END,
+   retry_after=CASE WHEN $3 AND auto_retry_count<2 THEN now()+make_interval(secs=>20*(auto_retry_count+1)) ELSE NULL END,
+   auto_retry_count=auto_retry_count+CASE WHEN $3 AND auto_retry_count<2 THEN 1 ELSE 0 END,
+   claim_id=NULL,claim_until=NULL,error=$2,updated_at=now()
+   WHERE id=$1 AND state IN ('downloading','uploading')`,[j.id,message,req.body.retryable===true]);
+ res.json({ok:true});
 }));
 router.post('/admin/media-transfers',admin,h(async(req,res)=>{
  const o=options(req.body);
@@ -145,7 +168,7 @@ router.post('/admin/media-transfers/:id/retry',admin,h(async(req,res)=>{
  const j=await access(req,req.params.id);
  if(j.execution!=='companion'||j.state!=='error')throw fail('Este trabajo no necesita reintento',409);
  if(!await one('SELECT id FROM media_devices WHERE id=$1 AND revoked_at IS NULL',[j.device_id]))throw fail('La computadora fue desvinculada');
- try{await query("UPDATE media_import_jobs SET state='awaiting_device',error=NULL,updated_at=now() WHERE id=$1 AND state='error'",[j.id]);}catch(e){if(e.code==='23505')throw fail('Ya hay otra importación de este video en curso',409);throw e;}res.json({ok:true});
+ try{await query("UPDATE media_import_jobs SET state='awaiting_device',error=NULL,auto_retry_count=0,retry_after=NULL,claim_id=NULL,claim_until=NULL,updated_at=now() WHERE id=$1 AND state='error'",[j.id]);}catch(e){if(e.code==='23505')throw fail('Ya hay otra importación de este video en curso',409);throw e;}res.json({ok:true});
 }));
 
 // Same resumable protocol for the browser (admin session) and paired computers.
@@ -175,7 +198,9 @@ for(const prefix of ['/admin/media-transfers','/companion/jobs']){
    if(!['uploading','error'].includes(j.state))throw fail('El archivo ya se está verificando o fue cancelado',409);
    const dir=assetDirectory(j.id),size=await fileSize(j.id);if(!j.upload_size||size!==Number(j.upload_size))throw fail('Todavía faltan fragmentos del video',409);
    const file=await receivedFile(j.id);if(!file)throw fail('El archivo recibido no está disponible',404);
-   const fd=await open(file,'r');const head=Buffer.alloc(16);try{await fd.read(head,0,16,0);}finally{await fd.close();}if(head.toString('ascii',4,8)!=='ftyp'&&head.readUInt32BE(0)!==0x1a45dfa3)throw fail('El archivo debe ser un video MP4 o MKV válido');
+   const fd=await open(file,'r');const head=Buffer.alloc(377);try{await fd.read(head,0,head.length,0);}finally{await fd.close();}
+   const transportStream=j.execution==='companion'&&[0,188,376].every(offset=>head[offset]===0x47);
+   if(!transportStream&&head.toString('ascii',4,8)!=='ftyp'&&head.readUInt32BE(0)!==0x1a45dfa3)throw fail('El archivo debe ser un video MP4 o MKV válido');
    // Every chunk is already checked before storage. Only reread a large file when the client supplies an additional full-file checksum.
    let checksum=null;if(req.body.sha256){if(!/^[a-f0-9]{64}$/i.test(req.body.sha256))throw fail('La verificación del archivo no es válida');const hash=createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);checksum=hash.digest('hex');if(req.body.sha256.toLowerCase()!==checksum)throw fail('El archivo recibido no coincide con el original');}
    const probe=await probeFile(file);if(!probe.streams?.some(s=>s.codec_type==='video'&&s.width>0&&s.height>0))throw fail('El archivo no contiene un video válido',422);

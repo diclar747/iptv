@@ -72,14 +72,10 @@ export default function Series({ onAuthError }) {
                 <button className="close" onClick={() => setSel(null)} aria-label="Cerrar">✕</button>
               </div>
 
-              {ep ? <Player url={proxyUrl({ url: ep.streamUrl })} /> :
-                <div className="player placeholder">Elegí un episodio</div>}
-
-              <WatchActions
-                contentId={`serie:${sel.id}`} title={sel.title}
-                streams={ep ? [{ url: ep.streamUrl }] : []} activeStream={ep ? { url: ep.streamUrl } : null}
-                onSelectStream={() => {}} user={user} kind="serie"
-              />
+              <WatchActions key={sel.id} contentId={`serie:${sel.id}`} title={sel.title} user={user}>
+                {ep ? <Player url={proxyUrl({ url: ep.streamUrl })} title={sel.title} /> :
+                  <div className="player placeholder">Elegí un episodio</div>}
+              </WatchActions>
 
               <div className="ep-list">
                 <div className="label-mono">EPISODIOS</div>

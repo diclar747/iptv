@@ -17,6 +17,16 @@
   overflow-x: hidden;
 }
 .lp *, .lp *::before, .lp *::after { box-sizing: border-box; }
+.lp-modern {
+  --font-body: system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+}
+.lp-modern .lp-apk-version {
+  min-inline-size: 5ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.lp-apk-version[data-pending="true"] { visibility: hidden; }
 
 /* ---------- botones base ---------- */
 .lp-btn {
@@ -164,6 +174,16 @@
 
 /* ---------- modal auth ---------- */
 .lp-modal { position: fixed; inset: 0; z-index: 60; background: #04050888; backdrop-filter: blur(6px); display: grid; place-items: center; padding: 18px; animation: lp-fade .18s ease; }
+.lp-modal {
+  --red: #ed0025;
+  --ink: #eef0f5;
+  --dim: #aeb8c8;
+  --edge: #ffffff14;
+  --disp: system-ui, sans-serif;
+  color: var(--ink);
+  font-family: var(--disp);
+}
+.lp-modal *, .lp-modal *::before, .lp-modal *::after { box-sizing: border-box; }
 @keyframes lp-fade { from { opacity: 0; } to { opacity: 1; } }
 .lp-auth { position: relative; width: 100%; max-width: 400px; background: linear-gradient(165deg, #1a1b23, #0c0d12); border: 1px solid #ffffff1f; border-radius: 22px; padding: 30px; box-shadow: 0 40px 100px -30px #000; display: flex; flex-direction: column; gap: 14px; animation: lp-pop .2s ease; }
 @keyframes lp-pop { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }

@@ -79,7 +79,7 @@ export function subscriptionStatus(user) {
 }
 
 // Vista pública del usuario (sin hash/salt), camelCase para el frontend.
-export function publicUser(u) {
+export function publicUser(u, { self = false } = {}) {
   if (!u) return null;
   const base = {
     id: u.id,
@@ -101,6 +101,10 @@ export function publicUser(u) {
     bankAlias: u.bank_alias || null,
     bankDoc: u.bank_doc || null,
   };
+  if (self && u.google_subject) {
+    base.googleAccount = true;
+    base.googlePictureUrl = u.google_picture_url || null;
+  }
   if (u.role !== 'admin') {
     base.expiresAt = u.expires_at || null;
     base.maxConnections = u.max_connections || 1;

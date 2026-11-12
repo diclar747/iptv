@@ -7,13 +7,13 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async ({ keepOnError = false } = {}) => {
     try {
       const { user } = await api.me();
       setUser(user);
       return user;
-    } catch {
-      setUser(null);
+    } catch (error) {
+      if (!keepOnError || error.status === 401) setUser(null);
       return null;
     }
   }, []);

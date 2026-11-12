@@ -18,6 +18,22 @@ CREATE TABLE IF NOT EXISTS users (
 );
 CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_subject TEXT UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_picture_url TEXT;
+CREATE TABLE IF NOT EXISTS google_oauth_requests (
+  state_hash TEXT PRIMARY KEY,
+  browser_hash TEXT NOT NULL,
+  verifier TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  referral TEXT NOT NULL,
+  mobile_challenge TEXT,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS google_mobile_grants (
+  challenge TEXT PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS packages (
   id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -370,7 +386,6 @@ CREATE TABLE IF NOT EXISTS media_categories (
  name TEXT PRIMARY KEY CHECK (char_length(name) BETWEEN 1 AND 80),
  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-INSERT INTO media_categories(name) VALUES ('Películas'),('Videos musicales'),('Documentales'),('Videos') ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS media_import_jobs (
  id UUID PRIMARY KEY,
  source_id TEXT NOT NULL,
@@ -414,5 +429,20 @@ ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS upload_bytes BIGINT NOT N
 ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS processing JSONB NOT NULL DEFAULT '{}';
 ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS claim_id TEXT;
 ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS claim_until TIMESTAMPTZ;
+ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS auto_retry_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE media_import_jobs ADD COLUMN IF NOT EXISTS retry_after TIMESTAMPTZ;
+-- Old duplicate attempts can be resolved from the already published library entry.
+UPDATE media_import_jobs j SET state='done',movie_id=m.id,progress=100,error=NULL,updated_at=now()
+FROM external_ids e JOIN movies m ON m.id=e.internal_id
+JOIN media_assets a ON a.movie_id=m.id
+WHERE j.execution='companion' AND j.state='error' AND e.provider='youtube' AND e.content_type='movie'
+  AND e.external_id=j.source_id AND NOT m.hidden AND NOT m.deleted;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_media_import_source_active_v2 ON media_import_jobs(source_id)
  WHERE state IN ('queued','awaiting_device','downloading','uploading','publishing');
+
+CREATE TABLE IF NOT EXISTS user_channel_favorites (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  channel_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY(user_id, channel_id)
+);

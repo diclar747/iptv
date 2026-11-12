@@ -1,9 +1,15 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 
-function Artwork({src,name,kind='logo',eager=false}){
+const heroPosters=[
+ {src:'/landing/cine-12593.webp',title:'¡El Mundo Perdido de los Dinosaurios! La Era de Hielo 4',label:'Cine en LiveTV'},
+ {src:'/landing/cine-12592.webp',title:'Los Gemelos del Kameleon',label:'Películas'},
+ {src:'/landing/cine-12591.webp',title:'Madagascar 2 escape de África',label:'Cine familiar'},
+];
+
+function Artwork({src,name,kind='logo',eager=false,priority}){
  const [failed,setFailed]=useState(false);
  useEffect(()=>setFailed(false),[src]);
- return <div className={`lp-art lp-art-${kind}`}>{src&&!failed?<img src={src} alt={name} loading={eager?'eager':'lazy'} decoding="async" onError={()=>setFailed(true)}/>:<span aria-hidden="true">{kind==='poster'?'▶':name.slice(0,2).toUpperCase()}</span>}</div>;
+ return <div className={`lp-art lp-art-${kind}`}>{src&&!failed?<img src={src} alt={name} loading={eager?'eager':'lazy'} fetchpriority={priority} decoding="async" onError={()=>setFailed(true)}/>:<span aria-hidden="true">{kind==='poster'?'▶':name.slice(0,2).toUpperCase()}</span>}</div>;
 }
 const FAQs=[
  ['¿Puedo probar LiveTV sin pagar?','Sí. Creá tu cuenta y tenés 24 horas gratis desde el registro, sin tarjeta. Después podés renovar por Gs. 27.500 al mes.'],
@@ -13,25 +19,47 @@ const FAQs=[
  ['¿Cómo funciona el programa de socios?','Recibís una comisión del 50% de cada mensualidad aprobada de las personas que se registren con tu enlace. Debés tener tu propio plan activo cuando se aprueba el pago; si está vencido, esa comisión se pierde. Ingresá a Afiliados y billetera para copiar tu enlace, ver tus ganancias y solicitar retiros.']
 ];
 function ApkDownload({apk,version,compact=false}){
- return <a className={`lp-btn lp-btn-ghost ${compact?'lp-apk-top':'lp-btn-lg lp-apk-prominent'}`} href={apk+(version?'?v='+encodeURIComponent(version):'')} download aria-label={`Descargar APK de LiveTV${version?' versión '+version:''}`}><span aria-hidden="true">↓</span>{compact?'APK':'Descargar APK'}{version&&<span className="lp-apk-version">v{version}</span>}</a>;
+ return <a className={`lp-btn lp-btn-ghost ${compact?'lp-apk-top':'lp-btn-lg lp-apk-prominent'}`} href={apk+(version?'?v='+encodeURIComponent(version):'')} download aria-label={`Descargar APK de LiveTV${version?' versión '+version:''}`}><span aria-hidden="true">↓</span>{compact?'APK':'Descargar APK'}<span className="lp-apk-version" data-pending={!version} aria-hidden="true">{version?'v'+version:'v0.00'}</span></a>;
 }
 export default function LandingShowcase({openAuth,whatsapp,apk,share}){
  const [data,setData]=useState({channels:[],movies:[],radios:[]});
  const [loaded,setLoaded]=useState(false),[version,setVersion]=useState('');
- useEffect(()=>{const c=new AbortController();fetch('/api/public/showcase?v=20261106',{signal:c.signal}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(d=>{setData(d);setLoaded(true);}).catch(()=>setLoaded(true));fetch('/api/app/version',{signal:c.signal}).then(r=>r.json()).then(d=>setVersion(d.versionName||'')).catch(()=>{});return()=>c.abort();},[]);
+ const catalogRef=useRef(null);
+ useEffect(()=>{
+  const controller=new AbortController();
+  const loadCatalog=()=>{
+   fetch('/api/public/showcase?v=20261106',{signal:controller.signal})
+    .then(r=>{if(!r.ok)throw Error();return r.json();})
+    .then(setData)
+    .catch(()=>{})
+    .finally(()=>{if(!controller.signal.aborted)setLoaded(true);});
+  };
+  let observer;
+  if ('IntersectionObserver' in window) {
+   observer=new IntersectionObserver(entries=>{
+    if(!entries.some(entry=>entry.isIntersecting))return;
+    observer.disconnect();
+    loadCatalog();
+   },{rootMargin:'100px 0px'});
+   observer.observe(catalogRef.current);
+  } else {
+   loadCatalog();
+  }
+  fetch('/api/app/version',{signal:controller.signal}).then(r=>r.json()).then(d=>setVersion(d.versionName||'')).catch(()=>{});
+  return()=>{observer?.disconnect();controller.abort();};
+ },[]);
  const register=()=>openAuth('register');
- const hero=data.movies.filter(m=>m.poster).slice(0,4);
  const partner=`https://wa.me/595994854167?text=${encodeURIComponent('¡Hola! Quiero conocer el programa de socios de LiveTV y la comisión del 50%.')}`;
  return <div className="lp lp-modern">
   <header className="lp-nav solid"><div className="lp-nav-in"><a className="lp-logo" href="#inicio" aria-label="LiveTV inicio"><span className="lp-playmark">▶</span>LiveTV</a><nav className="lp-nav-links" aria-label="Secciones"><a href="#television">TV en vivo</a><a href="#peliculas">Películas</a><a href="#radios">Radios</a><a href="#socios">Ser socio</a></nav><div className="lp-header-actions"><ApkDownload apk={apk} version={version} compact/><button className="lp-btn lp-btn-ghost" onClick={()=>openAuth('login')}>Ingresar <span aria-hidden="true">↗</span></button></div></div></header>
   <main>
    <section className="lp-hero lp-new-hero" id="inicio"><div className="lp-glow"/><div className="lp-hero-grid">
     <div className="lp-hero-copy"><span className="lp-kicker"><i/> HECHO PARA VOS. HECHO EN PARAGUAY.</span><h1>Tu mundo.<br/>Tu pantalla.<br/><em>Todo en LiveTV.</em></h1><p>El canal que seguís. La película que te atrapa. La radio que te acompaña. Todo junto, estés donde estés.</p><div className="lp-hero-buttons"><button className="lp-btn lp-btn-red lp-btn-lg" onClick={register}>Empezar 24 horas gratis <span>↗</span></button><ApkDownload apk={apk} version={version}/><a className="lp-btn lp-btn-ghost lp-btn-lg" href="#explorar">Explorar contenido</a></div><div className="lp-trust"><span>✓ Sin tarjeta</span><span>✓ Una sola cuenta</span><span>✓ Gs. 27.500 / mes después de la prueba</span></div></div>
-    <div className="lp-hero-visual" aria-label="Una muestra de la cartelera de LiveTV"><div className="lp-orbit"/><div className="lp-cinema-stack">{hero.length?hero.map((m,i)=><div className={`lp-cinema-panel panel-${i}`} key={m.id}><Artwork src={m.poster} name={m.title} kind="poster" eager/><span>{m.category||'Cine en LiveTV'}</span></div>):<div className="lp-cinema-placeholder"><span>▶</span><strong>Una pantalla.<br/>Muchas historias.</strong><small>CINE · TELEVISIÓN · RADIO</small></div>}</div><div className="lp-floating lp-floating-live"><span className="lp-status-dot"/><div><b>Tu conexión con Paraguay</b><small>TV y radios en un solo lugar</small></div><span>↗</span></div><div className="lp-floating lp-floating-price"><b>24h</b><span>Tu primera experiencia<br/><strong>totalmente gratis</strong></span></div></div>
+    <div className="lp-hero-visual" aria-label="Una muestra de la cartelera de LiveTV"><div className="lp-orbit"/><div className="lp-cinema-stack">{heroPosters.map((movie,index)=><div className={`lp-cinema-panel panel-${index}`} key={movie.src}><Artwork src={movie.src} name={movie.title} kind="poster" eager={index===0} priority={index===0?'high':'low'}/><span>{movie.label}</span></div>)}</div><div className="lp-floating lp-floating-live"><span className="lp-status-dot"/><div><b>Tu conexión con Paraguay</b><small>TV y radios en un solo lugar</small></div><span>↗</span></div><div className="lp-floating lp-floating-price"><b>24h</b><span>Tu primera experiencia<br/><strong>totalmente gratis</strong></span></div></div>
    </div><div className="lp-hero-bottom"><span>ENTRETENIMIENTO, A TU MANERA</span><a href="#television">Descubrí lo que hay para vos ↓</a></div></section>
    <div className="lp-benefit-strip" id="explorar"><span>◉ Televisión en vivo</span><span>▶ Películas y nuevas historias</span><span>♫ Radios de Paraguay</span><span>▣ Web + app Android</span></div>
 
-   <section className="lp-sec lp-catalog-section" id="television"><div className="lp-section-heading"><div><span className="lp-eyebrow">CERCA DE LO QUE IMPORTA</span><h2>Paraguay se ve acá.</h2><p>Noticias, entretenimiento y señales locales. Tus canales, mucho más cerca.</p></div><button className="lp-text-action" onClick={register}>Explorar los canales ↗</button></div><div className="lp-channel-grid">{data.channels.map(c=><button className="lp-channel-tile" key={c.id} onClick={register}><Artwork src={c.logo} name={c.name}/><strong>{c.name}</strong><small className={c.status==='online'?'is-online':''}>{c.status==='online'?<><i/> En línea</>:'TV · Paraguay'}</small></button>)}</div>{!data.channels.length&&<p className="lp-catalog-note">{loaded?'Ingresá para explorar las señales disponibles de Paraguay.':'Cargando los canales del catálogo…'}</p>}<p className="lp-catalog-note">Los logos identifican a cada señal. La disponibilidad puede cambiar.</p></section>
+   <section ref={catalogRef} className="lp-sec lp-catalog-section" id="television"><div className="lp-section-heading"><div><span className="lp-eyebrow">CERCA DE LO QUE IMPORTA</span><h2>Paraguay se ve acá.</h2><p>Noticias, entretenimiento y señales locales. Tus canales, mucho más cerca.</p></div><button className="lp-text-action" onClick={register}>Explorar los canales ↗</button></div><div className="lp-channel-grid">{data.channels.map(c=><button className="lp-channel-tile" key={c.id} onClick={register}><Artwork src={c.logo} name={c.name}/><strong>{c.name}</strong><small className={c.status==='online'?'is-online':''}>{c.status==='online'?<><i/> En línea</>:'TV · Paraguay'}</small></button>)}</div>{!data.channels.length&&<p className="lp-catalog-note">{loaded?'Ingresá para explorar las señales disponibles de Paraguay.':'Cargando los canales del catálogo…'}</p>}<p className="lp-catalog-note">Los logos identifican a cada señal. La disponibilidad puede cambiar.</p></section>
 
    <section className="lp-movies-band" id="peliculas"><div className="lp-sec"><div className="lp-section-heading"><div><span className="lp-eyebrow">DÁLE PLAY A OTRA HISTORIA</span><h2>Tu próxima película<br/>empieza acá.</h2><p>Acción, drama, comedia y mucho más. Descubrí lo último que sumamos a la cartelera.</p></div><button className="lp-btn lp-btn-ghost" onClick={register}>Ver la cartelera ↗</button></div><div className="lp-film-rail">{data.movies.map(m=><button className="lp-film" key={m.id} onClick={register}><div className="lp-film-picture"><Artwork src={m.poster} name={m.title} kind="poster"/><span className="lp-film-play">▶</span></div><strong title={m.title}>{m.title}</strong><small>{[m.category,m.year].filter(Boolean).join(' · ')||'Recién agregada'}</small></button>)}</div>{!data.movies.length&&<p className="lp-catalog-note">Creá tu cuenta para descubrir las películas disponibles.</p>}<div className="lp-category-tags">{['Acción','Comedia','Drama','Aventura','Familia','Suspenso'].map(t=><button key={t} onClick={register}>{t}</button>)}</div></div></section>
 
@@ -42,6 +70,6 @@ export default function LandingShowcase({openAuth,whatsapp,apk,share}){
    <section className="lp-sec lp-plan-section" id="planes"><div className="lp-plan-copy"><span className="lp-eyebrow">MENOS VUELTAS. MÁS ENTRETENIMIENTO.</span><h2>Todo tu LiveTV.<br/>Un solo plan.</h2><p>Probalo primero. Elegí después.</p><div className="lp-device-list"><span>▱ Teléfono</span><span>▣ Computadora</span><span>▰ TV compatible</span></div><a className="lp-download-link" href={apk} download>↓ Descargar app para Android {version&&<small>v{version}</small>}</a></div><div className="lp-plan lp-plan-visible"><div className="lp-plan-top"><span className="lp-plan-name">Plan mensual</span><div className="lp-plan-price"><span className="lp-plan-amt">27.500</span><span className="lp-plan-cur">Gs<br/>/ mes</span></div></div><ul className="lp-plan-list">{['Televisión en vivo y radios','Películas de nuestra cartelera','Acceso desde la web y Android','Transmisión a TV compatible','24 horas gratis al crear tu cuenta'].map(t=><li key={t}><span className="lp-check">✓</span>{t}</li>)}</ul><button className="lp-btn lp-btn-red lp-btn-block lp-btn-lg" onClick={register}>Empezar mi prueba gratis ↗</button><a className="lp-plan-wa" href={whatsapp} target="_blank" rel="noreferrer">Consultar formas de pago por WhatsApp</a></div></section>
    <section className="lp-sec lp-new-faq"><div><span className="lp-eyebrow">TE LO HACEMOS FÁCIL</span><h2>Antes de darle play.</h2><p>Lo que necesitás saber para empezar.</p></div><div>{FAQs.map(([q,a])=><details key={q}><summary>{q}<span>+</span></summary><p>{a}</p></details>)}</div></section>
    <section className="lp-cta lp-new-cta"><span className="lp-eyebrow">TU PRÓXIMO BUEN MOMENTO</span><h2>Encendé LiveTV.<br/>Conectá con lo tuyo.</h2><button className="lp-btn lp-btn-red lp-btn-lg" onClick={register}>Crear cuenta · 24 horas gratis ↗</button>{share}</section>
-  </main><footer className="lp-foot"><div className="lp-foot-in"><a className="lp-logo" href="#inicio"><span className="lp-playmark">▶</span>LiveTV</a><p className="lp-foot-tag">Televisión. Cine. Radio. Tu conexión con Paraguay.</p><div className="lp-foot-links"><button className="lp-link" onClick={()=>openAuth('login')}>Ingresar</button><a className="lp-link" href="#planes">Plan mensual</a><a className="lp-link" href="#socios">Ser socio</a><a className="lp-link" href={whatsapp} target="_blank" rel="noreferrer">Contactanos</a><a className="lp-link" href={apk} download>App Android</a></div><p className="lp-foot-copy">© {new Date().getFullYear()} LiveTV · Hecho en Paraguay</p></div></footer>
+  </main><footer className="lp-foot"><div className="lp-foot-in"><a className="lp-logo" href="#inicio"><span className="lp-playmark">▶</span>LiveTV</a><p className="lp-foot-tag">Televisión. Cine. Radio. Tu conexión con Paraguay.</p><div className="lp-foot-links"><button className="lp-link" onClick={()=>openAuth('login')}>Ingresar</button><a className="lp-link" href="#planes">Plan mensual</a><a className="lp-link" href="#socios">Ser socio</a><a className="lp-link" href={whatsapp} target="_blank" rel="noreferrer">Contactanos</a><a className="lp-link" href={apk} download>App Android</a><a className="lp-link" href="/privacidad.html">Política de Privacidad</a><a className="lp-link" href="/condiciones.html">Condiciones del Servicio</a></div><p className="lp-foot-copy">© {new Date().getFullYear()} LiveTV · Hecho en Paraguay</p></div></footer>
  </div>;
 }

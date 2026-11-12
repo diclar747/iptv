@@ -1,7 +1,39 @@
 import test from 'node:test';import assert from 'node:assert/strict';import express from 'express';import {streamHandler} from './proxy.js';
 async function withProxy(options,fn){const app=express();app.use((req,res,next)=>{req.user=options.viewer?.();next();});app.get('/stream',streamHandler(options));const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));try{await fn('http://127.0.0.1:'+server.address().port+'/stream?url='+encodeURIComponent('https://primary.test/live'));}finally{server.closeAllConnections();await new Promise(r=>server.close(r));}}
+
+test('NPY catalog URL requests a fresh official session before proxying video',async()=>{
+ const calls=[];
+ await withProxy({lookupRadio:async()=>null,request:async value=>{
+  const url=new URL(value);calls.push(url);
+  if(url.hostname==='www.desdepylabs.com')return new Response(`src: 'https://npy-test.example/live.m3u8?k=new&exp=9999999999'`);
+  assert.equal(url.searchParams.get('k'),'new');
+  return new Response('#EXTM3U\n#EXTINF:4,\nsegment.ts\n',{headers:{'content-type':'application/vnd.apple.mpegurl'}});
+ }},async base=>{
+  const url=new URL(base);url.searchParams.set('url','https://copacogen.desdeparaguay.net/npy/npy_py_alta/playlist.m3u8?admin=tvaccion');
+  const response=await fetch(url);assert.equal(response.status,200);
+  assert.ok((await response.text()).includes(encodeURIComponent('https://npy-test.example/segment.ts')));
+ });
+ assert.equal(calls[0].hostname,'www.desdepylabs.com');
+ assert.equal(calls.length,2);
+});
 test('proxy tries the alternative after an upstream failure',async()=>{
  await withProxy({lookupRadio:async()=>({url:'https://primary.test/live',alternativeSources:['https://backup.test/live']}),request:async url=>String(url).includes('primary')?new Response('Down',{status:503}):new Response(new Uint8Array([255,251,1,2]),{headers:{'content-type':'audio/mpeg'}})},async url=>{const r=await fetch(url);assert.equal(r.status,200);assert.equal((await r.arrayBuffer()).byteLength,4);});
+});
+test('proxy identifies a raw MPEG-TS signal with a generic video MIME type', async () => {
+ const packets = new Uint8Array(188 * 3);
+ for (let offset = 0; offset < packets.length; offset += 188) packets[offset] = 0x47;
+ const request = async () => new Response(new ReadableStream({
+  start(controller) {
+   controller.enqueue(packets.subarray(0, 120));
+   controller.enqueue(packets.subarray(120));
+   controller.close();
+  },
+ }), { headers: { 'content-type': 'video/mpeg' } });
+ await withProxy({ lookupRadio: async () => null, request }, async url => {
+  const response = await fetch(url);
+  assert.equal(response.headers.get('content-type'), 'video/mp2t');
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), packets);
+ });
 });
 test('a connection timeout returns JSON instead of leaving the gateway hanging',async()=>{
  await withProxy({lookupRadio:async()=>null,connectTimeoutMs:30,totalTimeoutMs:200,request:async(url,{signal})=>new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(signal.reason),{once:true}))},async url=>{const r=await fetch(url);assert.equal(r.status,504);assert.equal((await r.json()).code,'UPSTREAM_TIMEOUT');});

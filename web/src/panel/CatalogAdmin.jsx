@@ -1,13 +1,25 @@
 import YoutubeImporter from './YoutubeImporter.jsx';
 import MediaTransferManager from './MediaTransferManager.jsx';
 import MovieManager from './MovieManager.jsx';
-import React, { useEffect, useRef, useState } from 'react';
+import MediaCategoryManager, { sortCategories } from './MediaCategoryManager.jsx';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 
 // Super Admin — Gestión de películas y series: conexión con TheTVDB, importación
 // (start/stop/resume), sincronización, estadísticas y errores.
 export default function CatalogAdmin() {
   const [mediaRevision,setMediaRevision]=useState(0);
+  const [categories,setCategories]=useState([]);
+  const [categoryError,setCategoryError]=useState('');
+  const loadCategories = useCallback(async () => {
+    try { setCategories(sortCategories(await api.mediaCategories())); setCategoryError(''); }
+    catch (e) { setCategoryError(e.message); }
+  }, []);
+  useEffect(() => { loadCategories(); }, [loadCategories]);
+  const refreshMedia = () => {
+    setMediaRevision(v=>v+1);
+    return loadCategories();
+  };
   const [st, setSt] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [msg, setMsg] = useState(null);
@@ -38,9 +50,10 @@ export default function CatalogAdmin() {
 
   return (
     <div className="cat-admin">
-      <MediaTransferManager onPublished={()=>setMediaRevision(v=>v+1)} />
-      <details className="server-import-details"><summary>Importar directamente desde el servidor</summary><YoutubeImporter onPublished={()=>setMediaRevision(v=>v+1)} /></details>
-      <MovieManager refreshToken={mediaRevision} />
+      <MediaCategoryManager categories={categories} loadError={categoryError} refresh={refreshMedia} />
+      <MediaTransferManager categories={categories} onPublished={refreshMedia} />
+      <details className="server-import-details"><summary>Importar directamente desde el servidor</summary><YoutubeImporter categories={categories} onPublished={refreshMedia} /></details>
+      <MovieManager categories={categories} refreshToken={mediaRevision} onSaved={loadCategories} />
       <div className="stat-grid compact">
         <Stat label="Películas" value={stats.movies} />
         <Stat label="Series" value={stats.series} />

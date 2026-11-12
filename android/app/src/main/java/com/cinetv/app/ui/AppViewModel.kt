@@ -1,5 +1,9 @@
 package com.cinetv.app.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.util.Base64
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -7,12 +11,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cinetv.app.data.Card
 import com.cinetv.app.data.LoginReq
+import com.cinetv.app.data.GoogleLoginProof
 import com.cinetv.app.data.MovieDetail
 import com.cinetv.app.data.Net
 import com.cinetv.app.data.Row
 import com.cinetv.app.data.SerieDetail
 import com.cinetv.app.data.User
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import java.security.MessageDigest
+import java.security.SecureRandom
 
 data class PlayTarget(
     val url: String, val mime: String, val title: String,
@@ -39,6 +49,33 @@ class AppViewModel : ViewModel() {
     var busy by mutableStateOf(false)
         private set
     var error by mutableStateOf<String?>(null)
+    var channelFavorites by mutableStateOf<List<Card>>(emptyList())
+        private set
+    var favoritesBusy by mutableStateOf(false)
+        private set
+    var favoritesLoading by mutableStateOf(false)
+        private set
+    suspend fun refreshChannelFavorites() {
+        val owner=user?.id?:return
+        favoritesLoading=true
+        try { val result=api.channelFavorites();if(user?.id==owner)channelFavorites=result }
+        catch(e:kotlinx.coroutines.CancellationException){throw e}
+        catch(_:Exception){if(user?.id==owner)error="No pudimos actualizar tus canales favoritos. Revisá tu conexión."}
+        finally{favoritesLoading=false}
+    }
+    fun toggleChannelFavorite(card:Card) {
+        if(favoritesBusy||favoritesLoading)return
+        val owner=user?.id?:return
+        favoritesBusy=true
+        viewModelScope.launch {
+            try {
+                if(channelFavorites.any{it.id==card.id}){api.removeChannelFavorite(card.id);if(user?.id==owner)channelFavorites=channelFavorites.filterNot{it.id==card.id}}
+                else{api.addChannelFavorite(card.id);if(user?.id==owner)channelFavorites=channelFavorites+card}
+            }catch(e:kotlinx.coroutines.CancellationException){throw e}
+            catch(_:Exception){if(user?.id==owner)error="No pudimos guardar el favorito. Volvé a intentar."}
+            finally{favoritesBusy=false}
+        }
+    }
 
     var featured by mutableStateOf<List<Card>>(emptyList())
         private set
@@ -59,18 +96,79 @@ class AppViewModel : ViewModel() {
     private fun scheduleAccessExpiry(){
         accessExpiryJob?.cancel()
         val deadline=user?.takeIf{it.role!="admin"}?.expiresAt?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()}.getOrNull()}?:return
-        accessExpiryJob=viewModelScope.launch{kotlinx.coroutines.delay((deadline-System.currentTimeMillis()).coerceAtLeast(0));closePlayer()}
+        val accountId=user?.id ?: return
+        accessExpiryJob=viewModelScope.launch {
+            delay((deadline-System.currentTimeMillis()).coerceAtLeast(0))
+            while(user?.id==accountId){
+                val updated=try { api.me().user } catch(e:CancellationException){throw e} catch(_:Exception){null}
+                if(user?.id!=accountId)break
+                val nextDeadline=updated?.expiresAt?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()}.getOrNull()}
+                if(updated?.id==accountId&&nextDeadline!=null&&nextDeadline>System.currentTimeMillis()){
+                    val wasExpired=user?.subscription?.active==false
+                    user=updated
+                    com.cinetv.app.PlaybackHolder.deadline=nextDeadline
+                    if(wasExpired)loadHome()
+                    scheduleAccessExpiry()
+                    break
+                }
+                closePlayer()
+                delay(30000)
+            }
+        }
     }
     private var radioJob: kotlinx.coroutines.Job? = null
     private var radioGeneration = 0
     var play by mutableStateOf<PlayTarget?>(null)
 
     private val api get() = Net.api
+    var googleEnabled by mutableStateOf(false)
+        private set
+    var googlePending by mutableStateOf(false)
+        private set
+    private var googleJob: Job? = null
+
+    suspend fun loadGoogleStatus() {
+        try { googleEnabled = api.googleLoginStatus().enabled }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { googleEnabled = false }
+    }
+
+    fun cancelGoogleLogin() { googleJob?.cancel() }
+
+    fun loginWithGoogle(context: Context) {
+        if (busy || googlePending || !googleEnabled) return
+        val flags = Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
+        val verifier = Base64.encodeToString(ByteArray(32).also { SecureRandom().nextBytes(it) }, flags)
+        val challenge = Base64.encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()), flags)
+        val url = Uri.parse(Net.BASE + "api/auth/google/start").buildUpon()
+            .appendQueryParameter("mobile_challenge", challenge).build()
+        googleJob = viewModelScope.launch {
+            googlePending = true
+            error = null
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, url))
+                repeat(150) {
+                    delay(4000)
+                    val signedIn = try { api.finishGoogleLogin(GoogleLoginProof(verifier)).user }
+                    catch (_: java.io.IOException) { null }
+                    if (signedIn != null) {
+                        user = signedIn
+                        scheduleAccessExpiry()
+                        loadHome()
+                        return@launch
+                    }
+                }
+                error = "El ingreso con Google venció. Volvé a intentarlo."
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { error = "No pudimos completar el ingreso con Google." }
+            finally { googlePending = false }
+        }
+    }
 
     fun boot() {
         viewModelScope.launch {
             try{user=api.me().user}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){}finally{booting=false}
-            if(user!=null){scheduleAccessExpiry();busy=true;try{loadHome()}finally{busy=false}}
+            if(user!=null){if(play==null)play=com.cinetv.app.PlaybackHolder.target;scheduleAccessExpiry();busy=true;try{loadHome()}finally{busy=false}}
         }
     }
 
@@ -79,7 +177,7 @@ class AppViewModel : ViewModel() {
             busy = true; error = null
             try {
                 user = api.login(LoginReq(username.trim(), password)).user
-                if (user != null) loadHome()
+                if (user != null) { scheduleAccessExpiry(); loadHome() }
             } catch (e: Exception) {
                 error = humanize(e)
             }
@@ -99,6 +197,7 @@ class AppViewModel : ViewModel() {
     }
 
     fun logout() {
+        channelFavorites=emptyList()
         Net.logout()
         accessExpiryJob?.cancel();closePlayer()
         user = null; featured = emptyList(); channelRows = emptyList(); movieRows = emptyList(); detail = null; play = null
@@ -122,11 +221,12 @@ class AppViewModel : ViewModel() {
         // Si algo falló, lo mostramos (antes quedaba girando el spinner para
         // siempre, sin indicio de la causa).
         error = err
+        refreshChannelFavorites()
+        try{com.cinetv.app.AppSettings.notifications=api.notifications().enabled}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){}
     }
 
-    suspend fun refreshSignalStates() {
+    suspend fun refreshSignalStates(ids: List<String>) {
         try {
-            val ids=channelRows.flatMap { it.items.orEmpty() }.map { it.id }.distinct().take(20)
             if(ids.isEmpty())return
             val states=api.channelStatuses(ids.joinToString(",")).associateBy { it.id }
             channelRows=channelRows.map { row -> row.copy(items=row.items?.filter { states[it.id]?.status !in listOf("blocked","deleted") }?.map { c -> states[c.id]?.let { c.copy(status=it.status,checkedAt=it.checkedAt) } ?: c }) }
@@ -183,6 +283,7 @@ class AppViewModel : ViewModel() {
     }
 
     private fun startPlay(rawUrl: String, title: String, ua: String?, ref: String?, isLive: Boolean, reactionType: String = "series", reactionId: String = (detail as? Detail.Serie)?.d?.id?.toString() ?: "") {
+        com.cinetv.app.PlaybackHolder.deadline=if(user?.role=="admin")Long.MAX_VALUE else user?.expiresAt?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()}.getOrNull()}?:Long.MAX_VALUE
         val proxied = Net.proxied(rawUrl, ua, ref)
         val path = rawUrl.substringBefore('?')
         val mime = when {
@@ -208,7 +309,7 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    fun closePlayer() { radioGeneration++; radioJob?.cancel();busy=false;play = null }
+    fun closePlayer() { com.cinetv.app.PlaybackService.stop(); radioGeneration++; radioJob?.cancel();busy=false;play = null }
     fun closeDetail() { detail = null }
 
     private fun humanize(e: Exception): String =

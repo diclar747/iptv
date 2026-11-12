@@ -1,4 +1,5 @@
 import { managedCard, managedStreams, channelSettings, channelVisible, channelStatus, channelSettingsVersion } from './channelState.js';
+import {channelPriority} from './channelPriority.js';
 // Capa de datos de iptv-org: descarga, cachea en memoria y une
 // canales + streams. Fuente: https://iptv-org.github.io/api/
 //
@@ -216,6 +217,7 @@ export function queryChannels({
       const bp = b.country === pref ? 0 : 1;
       if (ap !== bp) return ap - bp;
     }
+    if(!q){const priority=channelPriority(a)-channelPriority(b);if(priority)return priority;}
     return a.name.localeCompare(b.name);
   });
 

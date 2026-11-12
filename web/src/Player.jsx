@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { api } from './api.js';
 import { castSupported, castTo, airplaySupported, airplay, loadCast } from './cast.js';
 import Icon from './ui/Icon.jsx';
+import {getAppSettings} from './appSettings.js';
 
 // Arranca silenciado (así el navegador permite el autoplay y el canal se ve al
 // instante) y el sonido se activa con el PRIMER toque. El volumen y la pantalla
@@ -13,15 +14,34 @@ function playVideo(video) {
   if (p && p.catch) p.catch(() => {});
 }
 
-export default function Player({ url, stream, title, poster, onFail }) {
+export default function Player({ url, stream, title, poster, onFail, isLive = false }) {
   const videoRef = useRef(null);
   const unmutedRef = useRef(false);
   const hideTimer = useRef(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [waiting, setWaiting] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const resumeAt = useRef(null);
   const [casting, setCasting] = useState(false);
   const [canCast, setCanCast] = useState(false);
   const [ctrlsOn, setCtrlsOn] = useState(true);
+  useEffect(()=>{
+    const video=videoRef.current;if(!video)return;
+    let lock=null,disposed=false,requesting=false;
+    async function screen(){
+      const prefs=getAppSettings();
+      if(document.hidden&&!prefs.background)video.pause();
+      if(disposed||!prefs.keepScreenOn||document.hidden||video.paused){await lock?.release().catch(()=>{});lock=null;return;}
+      if(!lock&&!requesting&&navigator.wakeLock){requesting=true;try{const next=await navigator.wakeLock.request('screen');if(disposed||document.hidden||video.paused||!getAppSettings().keepScreenOn)await next.release();else{lock=next;next.addEventListener('release',()=>{if(lock===next)lock=null;});}}catch{}finally{requesting=false;}}
+    }
+    video.addEventListener('playing',screen);video.addEventListener('pause',screen);video.addEventListener('ended',screen);document.addEventListener('visibilitychange',screen);window.addEventListener('livetv-settings',screen);
+    if('mediaSession' in navigator){
+      if(typeof MediaMetadata!=='undefined')navigator.mediaSession.metadata=new MediaMetadata({title:title||'LiveTV',artist:'LiveTV'});
+      for(const [action,handler] of Object.entries({play:()=>video.play().catch(()=>{}),pause:()=>video.pause(),stop:()=>video.pause()}))try{navigator.mediaSession.setActionHandler(action,handler);}catch{}
+    }
+    return()=>{disposed=true;lock?.release().catch(()=>{});video.removeEventListener('playing',screen);video.removeEventListener('pause',screen);video.removeEventListener('ended',screen);document.removeEventListener('visibilitychange',screen);window.removeEventListener('livetv-settings',screen);if('mediaSession' in navigator){for(const action of ['play','pause','stop'])try{navigator.mediaSession.setActionHandler(action,null);}catch{}navigator.mediaSession.metadata=null;}};
+  },[url,title]);
 
   // Muestra el botón de cast y lo oculta tras unos segundos de inactividad.
   function poke() {
@@ -49,33 +69,146 @@ export default function Player({ url, stream, title, poster, onFail }) {
     if (!video || !url) return;
     setError(null);
     setLoading(true);
+    setWaiting(false);
     unmutedRef.current = false;
     let hls;
+    let transportPlayer;
+    const probeController = new AbortController();
     let destroyed = false;
     let recoverTries = 0;
+    let waitTimer;
+    let stalledOnce = false;
+    let hasPlayed = false;
+    let failed = false;
+    const startupTimer = setTimeout(() => playbackFailed('El video está tardando demasiado en responder.'), 25000);
 
-    const onPlaying = () => setLoading(false);
-    const onNativeError = () => { setError('No se pudo reproducir el archivo.'); setLoading(false); onFail && onFail(); };
+    const clearWait = () => {
+      clearTimeout(waitTimer);
+      waitTimer = undefined;
+      setWaiting(false);
+    };
+    const onPlaying = () => {
+      clearTimeout(startupTimer);
+      hasPlayed = true;
+      stalledOnce = false;
+      if (failed) { failed = false; setError(null); }
+      clearWait();
+      setLoading(false);
+    };
+    const playbackFailed = (message) => {
+      if (destroyed || failed) return;
+      failed = true;
+      clearTimeout(startupTimer);
+      clearWait();
+      setError(message);
+      setLoading(false);
+      onFail?.();
+    };
+    const onCanPlay = () => {
+      clearTimeout(startupTimer);
+      if (video.paused) setLoading(false);
+    };
+    const onWaiting = () => {
+      if (!hasPlayed || video.paused || waitTimer) return;
+      waitTimer = setTimeout(() => {
+        if (video.paused || video.readyState >= 3) { clearWait(); return; }
+        setWaiting(true);
+        waitTimer = setTimeout(() => {
+          waitTimer = undefined;
+          if (!isLive || video.paused || video.readyState >= 3) return;
+          if (stalledOnce || (!hls && !transportPlayer)) {
+            playbackFailed('La señal dejó de responder.');
+            return;
+          }
+          stalledOnce = true;
+          if (hls) {
+            hls.stopLoad();
+            hls.startLoad();
+            const livePosition = hls.liveSyncPosition;
+            if (Number.isFinite(livePosition)) video.currentTime = livePosition;
+          } else {
+            transportPlayer.unload();
+            transportPlayer.load();
+            video.play().catch(() => {});
+          }
+          onWaiting();
+        }, 8500);
+      }, 1500);
+    };
+    const restorePosition = () => {
+      const saved = resumeAt.current;
+      resumeAt.current = null;
+      if (!isLive && saved?.url === url && Number.isFinite(saved.time) && saved.time < video.duration) {
+        video.currentTime = saved.time;
+      }
+    };
+
+    async function playTransportStream() {
+      const { default: mpegts } = await import('mpegts.js');
+      if (destroyed) return;
+      if (!mpegts.getFeatureList().mseLivePlayback) {
+        playbackFailed('Tu navegador no admite esta señal en vivo.');
+        return;
+      }
+      video.removeAttribute('src');
+      video.load();
+      transportPlayer = mpegts.createPlayer({ type: 'mpegts', isLive: true, url }, {
+        autoCleanupSourceBuffer: true,
+      });
+      transportPlayer.on(mpegts.Events.ERROR, () => playbackFailed('No se pudo reproducir la señal en vivo.'));
+      transportPlayer.attachMediaElement(video);
+      transportPlayer.load();
+      playVideo(video);
+    }
+
+    const onNativeError = async () => {
+      try {
+        if (video.error?.code === 4 && stream && url.startsWith('/api/stream?')) {
+          const response = await fetch(url, {
+            signal: AbortSignal.any([probeController.signal, AbortSignal.timeout(12000)]),
+          });
+          const isTransportStream = response.ok && /^video\/mp2t(?:;|$)/i.test(response.headers.get('content-type') || '');
+          void response.body?.cancel().catch(() => {});
+          if (isTransportStream) {
+            await playTransportStream();
+            return;
+          }
+        }
+      } catch { /* Report failure and let the caller try the next source. */ }
+      playbackFailed('No se pudo reproducir el archivo.');
+    };
     video.addEventListener('playing', onPlaying);
+    video.addEventListener('canplay', onCanPlay);
+    video.addEventListener('waiting', onWaiting);
+    video.addEventListener('pause', clearWait);
+    video.addEventListener('loadedmetadata', restorePosition, { once: true });
 
     let realUrl = url;
     try { realUrl = new URLSearchParams(url.split('?')[1]).get('url') || url; } catch { /* noop */ }
     const isHls = stream?.format === 'hls' || /\.m3u8(\?|$)/i.test(realUrl) || /\/\/www\.desdepylabs\.com\/External\/tvaccion\/npy/i.test(realUrl);
-
-    if (!isHls) {
+    const nativeHls = isHls && video.canPlayType('application/vnd.apple.mpegurl');
+    const playNative = () => {
+      video.addEventListener('error', onNativeError, { once: true });
       video.src = url;
       playVideo(video);
-      video.addEventListener('error', onNativeError);
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = url; // Safari / soporte nativo
-      playVideo(video);
+    };
+
+    if (stream?.format === 'mpegts') {
+      playTransportStream().catch(() => playbackFailed('No se pudo cargar la señal en vivo.'));
+    } else if (!isHls || (nativeHls && airplaySupported(video))) {
+      playNative();
     } else {
-      import('hls.js')
-        .then(({ default: Hls }) => {
+      Promise.all([import('hls.js'), import('hls.js/dist/hls.worker.js?url')])
+        .then(([{ default: Hls }, { default: workerPath }]) => {
           if (destroyed) return;
-          if (!Hls.isSupported()) { setError('Tu navegador no soporta la reproducción de este formato.'); setLoading(false); return; }
+          if (!Hls.isSupported()) {
+            if (nativeHls) playNative();
+            else playbackFailed('Tu navegador no admite esta señal.');
+            return;
+          }
           hls = new Hls({
             enableWorker: true,
+            workerPath,
             backBufferLength: 30,
             // Colchón de buffer: mantenerse unos segmentos atrás del vivo para que
             // un bajón momentáneo de red no corte la reproducción ("se tranca").
@@ -99,27 +232,33 @@ export default function Player({ url, stream, title, poster, onFail }) {
               recoverTries++;
               try { hls.recoverMediaError(); return; } catch { /* sigue abajo */ }
             }
-            setError(
+            playbackFailed(
               data.type === Hls.ErrorTypes.NETWORK_ERROR
                 ? 'No se pudo cargar el stream (red/CORS o canal caído).'
                 : 'Error de reproducción del stream.'
             );
-            setLoading(false);
-            if (onFail) onFail(); // intentar el siguiente stream del canal
           });
         })
-        .catch(() => { setError('No se pudo cargar el reproductor.'); setLoading(false); });
+        .catch(() => playbackFailed('No se pudo cargar el reproductor.'));
     }
 
     return () => {
       destroyed = true;
+      clearTimeout(startupTimer);
+      clearTimeout(waitTimer);
+      probeController.abort();
       video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('canplay', onCanPlay);
+      video.removeEventListener('waiting', onWaiting);
+      video.removeEventListener('pause', clearWait);
+      video.removeEventListener('loadedmetadata', restorePosition);
       video.removeEventListener('error', onNativeError);
       if (hls) hls.destroy();
+      if (transportPlayer) transportPlayer.destroy();
       video.removeAttribute('src');
       video.load();
     };
-  }, [url]);
+  }, [url, retry, isLive]);
 
   async function onCast(e) {
     e.stopPropagation();
@@ -147,8 +286,12 @@ export default function Player({ url, stream, title, poster, onFail }) {
           </button>
         </div>
       )}
-      {loading && !error && <div className="player-overlay">Conectando…</div>}
-      {error && <div className="player-overlay error">{error}</div>}
+      {(loading || waiting) && !error && <div className="player-overlay player-loading" role="status">{waiting ? 'Cargando video…' : 'Conectando…'}</div>}
+      {error && <div className="player-overlay error"><div className="player-error-detail"><span role="status">{error}</span><button type="button" onClick={e => {
+        e.stopPropagation();
+        resumeAt.current = { url, time: videoRef.current?.currentTime };
+        setRetry(count => count + 1);
+      }}>Reintentar</button></div></div>}
     </div>
   );
 }

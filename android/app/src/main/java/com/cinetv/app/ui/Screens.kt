@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -45,6 +46,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -77,6 +81,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -95,14 +100,10 @@ import androidx.compose.ui.unit.TextUnit
 import com.cinetv.app.data.Card
 import com.cinetv.app.data.Comment
 import com.cinetv.app.data.CommentReq
-import com.cinetv.app.data.CreditReqReq
 import com.cinetv.app.data.Net
-import com.cinetv.app.data.Profile
-import com.cinetv.app.data.ProfileUpdate
-import com.cinetv.app.data.ProviderBilling
 import com.cinetv.app.data.ReactReq
-import com.cinetv.app.data.User
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private val Panel = Color(0xFF0A0B10)
@@ -119,31 +120,32 @@ fun LoginScreen(vm: AppViewModel) { StudioLoginScreen(vm) }
 fun MainScreen(vm: AppViewModel,openWallet:Boolean=false,onWalletOpened:()->Unit={}) {
     var tab by remember { mutableStateOf(0) }
     var panelOpen by remember { mutableStateOf(false) }
-    LaunchedEffect(openWallet){if(openWallet){panelOpen=true;onWalletOpened()}}
+    var notificationsOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(openWallet){if(openWallet){tab=5;panelOpen=true;onWalletOpened()}}
     val foreground=rememberForeground()
+    LaunchedEffect(foreground){if(foreground){vm.refreshChannelFavorites();while(true){delay(30000);vm.refreshChannelFavorites()}}}
     val expiry=vm.user?.expiresAt
     var expiredByClock by remember(expiry){mutableStateOf(expiry?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()<=System.currentTimeMillis()}.getOrDefault(false)}?:false)}
     LaunchedEffect(expiry,foreground){
         if(!foreground||expiry==null)return@LaunchedEffect
         val deadline=runCatching{java.time.Instant.parse(expiry).toEpochMilli()}.getOrNull()?:return@LaunchedEffect
-        while(true){val remaining=deadline-System.currentTimeMillis();if(remaining<=0){expiredByClock=true;vm.closePlayer();break};delay(minOf(remaining,60000))}
+        while(true){val remaining=deadline-System.currentTimeMillis();if(remaining<=0){expiredByClock=true;break};delay(minOf(remaining,60000))}
     }
     if(vm.user?.role!="admin"&&(expiredByClock||vm.user?.subscription?.active==false)){
         val context=LocalContext.current
         Column(Modifier.fillMaxSize().background(Bg).padding(28.dp),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally){
             Text(if(vm.user?.packageName?.startsWith("Prueba")==true)"Terminó tu prueba gratis" else "Tu suscripción venció",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Bold)
             Text("Podés renovar por Gs. 27.500 al mes y seguir disfrutando de LiveTV.",color=Muted,modifier=Modifier.padding(vertical=18.dp))
-            Button(onClick={panelOpen=true}){Text("Mi plan, afiliados y billetera")}
+            Button(onClick={panelOpen=true}){Text("Mi cuenta y renovación")}
             TextButton(onClick={vm.logout()}){Text("Cerrar sesión")}
         }
-        if(panelOpen) AffiliateScreen { panelOpen=false;vm.boot() }
+        if(panelOpen) AffiliateScreen(onLogout={vm.logout()}) { panelOpen=false;vm.boot() }
         return
     }
-    LaunchedEffect(tab,foreground) { if(tab==0&&foreground)while(true) { delay(30000); vm.refreshSignalStates() } }
     var searchOpen by remember { mutableStateOf(false) }
     val tabs = listOf(
         "Inicio" to Icons.Filled.Home, "Pelis" to Icons.Filled.Movie,
-        "En Vivo" to Icons.Filled.LiveTv, "Radios" to Icons.Filled.Radio, "Perfil" to Icons.Filled.Person,
+        "En Vivo" to Icons.Filled.LiveTv, "Radios" to Icons.Filled.Radio, "Config" to androidx.compose.material.icons.Icons.Filled.Settings, "Cuenta" to Icons.Filled.Person,
     )
     Scaffold(
         containerColor = Bg,
@@ -151,7 +153,7 @@ fun MainScreen(vm: AppViewModel,openWallet:Boolean=false,onWalletOpened:()->Unit
             NavigationBar(containerColor = StudioSurface, modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))) {
                 tabs.forEachIndexed { i, (label, icon) ->
                     NavigationBarItem(
-                        selected = tab == i, onClick = { tab = i },
+                        selected = tab == i, onClick = { if(tab==5&&i!=5)vm.boot();panelOpen=false;tab = i },
                         icon = { Icon(icon, label) }, label = { Text(label, fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = StudioAccent, selectedTextColor = StudioAccent, indicatorColor = StudioAccent.copy(alpha = .12f)
@@ -162,7 +164,7 @@ fun MainScreen(vm: AppViewModel,openWallet:Boolean=false,onWalletOpened:()->Unit
         }
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
-            if (tab != 4) TopBar(vm.user, onSearch = { searchOpen = true }, onProfile = { tab = 4 })
+            if (tab != 5) TopBar(onSearch = { searchOpen = true }, onFavorites = { tab = 6 }, onNotifications = { notificationsOpen = true })
             if (vm.busy) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp), color = StudioAccent)
             vm.error?.let { message ->
                 Row(Modifier.fillMaxWidth().background(Color(0xFF2B2020)).padding(start = 16.dp),verticalAlignment = Alignment.CenterVertically) {
@@ -175,32 +177,32 @@ fun MainScreen(vm: AppViewModel,openWallet:Boolean=false,onWalletOpened:()->Unit
                 1 -> MoviesTab(vm)
                 2 -> LiveTab(vm)
                 3 -> RadiosTab(vm)
-                else -> ProfileScreen(vm, onOpenPanel = { panelOpen = true })
+                4 -> AppSettingsScreen()
+                6 -> FavoriteChannelsScreen(vm){tab=2}
+                else -> AffiliateScreen(embedded=true,onLogout={vm.logout()}){tab=0;vm.boot()}
             }
         }
     }
+    if(notificationsOpen) NotificationScreen(onClose={notificationsOpen=false},onAccount={notificationsOpen=false;tab=5})
     if (searchOpen) SearchOverlay(vm) { searchOpen = false }
-    if (panelOpen) AffiliateScreen(onClose = { panelOpen = false;vm.boot() })
+    if (panelOpen&&tab!=5) AffiliateScreen(onLogout={vm.logout()},onClose = { panelOpen = false;vm.boot() })
     vm.detail?.let { DetailOverlay(vm, it) }
 }
 
 @Composable
-private fun TopBar(user: User?, onSearch: () -> Unit, onProfile: () -> Unit) {
+private fun TopBar(onSearch: () -> Unit, onFavorites: () -> Unit, onNotifications: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().background(StudioSurface).padding(horizontal = 16.dp, vertical = 9.dp),
+        Modifier.fillMaxWidth().background(StudioSurface).padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text("LiveTV", color = Red, fontSize = 24.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.weight(1f))
+        IconButton(onClick=onFavorites,modifier=Modifier.size(40.dp)){Icon(Icons.Filled.StarBorder,"Mis canales favoritos",tint=Color(0xFFFFDC71))}
         CastButton()
+        IconButton(onClick=onNotifications,modifier=Modifier.size(40.dp)){Icon(Icons.Filled.Notifications,"Notificaciones",tint=Color.White)}
         TvSettingsButton()
-        IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, "Buscar", tint = Color.White) }
-        Box(
-            Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF203349)).border(1.dp, StudioAccent.copy(alpha = .25f), CircleShape).clickable { onProfile() },
-            contentAlignment = Alignment.Center
-        ) {
-            Text((user?.username?.firstOrNull() ?: 'U').uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
-        }
+        IconButton(onClick = onSearch,modifier=Modifier.size(40.dp)) { Icon(Icons.Filled.Search, "Buscar", tint = Color.White) }
+
     }
 }
 
@@ -250,18 +252,31 @@ private fun CastAction() {
 // deportes, noticias, etc. Las películas viven en la pestaña Pelis.
 @Composable
 private fun HomeTab(vm: AppViewModel, onNavigate: (Int) -> Unit) {
-    val heroChannels = remember(vm.channelRows) {
-        vm.channelRows.flatMap { it.items ?: emptyList() }.distinctBy { it.id }.take(8)
+    val foreground = rememberForeground()
+    val heroChannels = remember(vm.channelRows,vm.channelFavorites) {
+        (vm.channelFavorites+vm.channelRows.flatMap { it.items ?: emptyList() }).distinctBy { it.id }.take(8)
     }
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+        item { FavoriteChannelsRow(vm){onNavigate(6)} }
         item { StudioShortcuts(onNavigate) }
         if (heroChannels.isNotEmpty()) item { ChannelHero(heroChannels, onPlay = { vm.playChannel(it) }, onOpen = { vm.openCard(it) }) }
         items(vm.channelRows) { row ->
             if (!row.items.isNullOrEmpty()) {
                 Text(row.title ?: "", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 14.dp, top = 16.dp, bottom = 8.dp))
-                LazyRow(contentPadding = PaddingValues(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(row.items) { CardView(it) { if(it.kind == "channel") vm.playChannel(it) else vm.openCard(it) } }
+                val state = rememberLazyListState()
+                LaunchedEffect(state, foreground) {
+                    if (!foreground) return@LaunchedEffect
+                    snapshotFlow { state.layoutInfo.visibleItemsInfo.mapNotNull { it.key as? String }.take(20) }
+                        .collectLatest { ids ->
+                            while (ids.isNotEmpty()) {
+                                vm.refreshSignalStates(ids)
+                                delay(10000)
+                            }
+                        }
+                }
+                LazyRow(state = state, contentPadding = PaddingValues(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(row.items, key = { it.id }) { CardView(it) { if(it.kind == "channel") vm.playChannel(it) else vm.openCard(it) } }
                 }
             }
         }
@@ -479,167 +494,6 @@ private fun SearchOverlay(vm: AppViewModel, onClose: () -> Unit) {
     }
 }
 
-@Composable
-private fun ProfileScreen(vm: AppViewModel, onOpenPanel: () -> Unit) {
-    val u = vm.user ?: return
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val isReseller = u.role == "reseller"
-    val isAdmin = u.role == "admin"
-    val staff = true
-    var favs by remember { mutableStateOf<List<Card>>(emptyList()) }
-    var prof by remember { mutableStateOf<Profile?>(null) }
-    var provider by remember { mutableStateOf<ProviderBilling?>(null) }
-    var upPending by remember { mutableStateOf(false) }
-    var msg by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(Unit) {
-        favs = try { Net.api.favorites() } catch (_: Exception) { emptyList() }
-        prof = try { Net.api.profile() } catch (_: Exception) { null }
-        if (!isAdmin) provider = try { Net.api.billingProvider() } catch (_: Exception) { null }
-    }
-
-    // Formulario de datos (incluye bancarios); se inicializa al llegar el perfil.
-    var displayName by remember(prof) { mutableStateOf(prof?.displayName ?: "") }
-    var phone by remember(prof) { mutableStateOf(prof?.phone ?: "") }
-    var bankName by remember(prof) { mutableStateOf(prof?.bankName ?: "") }
-    var bankHolder by remember(prof) { mutableStateOf(prof?.bankHolder ?: "") }
-    var bankAccount by remember(prof) { mutableStateOf(prof?.bankAccount ?: "") }
-    var bankAlias by remember(prof) { mutableStateOf(prof?.bankAlias ?: "") }
-    var bankDoc by remember(prof) { mutableStateOf(prof?.bankDoc ?: "") }
-
-    fun saveProfile() {
-        scope.launch {
-            try {
-                prof = Net.api.updateProfile(ProfileUpdate(
-                    displayName = displayName, phone = phone, bankName = bankName, bankHolder = bankHolder,
-                    bankAccount = bankAccount, bankAlias = bankAlias, bankDoc = bankDoc))
-                msg = "Guardado ✓"
-            } catch (e: Exception) { msg = e.message }
-        }
-    }
-    fun askUpgrade() {
-        scope.launch {
-            try { Net.api.createCreditRequest(CreditReqReq("upgrade", 0)); upPending = true; msg = "Solicitud enviada ✓" }
-            catch (e: Exception) { msg = e.message }
-        }
-    }
-
-    LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-        item {
-            Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(84.dp).clip(CircleShape).background(Red), contentAlignment = Alignment.Center) {
-                    Text(u.username.firstOrNull()?.uppercase() ?: "U", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black)
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(u.displayName ?: u.username, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Text(roleLabel(u.role), color = Red, fontSize = 13.sp)
-            }
-        }
-        item {
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                if (isReseller) {
-                    InfoRow("Enlace de afiliado", "live.cd.com.py/?ref=${u.username}")
-                }
-                if (u.role == "client") {
-                    InfoRow("Suscripción", if (u.subscription?.active == true) "Activa" else "Vencida")
-                    u.packageName?.let { InfoRow("Paquete", it) }
-                    u.expiresAt?.let { value -> InfoRow("Vence",runCatching{java.time.Instant.parse(value).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}.getOrDefault(value.take(16))) }
-                    InfoRow("Pantallas", (u.maxConnections ?: 1).toString())
-                }
-                if (isAdmin) InfoRow("Rol", "Administrador")
-
-                Spacer(Modifier.height(16.dp))
-                if (staff) {
-                    Button(
-                        onClick = {
-                            onOpenPanel()
-                        },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Red)
-                    ) { Text(if(isAdmin) "Administración" else "Afiliados y billetera", fontWeight = FontWeight.Bold) }
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                // Datos + datos bancarios (staff)
-                if (staff) {
-                    Text("Datos bancarios", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text(if (isAdmin) "Los usuarios los ven para pagar el plan." else "Se utilizan para recibir los retiros de tus ganancias.",
-                        color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
-                    ProfileField("Nombre / Negocio", displayName) { displayName = it }
-                    ProfileField("Teléfono / WhatsApp", phone) { phone = it }
-                    ProfileField("Banco", bankName) { bankName = it }
-                    ProfileField("Titular", bankHolder) { bankHolder = it }
-                    ProfileField("Nº de cuenta", bankAccount) { bankAccount = it }
-                    ProfileField("Alias", bankAlias) { bankAlias = it }
-                    ProfileField("Cédula / RUC", bankDoc) { bankDoc = it }
-                    Button(onClick = { saveProfile() }, modifier = Modifier.fillMaxWidth().height(46.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("Guardar datos", fontWeight = FontWeight.Bold) }
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                // Cómo pagar al proveedor (distribuidor ve al admin; cliente a su vendedor)
-                if (!isAdmin) {
-                    val p = provider
-                    val hasBank = p != null && (!p.bankName.isNullOrBlank() || !p.bankAccount.isNullOrBlank() || !p.bankAlias.isNullOrBlank())
-                    Text("Cómo pagar mi plan", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    if (hasBank) {
-                        Text("Transferí a ${p!!.displayName ?: p.username ?: "tu proveedor"} y enviá el comprobante.",
-                            color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
-                        p.bankName?.let { InfoRow("Banco", it) }
-                        p.bankHolder?.let { InfoRow("Titular", it) }
-                        p.bankAccount?.let { InfoRow("Cuenta", it) }
-                        p.bankAlias?.let { InfoRow("Alias", it) }
-                        p.bankDoc?.let { InfoRow("CI/RUC", it) }
-                        p.phone?.let { InfoRow("WhatsApp", it) }
-                    } else {
-                        Text("Tu proveedor todavía no cargó sus datos de pago. Contactalo para renovar o ampliar tu acceso." +
-                            (p?.phone?.let { " ($it)" } ?: ""), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp))
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
-
-
-                msg?.let { Text(it, color = Red, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp)) }
-                Button(
-                    onClick = { vm.logout() }, modifier = Modifier.fillMaxWidth().height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16171D))
-                ) { Icon(Icons.Filled.Logout, null); Text("  Cerrar sesión", color = Color.White) }
-            }
-        }
-        if (favs.isNotEmpty()) {
-            item {
-                Text("Mi Lista", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp))
-                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(favs) { PosterCard(it) { vm.openCard(it) } }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Muted, fontSize = 14.sp, modifier = Modifier.width(140.dp))
-        Text(value, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-    }
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF1C1D25)))
-}
-
-@Composable
-private fun ProfileField(label: String, value: String, onChange: (String) -> Unit) {
-    OutlinedTextField(
-        value, onChange, label = { Text(label) }, singleLine = true,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-    )
-}
-
-private fun roleLabel(r: String?) = when (r) {
-    "admin" -> "Administrador"; "reseller" -> "Afiliado"; "client" -> "Afiliado"; else -> r ?: ""
-}
-
 // Sección social compartida (backend): Me gusta con contador, Mi Lista (solo
 // pelis/series), Compartir, y comentarios reales con autor y borrado propio.
 @Composable
@@ -660,6 +514,7 @@ private fun SocialSection(vm: AppViewModel, type: String, id: String, title: Str
 
     VoteButtons(type, id)
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+        if(type=="channel"){ChannelFavoriteButton(Card(id=id,name=title,type="channel"))}
         if (allowList) {
             ActionBtn(Icons.Filled.Add, if (inList) "✓ Mi Lista" else "Mi Lista", if (inList) Red else Color.White) {
                 if (!inList) { id.toLongOrNull()?.let { vm.addFavorite(if (type == "serie") "serie" else "movie", it) }; inList = true }

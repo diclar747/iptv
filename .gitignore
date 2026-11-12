@@ -32,3 +32,7 @@ backup.sql
 # Downloaded media and local importer tools must never enter Git.
 /data/media/
 /server/.tools/
+
+# Basura local (no commitear)
+.wallet-test-pg/
+.livetv-wallet-138.tar.gz

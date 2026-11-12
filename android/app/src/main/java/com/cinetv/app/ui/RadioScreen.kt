@@ -189,18 +189,19 @@ fun RadiosTab(vm: AppViewModel) {
 }
 
 @Composable
-fun VoteButtons(type: String, id: String) {
+fun VoteButtons(type: String, id: String, iconsOnly: Boolean = false) {
     var state by remember(type, id) { mutableStateOf(ReactionsResp()) }
     var busy by remember(type, id) { mutableStateOf(false) }
     var error by remember(type, id) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val foreground=rememberForeground()
-    LaunchedEffect(type, id,foreground) {
+    LaunchedEffect(type, id, foreground, iconsOnly) {
         if(!foreground)return@LaunchedEffect
         while (true) {
             try { state = Net.api.reactions(type, id); error = null }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { error = "No se pudieron cargar los votos" }
+            if (iconsOnly) break
             delay(5000)
         }
     }
@@ -214,7 +215,16 @@ fun VoteButtons(type: String, id: String) {
             finally { busy = false }
         }
     }
-    Column {
+    if (iconsOnly) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            IconToggleButton(checked = state.liked, onCheckedChange = { vote(1) }, enabled = !busy) {
+                Icon(Icons.Default.ThumbUp, "Me gusta", Modifier.size(24.dp), tint = if (state.liked) Color(0xFFFF5677) else Color.White)
+            }
+            IconToggleButton(checked = state.disliked, onCheckedChange = { vote(-1) }, enabled = !busy) {
+                Icon(Icons.Default.ThumbDown, "No me gusta", Modifier.size(24.dp), tint = if (state.disliked) Color(0xFFFF5677) else Color.White)
+            }
+        }
+    } else Column {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             VotePill(state.liked, state.likes, true, busy) { vote(1) }
             VotePill(state.disliked, state.dislikes, false, busy) { vote(-1) }

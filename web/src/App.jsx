@@ -2,18 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from './auth.jsx';
 import { api } from './api.js';
 import { subscribePwa, promptInstall } from './pwa.js';
-import Landing from './Landing.jsx';
 import Home from './views/Home.jsx';
 import Catalog from './views/Catalog.jsx';
 import Channels from './views/Channels.jsx';
 import Search from './views/Search.jsx';
-import Perfil from './views/Perfil.jsx';
+import AccountHub from './views/AccountHub.jsx';
+import Settings from './views/Settings.jsx';
 import Panel from './panel/Panel.jsx';
 import AffiliatePanel from './panel/AffiliatePanel.jsx';
 import Radios from './views/Radios.jsx';
 import TitleModal from './ui/TitleModal.jsx';
 import Icon from './ui/Icon.jsx';
+import AccountAvatar, { accountName } from './ui/AccountIdentity.jsx';
 import Notifications from './ui/Notifications.jsx';
+import ChannelFavorites from './views/ChannelFavorites.jsx';
+import {ChannelFavoritesProvider, useChannelFavorites} from './channelFavorites.jsx';
+import {DialogProvider} from './ui/SystemDialog.jsx';
+import './styles.css';
 
 const roleLabel = (r) => ({ admin: 'Admin', reseller: 'Afiliado', client: 'Afiliado' }[r] || r);
 // Tiempo restante legible: horas si falta poco (prueba 24h), si no días.
@@ -32,9 +37,10 @@ const NAV = [
   { k: 'peliculas', label: 'Películas', icon: 'film' },
   { k: 'tv', label: 'TV en Vivo', icon: 'live' },
   { k: 'radios', label: 'Radios', icon: 'live' },
+  { k: 'config', label: 'Config', icon: 'gear' },
   { k: 'deportes', label: 'Deportes', icon: 'sports' },
+  { k: 'favoritos', label: 'Canales favoritos', icon: 'star' },
   { k: 'milista', label: 'Mi Lista', icon: 'list' },
-  { k: 'perfil', label: 'Perfil', icon: 'user' },
 ];
 
 // Barra de navegación inferior (móvil, estilo app).
@@ -43,10 +49,25 @@ const BOTTOM = [
   { k: 'peliculas', label: 'Pelis', icon: 'film' },
   { k: 'tv', label: 'En Vivo', icon: 'live' },
   { k: 'radios', label: 'Radios', icon: 'live' },
+  { k: 'config', label: 'Config', icon: 'gear' },
+  { k: 'cuenta', label: 'Cuenta', icon: 'user' },
 ];
 
 export default function App() {
-  const { user, loading, logout, refresh } = useAuth();
+  useEffect(() => {
+    const fonts = document.createElement('link');
+    fonts.rel = 'stylesheet';
+    fonts.href = 'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap';
+    document.head.append(fonts);
+    return () => fonts.remove();
+  }, []);
+
+  return <ChannelFavoritesProvider><DialogProvider><ViewerApp /></DialogProvider></ChannelFavoritesProvider>;
+}
+
+function ViewerApp() {
+  const { user, logout, refresh } = useAuth();
+  const channelFavorites=useChannelFavorites();
   const [view, setView] = useState('inicio');
   const [params, setParams] = useState({});
   const [query, setQuery] = useState('');
@@ -64,6 +85,15 @@ export default function App() {
   const apkDownload='/cinetv.apk'+(apkVersion?'?v='+encodeURIComponent(apkVersion):'');
 
   useEffect(() => subscribePwa(setPwa), []);
+  useEffect(() => {
+    if (user.role === 'admin' || !user.expiresAt) return;
+    const deadline = Date.parse(user.expiresAt);
+    if (!Number.isFinite(deadline)) return;
+    const timer = setInterval(() => {
+      if (Date.now() >= deadline && !document.hidden) refresh({keepOnError:true});
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [user.role, user.expiresAt, refresh]);
   useEffect(() => {
     if (user) {
       setView('inicio');
@@ -91,42 +121,34 @@ export default function App() {
     });
   }
 
-  if (loading) return (
-    <div className="splash">
-      <div className="splash-logo"><span className="tally" /><span className="wordmark">LIVE</span></div>
-      <div className="splash-tag">TV EN VIVO</div>
-    </div>
-  );
-  if (!user) return <Landing />;
-
-  if(window.location.pathname==='/afiliados') return <div className='aff-standalone'><div className="aff-standalone-nav"><a href="/">LiveTV</a><a href="/perfil">Mi perfil</a><Notifications/></div>{user.role==='admin'?<Panel user={user}/>:<AffiliatePanel/>}</div>;
-  if(window.location.pathname==='/perfil')return <div className="aff-standalone"><a href="/afiliados">← Afiliados y billetera</a><Perfil user={user} onLogout={logout} onNavigate={()=>window.location.assign('/afiliados')}/></div>;
+  const embedded=new URLSearchParams(location.search).get('embedded')==='android';
+  if(['/cuenta','/perfil','/afiliados'].includes(location.pathname))return <AccountHub user={user} onLogout={logout} standalone embedded={embedded} initialSection={new URLSearchParams(location.search).get('section')||(location.pathname==='/afiliados'?'billetera':'datos')}/>;
   const isStaff = true;
   const sub = user.subscription;
   const subInactive = user.role !== 'admin' && sub && !sub.active;
 
-  const nav = [...NAV, ...(isStaff ? [{ k: 'panel', label: user.role==='admin'?'Panel':'Afiliados', icon: 'gear' }] : [])];
+  const nav = [...NAV, ...(user.role==='admin' ? [{ k: 'panel', label: 'Administración', icon: 'gear' }] : [])];
 
   // Al navegar, cerrar el reproductor abierto (si no, el canal sigue sonando por detrás).
   function go(v, p = {}) { setView(v); setParams(p); setModal(null); setDrawer(false); setAccount(false); if (v !== 'buscar') setQuery(''); }
   function onOpen(item) { setModal(item); }
   function onSearch(q) { setQuery(q); setView(q ? 'buscar' : 'inicio'); }
 
-  const content = view==='panel' ? <Panel user={user}/> : view==='perfil' ? <Perfil user={user} onLogout={logout} onNavigate={go} onAuthError={refresh}/> : subInactive ? (
+  const content = view==='config' ? <Settings/> : ['cuenta','perfil'].includes(view)||(view==='panel'&&user.role!=='admin') ? <AccountHub user={user} onLogout={logout} initialSection={params.section||'datos'}/> : view==='panel' ? <Panel user={user}/> : subInactive ? (
     <div className="sub-blocked">
       <div className="offair-label" style={{ color: 'var(--bad)' }}>{sub.reason === 'expired' ? 'VENCIDA' : 'INACTIVA'}</div>
-      <p>Tu suscripción {sub.reason === 'expired' ? 'venció' : 'está deshabilitada'}.<br />Renová tu plan desde Afiliados y billetera.</p>
-      <button className="hero-play" onClick={()=>go('panel')}>Renovar mi plan</button>
+      <p>Tu suscripción {sub.reason === 'expired' ? 'venció' : 'está deshabilitada'}.<br />Renová tu plan desde Mi cuenta.</p>
+      <button className="hero-play" onClick={()=>go('cuenta',{section:'billetera'})}>Renovar mi plan</button>
     </div>
   ) : view === 'inicio' ? <Home onOpen={onOpen} onNavigate={go} onAuthError={refresh} />
     : view === 'peliculas' ? <Catalog mode="movies" title="Películas" onOpen={onOpen} onAuthError={refresh} />
     : view === 'series' ? <Catalog mode="series" title="Series" onOpen={onOpen} onAuthError={refresh} />
+    : view === 'favoritos' ? <ChannelFavorites onOpen={onOpen} onNavigate={go}/>
     : view === 'milista' ? <Catalog mode="mylist" title="Mi Lista" onOpen={onOpen} onAuthError={refresh} />
     : view === 'radios' ? <Radios onOpen={onOpen} />
     : view === 'tv' ? <Channels title="TV en Vivo" defaultCountry={geo} onOpen={onOpen} onAuthError={refresh} />
     : view === 'deportes' ? <Channels title="Deportes" fixedCategory="sports" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />
     : view === 'documentales' ? <Channels title="Documentales" fixedCategory="documentary" defaultCountry="" onOpen={onOpen} onAuthError={refresh} />
-    : view === 'perfil' ? <Perfil user={user} onLogout={logout} onNavigate={go} onAuthError={refresh} />
     : view === 'buscar' ? <Search query={query} onOpen={onOpen} onAuthError={refresh} />
     : view === 'panel' && isStaff ? <Panel user={user} />
     : <Home onOpen={onOpen} onNavigate={go} onAuthError={refresh} />;
@@ -175,32 +197,21 @@ export default function App() {
             <input value={query} onChange={(e) => onSearch(e.target.value)}
               aria-label="Buscar canales" placeholder="Buscar canales…" />
           </div>
-          <div className="topbar2-right">
+          <div className="topbar2-right"><button className="icon-btn favorites-access" title="Mis canales favoritos" aria-label="Mis canales favoritos" aria-pressed={view==='favoritos'} onClick={()=>go('favoritos')}><Icon name="star" size={22}/>{channelFavorites.items.length>0&&<span className="favorites-count">{channelFavorites.items.length}</span>}</button>
             <button className="icon-btn fs-btn" onClick={toggleFullscreen}
               title={fs ? 'Salir de pantalla completa' : 'Pantalla completa'}
               aria-label={fs ? 'Salir de pantalla completa' : 'Pantalla completa'}>
               <Icon name="fullscreen" size={20} />
             </button>
+            <Notifications/>
             <div className="account">
-              <Notifications/><button className="account-btn" aria-expanded={account} aria-label="Mi cuenta" onClick={() => setAccount((v) => !v)}>
-                <span className="avatar">{user.username[0].toUpperCase()}</span>
-                <span className="account-name">{user.username}</span>
-                <span className="caret">▾</span>
+              <button className="account-btn" aria-label="Mi cuenta" title={user.googleAccount ? user.email || 'Mi cuenta' : 'Mi cuenta'} onClick={()=>go('cuenta')}>
+                <AccountAvatar className="avatar" user={user} />
+                <span className="account-name">
+                  <span>{accountName(user)}</span>
+                  {user.googleAccount && user.email && user.email !== accountName(user) && <small>{user.email}</small>}
+                </span>
               </button>
-              {account && (
-                <div className="account-menu">
-                  <div className="am-head">
-                    <strong>{user.username}</strong>
-                    <span className="u-role">{roleLabel(user.role)}</span>
-                  </div>
-                  {user.role === 'client' && user.expiresAt && (
-                    <div className="am-line">Vence en {timeLeft(user.expiresAt)}</div>
-                  )}
-                  {isStaff && <button onClick={() => go('panel')}>Afiliados y billetera</button>}
-                  <a className="account-download" href={apkDownload} download>↓ Descargar APK{apkVersion?' v'+apkVersion:''}</a>
-                  <button onClick={logout}>Cerrar sesión</button>
-                </div>
-              )}
             </div>
           </div>
         </header>

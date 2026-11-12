@@ -23,6 +23,7 @@ class AccountNotificationJob : JobService() {
     private val executor=Executors.newSingleThreadExecutor()
     @Volatile private var stopped=false
     override fun onStartJob(params: JobParameters): Boolean {
+        if(!AppSettings.notifications)return false
         stopped=false
         executor.execute {
             try {
@@ -44,7 +45,7 @@ class AccountNotificationJob : JobService() {
                             val intent=Intent(this,MainActivity::class.java).putExtra("open_wallet",true).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                             val pending=PendingIntent.getActivity(this,id.toInt(),intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                             val notification=NotificationCompat.Builder(this,"account").setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle(item.optString("title")).setContentText(item.optString("body")).setStyle(NotificationCompat.BigTextStyle().bigText(item.optString("body"))).setContentIntent(pending).setAutoCancel(true).build()
-                            if(!stopped)runCatching{manager.notify((id%2147483647).toInt(),notification)}
+                            if(!stopped&&AppSettings.notifications)runCatching{manager.notify((id%2147483647).toInt(),notification)}
                         }
                         if(!stopped)prefs.edit().putLong("cursor_"+owner,newest).apply()
                     }
@@ -55,6 +56,6 @@ class AccountNotificationJob : JobService() {
     override fun onStopJob(params:JobParameters):Boolean{stopped=true;return true}
     override fun onDestroy(){stopped=true;executor.shutdownNow();super.onDestroy()}
     companion object {
-        fun schedule(context:Context){context.getSystemService(JobScheduler::class.java).schedule(JobInfo.Builder(42031,ComponentName(context,AccountNotificationJob::class.java)).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setPeriodic(15*60*1000L).setPersisted(true).build())}
+        fun schedule(context:Context){if(AppSettings.notifications)context.getSystemService(JobScheduler::class.java).schedule(JobInfo.Builder(42031,ComponentName(context,AccountNotificationJob::class.java)).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setPeriodic(15*60*1000L).setPersisted(true).build())}
     }
 }

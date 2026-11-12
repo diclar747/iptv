@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import ChannelArtwork from './ChannelArtwork.jsx';
+import ChannelCard from './ChannelCard.jsx';
 
 // Fila de canales en vivo como "chips" de logo (estilo TV en Vivo del mockup).
 export default function LiveRow({ title, channels, onOpen, onSeeAll, live = true }) {
@@ -19,12 +19,7 @@ export default function LiveRow({ title, channels, onOpen, onSeeAll, live = true
         <button className="row-arrow left" onClick={() => scroll(-1)} aria-label="Anterior">‹</button>
         <div className="row-track live" ref={track}>
           {channels.map((c) => (
-            <button key={c.id} className="live-chip" onClick={() => onOpen({ type: 'channel', ...c })} title={c.name}>
-              <div className="live-logo">
-                <ChannelArtwork channel={c}/>
-              </div>
-              <span className="live-name">{c.name}</span><span className={`signal-status ${c.status||"unchecked"}`}>● {c.status==="online"?"ONLINE":c.status==="offline"?"OFFLINE":"SIN VERIFICAR"}</span>
-            </button>
+            <ChannelCard key={c.id} channel={c} onOpen={onOpen} compact/>
           ))}
         </div>
         <button className="row-arrow right" onClick={() => scroll(1)} aria-label="Siguiente">›</button>

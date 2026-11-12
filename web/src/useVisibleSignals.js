@@ -5,7 +5,7 @@ export function useVisibleSignals(items,load,apply){
  const [ids,setIds]=useState('');const key=items.map(x=>x.id).join(',');
  useEffect(()=>{
   const visible=new Set();
-  const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{const id=e.target.dataset.signalId;if(e.isIntersecting)visible.add(id);else visible.delete(id);});setIds([...visible].sort().slice(0,20).join(','));},{threshold:.1});
+  const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)visible.add(e.target);else visible.delete(e.target);});setIds([...new Set([...visible].map(el=>el.dataset.signalId))].sort().slice(0,20).join(','));},{threshold:.1});
   root.current?.querySelectorAll('[data-signal-id]').forEach(el=>observer.observe(el));
   return()=>observer.disconnect();
  },[key]);

@@ -82,7 +82,21 @@ function currentCatalog(){
  return mergedCatalog||localCatalog;
 }
 export async function loadRadios(){return currentCatalog();}
-export function getRadioByUrl(url){return currentCatalog().find(s=>radioSources(s).includes(url));}
+let indexedCatalog;
+let stationByUrl;
+export function getRadioByUrl(url) {
+ const catalog = currentCatalog();
+ if (catalog !== indexedCatalog) {
+  indexedCatalog = catalog;
+  stationByUrl = new Map();
+  for (const station of catalog) {
+   for (const source of radioSources(station)) {
+    if (!stationByUrl.has(source)) stationByUrl.set(source, station);
+   }
+  }
+ }
+ return stationByUrl.get(url);
+}
 const snapshots=new Map();
 function snapshot(token){
  const now=Date.now();for(const [key,value] of snapshots)if(now-value.at>600000)snapshots.delete(key);

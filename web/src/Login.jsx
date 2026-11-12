@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from './auth.jsx';
+import GoogleLogin from './GoogleLogin.jsx';
 
 export default function Login() {
   const { login, register } = useAuth();
@@ -70,6 +71,7 @@ export default function Login() {
             ? (isRegister ? 'Creando…' : 'Entrando…')
             : (isRegister ? 'Crear cuenta y probar gratis' : 'Entrar')}
         </button>
+        <GoogleLogin disabled={busy} />
 
         {!isRegister && (
           <button type="button" className="login-demo" disabled={busy}

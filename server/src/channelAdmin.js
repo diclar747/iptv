@@ -2,7 +2,7 @@ import express from 'express';
 import { ensureLoaded, getState, getChannelStreams, queryChannels } from './iptvSource.js';
 import { many, one, query } from './pg.js';
 import { requireRole, requireActiveViewer } from './auth.js';
-import { managedCard, managedStreams, channelSettings, saveChannelSettings, resetChannelSettings, saveChannelCheck, channelCheckDetails,channelStatus } from './channelState.js';
+import { managedCard, managedStreams, channelSettings, saveChannelSettings, resetChannelSettings, saveChannelCheck, channelCheckDetails,channelStatus,needsChannelCheck } from './channelState.js';
 import { checkMany } from './checker.js';
 
 const router=express.Router();
@@ -11,7 +11,12 @@ router.use('/admin/channels',requireRole('admin'));
 router.get('/channels/status',requireActiveViewer,h(async(req,res)=>{
  const ids=[...new Set(String(req.query.ids||'').split(',').filter(Boolean))].slice(0,20);
  res.set('Cache-Control','private, no-store');
- res.json(await Promise.all(ids.map(async id=>{const record=await channelRecord(id);const status=channelStatus(id,record?.streams||[]);if(record&&status.status==='unchecked')queueVisibleCheck(id);return {id,...status};})));
+ res.json(await Promise.all(ids.map(async id=>{
+  const record=await channelRecord(id);
+  const streams=record?.streams||[];
+  if(record?.channel.enabled!==false && needsChannelCheck(id,streams))queueVisibleCheck(id);
+  return {id,...channelStatus(id,streams)};
+ })));
 }));
 export async function allManagedChannels() {
  await ensureLoaded();
@@ -36,15 +41,21 @@ export function verifyChannel(id) {
 }
 async function checkChannel(id) {
  const record=await channelRecord(id);if(!record)throw Object.assign(Error('Canal no encontrado'),{status:404});
- const results=await checkMany(record.streams,{concurrency:3});
+ const results=await checkMany(record.streams,{concurrency:3,strict:true});
  return saveChannelCheck(id,record.streams,results);
 }
-const visibleQueue=new Set(),visiblePending=new Set();let visibleActive=0;
+const visibleQueue=new Set(),openingQueue=new Set(),visiblePending=new Set();let visibleActive=0;
+export function checkOnOpen(id, streams){
+ if(openingQueue.size>=20||!needsChannelCheck(id,streams,{opening:true}))return;
+ if(visibleQueue.delete(id))visiblePending.delete(id);
+ if(visiblePending.has(id))return;
+ visiblePending.add(id);openingQueue.add(id);drainVisible();
+}
 function queueVisibleCheck(id){
  if(visiblePending.has(id)||visibleQueue.size>=80)return;
  visiblePending.add(id);visibleQueue.add(id);drainVisible();
 }
-function drainVisible(){while(visibleActive<3&&visibleQueue.size){const id=visibleQueue.values().next().value;visibleQueue.delete(id);visibleActive++;
+function drainVisible(){while(visibleActive<3&&(openingQueue.size||visibleQueue.size)){const queue=openingQueue.size?openingQueue:visibleQueue;const id=queue.values().next().value;queue.delete(id);visibleActive++;
  void verifyChannel(id).catch(()=>{}).finally(()=>{visibleActive--;visiblePending.delete(id);drainVisible();});
 }}
 const job={running:false,stop:false,total:0,done:0,online:0,offline:0,errors:0,current:null,startedAt:null};
@@ -56,7 +67,7 @@ export async function startChannelChecks(filters={}) {
   const rows=(await allManagedChannels()).filter(c=>!c.deleted&&!c.blocked&&c.enabled!==false&&c.streamCount>0&&(!filters.country||c.country===filters.country)&&(!filters.category||c.categories?.includes(filters.category)));
   rows.sort((a,b)=>Number(b.country==='PY')-Number(a.country==='PY'));
   job.total=rows.length;let index=0;
-  await Promise.all(Array.from({length:3},async()=>{while(index<rows.length&&!job.stop){const channel=rows[index++];job.current=channel.name;try{const r=await verifyChannel(channel.id);job[r.status==='online'?'online':'offline']++;}catch{job.errors++;}job.done++;}}));
+  await Promise.all(Array.from({length:8},async()=>{while(index<rows.length&&!job.stop){const channel=rows[index++];job.current=channel.name;try{const r=await verifyChannel(channel.id);job[r.status==='online'?'online':'offline']++;}catch{job.errors++;}job.done++;}}));
  })().catch(e=>{job.errors++;job.current=e.message;}).finally(()=>{job.running=false;});
  return {ok:true};
 }

@@ -2,7 +2,7 @@ import express from 'express';
 import {randomUUID} from 'node:crypto';
 import {many,one,tx} from './pg.js';
 import {requireRole,hashPassword,publicUser} from './auth.js';
-import {approvePayment} from './affiliates.js';
+import {approvePayment,lockWalletUsers} from './affiliates.js';
 import {notify} from './notifications.js';
 const router=express.Router(),fail=(status,message)=>Object.assign(Error(message),{status});
 const h=fn=>(req,res)=>Promise.resolve(fn(req,res)).catch(e=>{if(!e.status&&e.code!=='23505')console.error('[affiliate-admin]',e.message);res.status(e.status||(e.code==='23505'?409:500)).json({error:e.status?e.message:e.code==='23505'?'Ese usuario, correo o referencia ya está registrado':'No se pudo guardar'});});
@@ -55,7 +55,7 @@ router.post('/admin/affiliates/:id/activate',h(async(req,res)=>{
  if(![1,2,3,6,12].includes(months)||!['paid','courtesy'].includes(kind)||! /^[a-f0-9-]{36}$/i.test(key||''))throw fail(400,'Datos de activación inválidos');if(kind==='paid'&&!reference)throw fail(400,'Indicá la referencia del pago recibido');if(kind==='courtesy'&&!note)throw fail(400,'Indicá el motivo de la cortesía');
  res.json(await tx(async c=>{
  // Lock user first, then the new payment. Existing payments are reviewed in Solicitudes.
- const u=(await c.query("SELECT * FROM users WHERE id=$1 AND role<>'admin' AND deleted_at IS NULL FOR UPDATE",[req.params.id])).rows[0];if(!u)throw fail(404,'Cuenta no encontrada');
+ const {user:u}=await lockWalletUsers(c,req.params.id);if(!u||u.role==='admin'||u.deleted_at)throw fail(404,'Cuenta no encontrada');
  const prior=(await c.query('SELECT * FROM admin_plan_activations WHERE user_id=$1 AND request_key=$2',[u.id,key])).rows[0];if(prior)return prior;
  if((await c.query("SELECT id FROM subscription_payments WHERE user_id=$1 AND status='pending'",[u.id])).rows.length)throw fail(409,'Este usuario ya tiene un pago pendiente. Revisalo en Solicitudes.');
  await c.query("UPDATE users SET status='active' WHERE id=$1",[u.id]);let payment=null;

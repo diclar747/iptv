@@ -30,7 +30,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 
 // Web and Android share the same authenticated wallet and payment workflow.
 @Composable
-fun AffiliateScreen(onClose: () -> Unit) {
+fun AffiliateScreen(embedded: Boolean = false, onLogout: () -> Unit = {}, onClose: () -> Unit) {
     val context = LocalContext.current
     var view by remember { mutableStateOf<WebView?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -47,8 +47,8 @@ fun AffiliateScreen(onClose: () -> Unit) {
         onDispose { fileCallback?.onReceiveValue(null);fileCallback=null;view?.stopLoading(); view?.destroy(); view = null }
     }
     Column(Modifier.fillMaxSize().background(Color(0xFF080E17))) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Afiliados y billetera", color = Color.White, modifier = Modifier.weight(1f))
+        if(!embedded)Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("LiveTV", color = Color.White, modifier = Modifier.weight(1f))
             IconButton(onClick = onClose) { Icon(Icons.Default.Close, "Cerrar", tint = Color.White) }
         }
         error?.let { Text(it, color = Color(0xFFFF93A4), modifier = Modifier.padding(20.dp)) }
@@ -59,7 +59,7 @@ fun AffiliateScreen(onClose: () -> Unit) {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.allowFileAccess = false
-                settings.allowContentAccess = false
+                settings.allowContentAccess = true
                 settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
                 webChromeClient = object : WebChromeClient() {
                     override fun onShowFileChooser(v: WebView, callback: ValueCallback<Array<Uri>>, params: FileChooserParams): Boolean {
@@ -77,17 +77,25 @@ fun AffiliateScreen(onClose: () -> Unit) {
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
                         val uri = request.url
+                        if(uri.host==Uri.parse(Net.BASE).host&&uri.path=="/cuenta"&&uri.getQueryParameter("signedOut")=="1"){onLogout();return true}
                         if (uri.scheme == "https" && uri.host == Uri.parse(Net.BASE).host) return false
                         if (uri.scheme in listOf("https", "http")) runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
                         return true
                     }
+                    override fun onPageFinished(v:WebView,url:String){
+                        super.onPageFinished(v,url)
+                        if(Uri.parse(url).host!=Uri.parse(Net.BASE).host)return
+                        val base=Net.BASE.toHttpUrl()
+                        val cookies=CookieManager.getInstance().getCookie(Net.BASE).orEmpty().split(";").mapNotNull{okhttp3.Cookie.parse(base,it.trim()+"; Path=/; Secure; HttpOnly")}.filter{it.name=="sid"}
+                        if(cookies.isNotEmpty())Net.okHttp.cookieJar.saveFromResponse(base,cookies)
+                    }
                 }
                 val session = Net.okHttp.cookieJar.loadForRequest(Net.BASE.toHttpUrl()).find { it.name == "sid" }
-                if (session == null) error = "Volvé a iniciar sesión para abrir tu billetera."
+                if (session == null) error = "Volvé a iniciar sesión para abrir Mi cuenta."
                 else {
                     val cookies = CookieManager.getInstance()
                     cookies.setAcceptCookie(true)
-                    cookies.setCookie(Net.BASE, session.toString()) { if(view === this) loadUrl(Net.BASE + "afiliados") }
+                    cookies.setCookie(Net.BASE, session.toString()) { if(view === this) loadUrl(Net.BASE + "cuenta?embedded=android") }
                 }
             }
         })

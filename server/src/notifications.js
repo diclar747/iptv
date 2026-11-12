@@ -6,6 +6,12 @@ export async function notify(c,userId,kind,title,body,key,link='/afiliados'){
 }
 const router=express.Router();
 const h=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
+export const notificationSettingsHandler=(write=query)=>async(req,res)=>{
+ if(typeof req.body?.enabled!=='boolean')return res.status(400).json({error:'Indicá si querés recibir notificaciones'});
+ await write('INSERT INTO app_notification_state(user_id,enabled) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET enabled=EXCLUDED.enabled',[req.user.id,req.body.enabled]);
+ res.json({enabled:req.body.enabled});
+};
+router.patch('/notifications/settings',requireAuth,h(notificationSettingsHandler()));
 router.get('/notifications',requireAuth,h(async(req,res)=>{
  const after=/^\d+$/.test(String(req.query.after||''))?req.query.after:'0';
  const items=await many('SELECT id,kind,title,body,link,created_at FROM app_notifications WHERE (user_id=$1 OR (user_id IS NULL AND created_at>=$2)) AND id>$3 ORDER BY id DESC LIMIT 50',[req.user.id,req.user.created_at,after]);

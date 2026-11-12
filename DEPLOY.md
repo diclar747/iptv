@@ -1,5 +1,61 @@
 # Deploy en VPS (cd.com.py)
 
+## Web y Android: publicar la misma funcionalidad
+
+### Acceso con Google
+
+En Google Auth Platform creá un cliente OAuth de tipo **Aplicación web**
+para LiveTV. Usá `https://live.cd.com.py` como origen autorizado y
+`https://live.cd.com.py/api/auth/google/callback` como URI de redirección
+autorizado. La portada es `https://live.cd.com.py/`. El APK abre el
+navegador del teléfono y usa el mismo cliente y callback. Los permisos
+solicitados son `openid email profile`.
+
+Configurá `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y, opcionalmente,
+`GOOGLE_REDIRECT_URI` en el `.env` del servidor. Reiniciá LiveTV y verificá
+que `GET /api/auth/google/status` devuelva `{"enabled":true}`. Mantené el
+secreto solo en el servidor. En modo de prueba, agregá las cuentas de
+Google que van a usar el acceso en la sección **Público**.
+
+El primer ingreso crea una cuenta de cliente con 24 horas de acceso y una
+conexión. El identificador de Google reconoce la misma cuenta al volver;
+el vencimiento original se conserva. Si el correo ya pertenece a otra
+cuenta de LiveTV, se solicita iniciar sesión con su acceso anterior.
+
+La interfaz web y el APK son clientes distintos del mismo servidor. Los cambios
+en señales y datos se comparten desde la API. Cada cambio en pantallas o acciones
+debe implementarse y comprobarse en ambos clientes antes de cerrar la entrega.
+
+Los canales favoritos usan `/api/channel-favorites`, se guardan por usuario y se
+comparten entre web y Android. No crear una lista local independiente en el APK.
+
+Para una nueva versión Android: incrementar `versionCode` y `versionName` en
+`android/app/build.gradle.kts`, compilar `assembleDebug` y ejecutar `lintDebug`,
+verificar que la firma coincida con el APK publicado, respaldar y reemplazar
+`web/public/cinetv.apk` y `web/dist/cinetv.apk` en el servidor. Publicar la nueva
+versión en `/api/app/version` solo después de verificar el APK descargable.
+Mantener el APK firmado con la misma clave permite actualizar sin desinstalar.
+La app ofrece la actualización al iniciar sesión o al volver a abrirla.
+
+### Cuenta y configuración (1.33)
+
+`/cuenta` es la pantalla única de cuenta. `/perfil` y `/afiliados` se conservan
+como accesos compatibles a sus secciones; no deben crear perfiles alternativos.
+Android la muestra en su pestaña Cuenta con `?embedded=android`. El cierre de
+sesión y la renovación de la cookie después de cambiar la contraseña se
+sincronizan con el cliente nativo. Los datos personales, las cuentas bancarias,
+la billetera y la seguridad tienen un único editor por función.
+
+Config aparece después de Radios en ambos clientes. Los avisos de cuenta usan
+`PATCH /api/notifications/settings`; las preferencias de reproducción y pantalla
+se guardan en cada dispositivo. Android reproduce mediante MediaSessionService,
+que conserva el reproductor al salir de la pantalla. Cerrar el reproductor o la
+sesión lo detiene. El servicio respeta el vencimiento y los errores de acceso.
+Los avisos de Android usan JobScheduler: el sistema programa su ejecución y no
+garantiza entrega instantánea. Config abre los permisos y los ajustes de batería
+del teléfono para que el usuario los gestione. La web puede mantener audio y
+avisos mientras está abierta, dentro de los límites del navegador.
+
 La app es un **servidor Node.js + PostgreSQL** que sirve API + frontend + proxy
 en un solo puerto. La base de datos se crea y siembra **sola** al primer arranque
 (tablas + admin + revendedor + paquetes). No hay que importar datos.

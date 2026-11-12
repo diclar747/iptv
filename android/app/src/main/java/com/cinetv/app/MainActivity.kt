@@ -27,6 +27,8 @@ import com.cinetv.app.ui.AppViewModel
 import com.cinetv.app.ui.CineTheme
 import com.cinetv.app.ui.LoginScreen
 import com.cinetv.app.ui.MainScreen
+import com.cinetv.app.ui.rememberForeground
+import com.cinetv.app.ui.LocalChannelFavorites
 import com.cinetv.app.ui.PlayerScreen
 import com.cinetv.app.ui.SplashLoading
 
@@ -53,8 +55,9 @@ class MainActivity : AppCompatActivity() {
 
                 // Auto-update: compara la versión instalada con la disponible en el servidor.
                 var update by remember { mutableStateOf<AppVersion?>(null) }
-                LaunchedEffect(vm.user?.id) {
-                    if (vm.user != null) {
+                val foreground=rememberForeground()
+                LaunchedEffect(vm.user?.id,foreground) {
+                    if (vm.user != null && foreground) {
                         try {
                             val remote = Net.api.appVersion()
                             val local = runCatching {
@@ -71,7 +74,7 @@ class MainActivity : AppCompatActivity() {
                     when {
                         vm.booting -> SplashLoading()
                         vm.user == null -> LoginScreen(vm)
-                        else -> MainScreen(vm,walletRequested){walletRequested=false}
+                        else -> androidx.compose.runtime.CompositionLocalProvider(LocalChannelFavorites provides vm) { MainScreen(vm,walletRequested){walletRequested=false} }
                     }
                     val target = vm.play
                     if (target != null) PlayerScreen(target) { vm.closePlayer() }

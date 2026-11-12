@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
-import ChannelArtwork from '../ui/ChannelArtwork.jsx';
+import ChannelCard from '../ui/ChannelCard.jsx';
 
 // Búsqueda de CANALES (el VOD está desactivado por ahora).
 export default function Search({ query, onOpen, onAuthError }) {
@@ -29,10 +29,7 @@ export default function Search({ query, onOpen, onAuthError }) {
       {channels.length > 0 && (
         <div className="chan-grid">
           {channels.map((c) => (
-            <button key={c.id} className="chan-card" onClick={() => onOpen({ type: 'channel', ...c })}>
-              <div className="chan-logo"><ChannelArtwork channel={c}/></div>
-              <div className="chan-name">{c.name}</div>
-            </button>
+              <ChannelCard key={c.id} channel={c} onOpen={onOpen}/>
           ))}
         </div>
       )}

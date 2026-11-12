@@ -3,6 +3,10 @@ package com.cinetv.app.data
 // Modelos que reflejan las respuestas del backend (live.cd.com.py/api).
 
 data class LoginReq(val username: String, val password: String)
+data class AppNotification(val id: String = "0", val title: String = "", val body: String = "", val created_at: String? = null)
+data class NotificationInbox(val items: List<AppNotification> = emptyList(), val lastRead: String = "0",val enabled:Boolean=true)
+data class NotificationRead(val id: String)
+data class NotificationPreference(val enabled:Boolean)
 data class UserResp(val user: User?)
 data class Subscription(val active: Boolean? = null, val reason: String? = null)
 data class User(
@@ -104,3 +108,5 @@ data class SerieDetail(
     val genres: List<String>? = null,
     val episodes: List<Episode>? = null,
 )
+data class GoogleLoginStatus(val enabled: Boolean = false)
+data class GoogleLoginProof(val verifier: String)

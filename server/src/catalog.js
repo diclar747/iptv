@@ -96,7 +96,7 @@ router.get('/catalog/home', async (req, res) => {
   if (series.length) rows.push({ key: 'series', title: 'Series', nav: 'series', items: series.map(seriesCard) });
   for (const c of topCats) {
     const items = await movieRow('m.category=$1', [c.category], 20);
-    if (items.length) rows.push({ key: 'cat-' + c.category, title: label(c.category), items });
+    if (items.length) rows.push({ key: 'cat-' + c.category, title: c.category, items });
   }
 
   // Banner: destacados. Prioriza los que tienen imagen de fondo (backdrop);
@@ -122,7 +122,7 @@ router.get('/catalog/movies', async (req, res) => {
   const where = ['NOT m.hidden', MOVIE_AVAIL];
   const params = [];
   if (search) { params.push(`%${search}%`); where.push(`m.title ILIKE $${params.length}`); }
-  if (category) { params.push(category); where.push(`m.category=$${params.length}`); }
+  if (typeof category === 'string' && category) { params.push(category); where.push(`m.category=media_category_lookup($${params.length})`); }
   const ps = Math.min(80, Math.max(1, parseInt(pageSize, 10) || 48));
   const off = (Math.max(1, parseInt(page, 10) || 1) - 1) * ps;
   params.push(ps, off);
@@ -230,7 +230,7 @@ router.get('/catalog/meta', async (req, res) => {
   res.json({
     attribution: p.attribution,
     providerConfigured: p.isConfigured(),
-    genres: cats.map((c) => ({ value: c.slug, label: label(c.slug), count: c.n })),
+    genres: cats.map((c) => ({ value: c.slug, label: c.slug, count: c.n })),
   });
 });
 

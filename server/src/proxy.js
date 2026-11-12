@@ -13,7 +13,7 @@ import {preferredRadioSource} from './radio-health.js';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { streamToken,tokenExpiresAt } from './streamToken.js';
-import { isDesdeParaguay, resolveDesdeStreams, preferDesdeStream } from './desdeparaguay.js';
+import { isDesdeParaguay, resolveDesdeStreams, preferDesdeStream, refreshableDesdeSource } from './desdeparaguay.js';
 import { isResolvable, resolvePlatform } from './resolver.js';
 
 // UA de navegador por defecto: algunos orígenes rechazan UA vacío o de Node.
@@ -81,7 +81,8 @@ export function streamHandler({request=fetch,lookupRadio=findRadio,connectTimeou
    if(await tryLibraryProxy(original,req,res))return;
    station=await lookupRadio(original);
    const candidates=station?radioSources({...station,preferredSource:preferredRadioSource(station.id)}):[original];
-   for(const source of candidates){
+   for(const candidate of candidates){
+    const source=refreshableDesdeSource(candidate);
     if(controller.signal.aborted)break;
     const attempt=new AbortController(),timer=setTimeout(()=>attempt.abort(),connectTimeoutMs);
     const signal=AbortSignal.any([controller.signal,attempt.signal]);let upstream,stage='resolve';
@@ -118,11 +119,26 @@ export function streamHandler({request=fetch,lookupRadio=findRadio,connectTimeou
      if(/text\/html|application\/json/i.test(contentType)){await upstream.body?.cancel();attempts.push({host:new URL(source).host,stage,status:upstream.status,code:'NOT_MEDIA'});continue;}
      const reader=upstream.body?.getReader();if(!reader){attempts.push({host:new URL(source).host,stage,code:'EMPTY_BODY'});continue;}
      const first=await reader.read();if(!first.value?.length){await reader.cancel();attempts.push({host:new URL(source).host,stage,code:'EMPTY_BODY'});continue;}
+     const initialChunks = [first.value];
+     let isTransportStream = false;
+     // Some live MPEG-TS endpoints advertise video/mpeg and have no extension.
+     if ((!contentType || /^(video\/mpeg|application\/octet-stream)(;|$)/i.test(contentType)) && first.value[0] === 0x47) {
+       let length = first.value.length;
+       while (length < 377) {
+         const next = await reader.read();
+         if (next.done) break;
+         initialChunks.push(next.value);
+         length += next.value.length;
+       }
+       const prefix = Buffer.concat(initialChunks.map(chunk => chunk.subarray(0, 377)));
+       isTransportStream = prefix[188] === 0x47 && prefix[376] === 0x47;
+     }
      clearTimeout(timer);clearTimeout(total);
      res.status(upstream.status);
      for(const header of ['content-type','content-length','content-range','accept-ranges']){const value=upstream.headers.get(header);if(value)res.set(header,value);}
+     if (isTransportStream) res.set('Content-Type', 'video/mp2t');
      res.set('Cache-Control','no-cache');
-     async function* chunks(){try{yield first.value;while(true){const next=await reader.read();if(next.done)break;yield next.value;}}finally{await reader.cancel().catch(()=>{});}}
+     async function* chunks(){try{yield* initialChunks;while(true){const next=await reader.read();if(next.done)break;yield next.value;}}finally{await reader.cancel().catch(()=>{});}}
      try{await pipeline(Readable.from(chunks()),res);}catch{if(!res.writableEnded)res.destroy();}
      return;
     }catch(error){

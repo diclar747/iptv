@@ -83,7 +83,13 @@ const PATHS = {
       <circle cx="3.4" cy="18.6" r=".9" fill="currentColor" stroke="none" />
     </>
   ),
+  star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z" />,
   fullscreen: <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
+  thumbUp: <path d="M7 10v10H3V10zm0 0 5-7a2 2 0 0 1 2 2l-.7 4H19a2 2 0 0 1 2 2.5l-1.6 7A2 2 0 0 1 17.5 20H7" />,
+  thumbDown: <path d="M7 10v10H3V10zm0 0 5-7a2 2 0 0 1 2 2l-.7 4H19a2 2 0 0 1 2 2.5l-1.6 7A2 2 0 0 1 17.5 20H7" transform="translate(0 24) scale(1 -1)" />,
+  comment: <path d="M20.5 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-3.5-.7L4 21l1.6-4.3a8.5 8.5 0 1 1 14.9-5.2Z" />,
+  share: <path d="M21 3 3 10l7 4 4 7 7-18ZM10 14l11-11" />,
+  close: <path d="m6 6 12 12M18 6 6 18" />,
   download: (
     <>
       <path d="M12 3.5v11" />

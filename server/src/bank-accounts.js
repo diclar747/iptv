@@ -4,7 +4,7 @@ import {requireAuth} from './auth.js';
 const router=express.Router(),h=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 router.get('/affiliate/bank-accounts',requireAuth,h(async(req,res)=>{
  const rows=await many('SELECT id,label,data FROM affiliate_bank_accounts WHERE user_id=$1 AND NOT disabled ORDER BY created_at DESC',[req.user.id]);
- const u=req.user;if(u.bank_name&&u.bank_holder&&(u.bank_account||u.bank_alias))rows.push({id:'profile',label:'Cuenta de mi perfil',data:{bankName:u.bank_name,bankHolder:u.bank_holder,bankAccount:u.bank_account,bankAlias:u.bank_alias,bankDoc:u.bank_doc}});
+ const u=req.user;if(u.bank_name&&u.bank_holder&&(u.bank_account||u.bank_alias))rows.push({id:'profile',label:'Cuenta principal',data:{bankName:u.bank_name,bankHolder:u.bank_holder,bankAccount:u.bank_account,bankAlias:u.bank_alias,bankDoc:u.bank_doc}});
  res.set('Cache-Control','private, no-store').json(rows);
 }));
 router.post('/affiliate/bank-accounts',requireAuth,h(async(req,res)=>{

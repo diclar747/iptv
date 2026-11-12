@@ -4,8 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,8 +38,10 @@ private val StudioLine = Color(0xFF203044)
 
 @Composable
 fun ChannelSignalBadge(status: String) {
-    val color=when(status){"online"->StudioAccent;"offline"->Color(0xFFFF8B9D);else->Color(0xFF94A8C2)}
-    Text("● "+when(status){"online"->"ONLINE";"offline"->"OFFLINE";else->"SIN VERIFICAR"},color=color,fontSize=8.sp,fontWeight=FontWeight.Bold,letterSpacing=.5.sp,modifier=Modifier.clip(RoundedCornerShape(20.dp)).background(color.copy(alpha=.1f)).padding(horizontal=7.dp,vertical=4.dp))
+    if (status != "online" && status != "offline") return
+    val online = status == "online"
+    val color = if (online) StudioAccent else Color(0xFFFF8B9D)
+    Text(if (online) "● ONLINE" else "● OFFLINE",color=color,fontSize=8.sp,fontWeight=FontWeight.Bold,letterSpacing=.5.sp,modifier=Modifier.clip(RoundedCornerShape(20.dp)).background(color.copy(alpha=.1f)).padding(horizontal=7.dp,vertical=4.dp))
 }
 
 @Composable
@@ -66,6 +66,7 @@ fun StudioChannelCard(channel: Channel, modifier: Modifier = Modifier, list: Boo
                 Text(listOfNotNull(channel.country, channel.category).joinToString(" · ").ifBlank { "Televisión en directo" }, color = Muted, fontSize = 11.sp, maxLines = 1)
                 ChannelSignalBadge(channel.status)
             }
+            ChannelFavoriteButton(channel)
             if(onDetails != null) IconButton(onClick = onDetails, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Info, "Información del canal", tint = Muted, modifier = Modifier.size(19.dp)) }
             Icon(Icons.Default.PlayCircle, "Reproducir", tint = StudioAccent, modifier = Modifier.size(30.dp))
         }
@@ -81,6 +82,7 @@ fun StudioChannelCard(channel: Channel, modifier: Modifier = Modifier, list: Boo
             Text(channel.displayTitle, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 5.dp))
             Row(Modifier.fillMaxWidth().padding(top = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(channel.country ?: "TV", color = Muted, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                ChannelFavoriteButton(channel)
                 Icon(Icons.Default.PlayArrow, null, tint = StudioAccent, modifier = Modifier.size(19.dp))
             }
         }
@@ -134,10 +136,10 @@ fun StudioShortcuts(onNavigate: (Int) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StudioLiveTab(vm: AppViewModel) {
     var country by remember(vm.geoCountry) { mutableStateOf(vm.geoCountry) }
-    var category by remember { mutableStateOf<String?>(null) }
     var search by remember { mutableStateOf("") }
     var signalFilter by remember { mutableStateOf<String?>(null) }
     var dropdown by remember { mutableStateOf(false) }
@@ -167,8 +169,8 @@ fun StudioLiveTab(vm: AppViewModel) {
             }
           }
     }
-    suspend fun fetchPage(number: Int) = Net.api.channels(country = if(category == null) country else null, category = category, search = search, prefer = if(category != null) country else null, page = number, status = signalFilter)
-    LaunchedEffect(country,category,search,retry,signalFilter) {
+    suspend fun fetchPage(number: Int) = Net.api.channels(country = country, search = search, page = number, status = signalFilter)
+    LaunchedEffect(country,search,retry,signalFilter) {
         generation++; loading = true; loadingMore = false; channels=emptyList(); error = null
         delay(300)
         try { val result = fetchPage(1); channels = result.items.orEmpty(); total = result.total; page = 1 }
@@ -223,17 +225,22 @@ fun StudioLiveTab(vm: AppViewModel) {
                     }
                     Text(if(loading) "Buscando…" else "$total canales", color = Muted,fontSize = 11.sp)
                 }
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf(null to "Todos", "sports" to "Deportes", "news" to "Noticias", "entertainment" to "Entretenimiento", "kids" to "Infantil", "music" to "Música")) { (id,label) ->
-                        FilterChip(category == id,{ category = id },label = { Text(label,fontSize = 12.sp) },colors = FilterChipDefaults.filterChipColors(selectedContainerColor = StudioAccent.copy(alpha = .17f),selectedLabelColor = StudioAccent))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    listOf(null to "Todos", "offline" to "Offline", "online" to "Online").forEach { (id, label) ->
+                        FilterChip(
+                            selected = signalFilter == id,
+                            onClick = { signalFilter = id },
+                            label = { Text(label, fontSize = 12.sp, maxLines = 1) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = StudioAccent.copy(alpha = .15f),
+                                selectedLabelColor = StudioAccent,
+                            ),
+                        )
                     }
                 }
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf(null to "Todos los estados", "online" to "Online", "offline" to "Offline", "unchecked" to "Sin verificar")) { (id,label) ->
-                        FilterChip(signalFilter == id,{signalFilter = id},label = {Text(label,fontSize = 11.sp)},colors = FilterChipDefaults.filterChipColors(selectedContainerColor = StudioAccent.copy(alpha = .15f),selectedLabelColor = StudioAccent))
-                    }
-                }
-                if(category != null) Text("Canales de todos los países, priorizando ${selected?.name ?: country}",color = Muted,fontSize = 10.sp)
                 if(loading) LinearProgressIndicator(Modifier.fillMaxWidth(),color = StudioAccent, trackColor = StudioSurface)
                 error?.let { TextButton(onClick = { retry++ }) { Text(it,color = Color(0xFFFFC87F)) } }
             }

@@ -37,11 +37,21 @@ try{
  await call('/companion/jobs/'+queued.id+'/progress',{method:'POST',body:{progress:20},headers:token});
  const concurrent=[];
  for(let i=0;i<3;i++){const linkSource=randomUUID().replaceAll('-','').slice(0,11);const j=await call('/admin/media-transfers',{method:'POST',body:{...link,url:'https://youtu.be/'+linkSource},status:201});jobs.push(j.id);concurrent.push(j.id);}
- const claim=await call('/companion/claim',{method:'POST',body:{worker:'a'.repeat(32),exclude:[],limit:3},headers:token});assert.equal(claim.jobs.length,3);assert.deepEqual(new Set(claim.jobs.map(j=>j.id)),new Set(concurrent));
+ const requestClaim=worker=>call('/companion/claim',{method:'POST',body:{worker:worker.repeat(32),limit:3,version:2},headers:token});
+ assert.equal((await requestClaim('a')).jobs.length,0,'Unfinished work blocks a new claim');
+ await call('/companion/jobs/'+queued.id+'/cancel',{method:'POST',body:{},headers:token});
+ const claim=await requestClaim('a');assert.deepEqual(claim.jobs.map(j=>j.id),[concurrent[0]],'Even old clients receive one job at a time');
  assert.equal((await call('/companion/claim',{method:'POST',body:{worker:'b'.repeat(32),exclude:[],limit:3},headers:token})).jobs.length,0,'Another instance must not steal jobs with a live lease');
  assert.equal((await call('/companion/claim',{method:'POST',body:{worker:'a'.repeat(32),exclude:concurrent,limit:3},headers:token})).jobs.length,0);
  await query("UPDATE media_import_jobs SET claim_until=now()-interval '1 second' WHERE id=$1",[concurrent[0]]);
  assert.equal((await call('/companion/claim',{method:'POST',body:{worker:'b'.repeat(32),exclude:[],limit:3},headers:token})).jobs[0].id,concurrent[0]);
+ await call('/companion/jobs/'+concurrent[0]+'/error',{method:'POST',body:{message:'Timeout',retryable:true},headers:token});
+ assert.equal((await one('SELECT state FROM media_import_jobs WHERE id=$1',[concurrent[0]])).state,'awaiting_device');
+ assert.equal((await requestClaim('b')).jobs[0].id,concurrent[1],'A delayed retry does not block the next link');
+ await query("UPDATE media_import_jobs SET state='publishing' WHERE id=$1",[concurrent[1]]);
+ assert.equal((await requestClaim('b')).jobs.length,0,'The next job waits for publication');
+ await query("UPDATE media_import_jobs SET state='cancelled' WHERE id=$1",[concurrent[1]]);
+ assert.equal((await requestClaim('b')).jobs[0].id,concurrent[2]);
  await call('/companion/claim',{method:'POST',body:{worker:'a'.repeat(32),limit:99},headers:token,status:400});
  await call('/admin/media-devices/'+d.id,{method:'DELETE'});
  await call('/companion/next',{headers:token,status:401});assert.equal((await one('SELECT state FROM media_import_jobs WHERE id=$1',[queued.id])).state,'cancelled');

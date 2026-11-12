@@ -105,3 +105,12 @@ self.addEventListener('fetch', (event) => {
   // Estáticos del mismo origen (JS/CSS): cache-first + refresco.
   if (sameOrigin) event.respondWith(shellStatic(request));
 });
+
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();
+  event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(windows=>{
+    const current=windows.find(w=>new URL(w.url).origin===self.location.origin);
+    if(current)return current.focus();
+    return clients.openWindow('/cuenta?section=billetera');
+  }));
+});

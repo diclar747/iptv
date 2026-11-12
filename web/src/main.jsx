@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.jsx';
-import { AuthProvider } from './auth.jsx';
+import Landing from './Landing.jsx';
+import { AuthProvider, useAuth } from './auth.jsx';
 import { initPwa } from './pwa.js';
-import './styles.css';
-import {DialogProvider} from './ui/SystemDialog.jsx';
+
+const App = lazy(() => import('./App.jsx'));
+
+function LoadingLiveTV() {
+  return <div className="boot-screen" role="status">LiveTV</div>;
+}
+
+function Root() {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingLiveTV />;
+  if (!user) return <Landing />;
+  return <Suspense fallback={<LoadingLiveTV />}><App /></Suspense>;
+}
 
 initPwa();
 
@@ -17,7 +28,7 @@ try {
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
-      <DialogProvider><App /></DialogProvider>
+      <Root />
     </AuthProvider>
   </React.StrictMode>
 );

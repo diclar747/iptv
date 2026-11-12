@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -30,6 +31,8 @@ import com.cinetv.app.data.Card as Channel
 
 @Composable
 fun StudioLoginScreen(vm: AppViewModel) {
+    val context = LocalContext.current
+    LaunchedEffect(vm) { vm.loadGoogleStatus() }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visible by remember { mutableStateOf(false) }
@@ -55,8 +58,24 @@ fun StudioLoginScreen(vm: AppViewModel) {
                 if(registering&&password.isNotEmpty()&&password.length<8)Text("Usá al menos 8 caracteres",color=Muted,fontSize=11.sp)
                 if(registering&&confirm.isNotEmpty()&&confirm!=password)Text("Las contraseñas no coinciden",color=Color(0xFFFF8D9E),fontSize=11.sp)
                 vm.error?.let {Text(it,color = Color(0xFFFF8D9E),fontSize = 12.sp)}
-                Button(onClick = {if(registering)vm.register(username,password) else vm.login(username,password)},enabled = !vm.busy && username.isNotBlank() && password.isNotBlank() && (!registering||(username.trim().length>=3&&password.length>=8&&password==confirm)),modifier = Modifier.fillMaxWidth().height(50.dp),shape = RoundedCornerShape(14.dp),colors = ButtonDefaults.buttonColors(containerColor = StudioAccent,contentColor = Color(0xFF08251B))) {
+                Button(onClick = {if(registering)vm.register(username,password) else vm.login(username,password)},enabled = !vm.busy && !vm.googlePending && username.isNotBlank() && password.isNotBlank() && (!registering||(username.trim().length>=3&&password.length>=8&&password==confirm)),modifier = Modifier.fillMaxWidth().height(50.dp),shape = RoundedCornerShape(14.dp),colors = ButtonDefaults.buttonColors(containerColor = StudioAccent,contentColor = Color(0xFF08251B))) {
                     if(vm.busy) CircularProgressIndicator(Modifier.size(20.dp),strokeWidth = 2.dp,color = Color(0xFF08251B)) else Text(if(registering)"Empezar mis 24 horas gratis" else "Entrar a LiveTV",fontWeight = FontWeight.Bold)
+                }
+                Button(
+                    onClick = { vm.loginWithGoogle(context) },
+                    enabled = vm.googleEnabled && !vm.busy && !vm.googlePending,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF1F1F1F)),
+                ) {
+                    Image(painterResource(R.drawable.google_mark), null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Continuar con Google", fontWeight = FontWeight.SemiBold)
+                }
+                if (vm.googlePending) TextButton(onClick = vm::cancelGoogleLogin) {
+                    Text("Cancelar inicio con Google")
+                } else if (!vm.googleEnabled) {
+                    Text("Ingreso con Google pendiente de activación.", color = Muted, fontSize = 12.sp)
                 }
                 TextButton(onClick = {registering=!registering;vm.error=null},enabled = !vm.busy,modifier = Modifier.align(Alignment.CenterHorizontally)) {Text(if(registering)"Ya tengo cuenta · Iniciar sesión" else "Crear cuenta · 24 horas gratis",color = Color(0xFFA9BCD3))}
             }

@@ -1,4 +1,8 @@
 const cache=new Map(),pending=new Map();
+export function refreshableDesdeSource(value){
+ try{const u=new URL(value);if(['copacotf.desdeparaguay.net','copacogen.desdeparaguay.net'].includes(u.hostname)&&/^\/npy\/npy_py_(alta|med|baja)\/playlist\.m3u8$/.test(u.pathname))return 'https://www.desdepylabs.com/External/tvaccion/npy';}catch{}
+ return value;
+}
 export function isDesdeParaguay(value){try{const u=new URL(value);return /^(www\.)?desdeparaguay\.com$/.test(u.hostname)&&/^\/[a-z0-9-]+\/?$/i.test(u.pathname)||/^(www\.)?desdepylabs\.com$/.test(u.hostname)&&/^\/External\/tvaccion\/npy\/?$/i.test(u.pathname);}catch{return false;}}
 export function parseDesdeStreams(html){
  const matches=[...html.matchAll(/dsdpyStream(?:0|1|0_alta|0_med)\s*=\s*"([^"\r\n]+)"/g),...html.matchAll(/src\s*:\s*['"](https:\/\/[^'"\r\n]+\.m3u8\?[^'"\r\n]+)['"]/g)];
@@ -8,6 +12,7 @@ export function parseDesdeStreams(html){
 }
 export const parseDesdeStream=html=>parseDesdeStreams(html)[0];
 export async function resolveDesdeStreams(page,request=fetch){
+ page=refreshableDesdeSource(page);
  if(!isDesdeParaguay(page))return [page];
  const cached=cache.get(page);if(cached&&cached.until>Date.now())return cached.urls;
  if(pending.has(page))return pending.get(page);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api, proxyUrl } from '../api.js';
 import Player from '../Player.jsx';
+import {useChannelFavorites} from '../channelFavorites.jsx';
 import WatchActions from '../WatchActions.jsx';
 import { inMyList, toggleMyList, pushContinue, keyOf } from '../library.js';
 import { curatedEmbed, curatedDirect, transcodeUrl } from '../curated.js';
@@ -16,6 +17,8 @@ function toYouTubeEmbed(url) {
 // "Ver ahora" SOLO si hay fuente autorizada (available); si no, el tráiler
 // (estrenos) o una ficha informativa.
 export default function TitleModal({ item, user, onClose, onAuthError }) {
+  const channelFavorites=useChannelFavorites();
+  const channelSaved=channelFavorites.items.some(c=>c.id===item.id);
   const isMovie = item.type === 'movie';
   const isSerie = item.type === 'serie';
   const isChannel = item.type === 'channel';
@@ -67,6 +70,10 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
         else if (s.episodes?.[0]) setSeason(s.episodes[0].season);
       }).catch(handleErr);
     } else if (isChannel) {
+      // Descargá el reproductor HLS en paralelo con la búsqueda de la señal.
+      if (window.MediaSource || window.ManagedMediaSource) {
+        void Promise.all([import('hls.js'), import('hls.js/dist/hls.worker.js?url')]).catch(() => {});
+      }
       const direct = curatedDirect(item.type, item.id);
       const tc = transcodeUrl(item.type, item.id);
       if (direct) { setStreams([direct]); setActiveStream(direct); }
@@ -126,6 +133,7 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
 
   // Mi Lista: canales → localStorage; pelis/series → favoritos del servidor.
   function toggleList() {
+    if(isChannel){channelFavorites.toggle({...item,...detail,name:title,logo:backdrop});return;}
     const next = toggleMyList({ type: item.type, id: item.id, title, poster: backdrop, meta });
     setInList(next);
     if (isMovie || isSerie) {
@@ -152,6 +160,32 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
   const seasonsList = [...new Set(episodes.map((e) => e.season))].sort((a, b) => a - b);
   const seasonEps = episodes.filter((e) => e.season === season);
 
+  const playback = embed ? (
+    <div className="player">
+      <iframe className="embed-frame" src={embed} title={title}
+        allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowFullScreen />
+    </div>
+  ) : limit ? (
+    <div className="player placeholder limit">
+      Límite de conexiones alcanzado ({limit.max}).<br />Cerrá otra pantalla e intentá de nuevo.
+    </div>
+  ) : showTrailer ? (
+    <div className="player">
+      <iframe className="embed-frame" src={trailerEmbed} title={`Tráiler · ${title}`}
+        allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowFullScreen />
+    </div>
+  ) : notAvailable ? (
+    <div className="player placeholder soon">
+      <strong>Próximamente</strong>
+      <span>Este título está en el catálogo pero todavía no tiene una fuente disponible para reproducir.</span>
+    </div>
+  ) : activeStream ? (
+    <Player url={proxyUrl(activeStream)} stream={activeStream} title={title} isLive={isChannel || isRadio}
+      poster={backdrop} onFail={isChannel ? tryNextStream : undefined} />
+  ) : (
+    <div className="player placeholder">{error || 'Cargando…'}</div>
+  );
+
   return (
     <div className="modal" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -169,35 +203,19 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
             {genres && <div className="modal-genres">{genres}</div>}
           </div>
 
-          {embed ? (
-            <div className="player">
-              <iframe className="embed-frame" src={embed} title={title}
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowFullScreen />
-            </div>
-          ) : limit ? (
-            <div className="player placeholder limit">
-              Límite de conexiones alcanzado ({limit.max}).<br />Cerrá otra pantalla e intentá de nuevo.
-            </div>
-          ) : showTrailer ? (
-            <div className="player">
-              <iframe className="embed-frame" src={trailerEmbed} title={`Tráiler · ${title}`}
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowFullScreen />
-            </div>
-          ) : notAvailable ? (
-            <div className="player placeholder soon">
-              <strong>Próximamente</strong>
-              <span>Este título está en el catálogo pero todavía no tiene una fuente disponible para reproducir.</span>
-            </div>
-          ) : activeStream ? (
-            <Player url={proxyUrl(activeStream)} stream={activeStream} title={title}
-              poster={backdrop} onFail={isChannel ? tryNextStream : undefined} />
-          ) : (
-            <div className="player placeholder">{error || 'Cargando…'}</div>
-          )}
+          {isChannel || isRadio || activeStream || embed || showTrailer ? (
+            <WatchActions
+              key={keyOf(item.type, item.id)}
+              contentId={keyOf(item.type, item.id)} title={title}
+              streams={isChannel ? streams : []} activeStream={activeStream}
+              onSelectStream={(s) => { setLimit(null); setActiveStream(s); }}
+              onVerify={verify} checking={checking} user={user} inline={isRadio}
+            >{playback}</WatchActions>
+          ) : playback}
 
           <div className="modal-actions-top">
             <button className={`mylist-btn ${inList ? 'on' : ''}`} onClick={toggleList}>
-              {inList ? '✓ En Mi Lista' : '+ Mi Lista'}
+              {isChannel?(channelSaved?'★ En favoritos':'☆ Agregar a favoritos'):(inList ? '✓ En Mi Lista' : '+ Mi Lista')}
             </button>
           </div>
 
@@ -206,15 +224,6 @@ export default function TitleModal({ item, user, onClose, onAuthError }) {
           {d.originUrl&&<p className="vod-credit"><b>{d.creator||'Autor'}</b> · <a href={d.originUrl} target="_blank" rel="noreferrer">Fuente original en YouTube ↗</a>{d.license?' · '+d.license:''}</p>}
           {d.director?.length > 0 && <p className="vod-credit"><b>Dirección:</b> {d.director.join(', ')}</p>}
           {d.cast?.length > 0 && <p className="vod-credit"><b>Reparto:</b> {d.cast.map((c) => c.name).join(', ')}</p>}
-
-          {(isChannel || isRadio) && (
-            <WatchActions
-              contentId={keyOf(item.type, item.id)} title={title}
-              streams={streams} activeStream={activeStream}
-              onSelectStream={(s) => { setLimit(null); setActiveStream(s); }}
-              onVerify={verify} checking={checking} user={user} kind={item.type}
-            />
-          )}
 
           {isSerie && episodes.length > 0 && (
             <div className="ep-list">

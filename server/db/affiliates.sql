@@ -75,6 +75,36 @@ CREATE TABLE IF NOT EXISTS payment_receipts (
  filename TEXT NOT NULL,original_name TEXT NOT NULL,mime TEXT NOT NULL,size_bytes BIGINT NOT NULL CHECK(size_bytes>0),created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS receipt_owner ON payment_receipts(user_id,created_at DESC);
+ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS method TEXT NOT NULL DEFAULT 'bank' CHECK(method IN ('bank','wallet'));
+CREATE TABLE IF NOT EXISTS wallet_topups (
+ id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ user_id BIGINT NOT NULL REFERENCES users(id), amount_gs BIGINT NOT NULL CHECK(amount_gs>0),
+ reference TEXT NOT NULL, request_key UUID NOT NULL, bank_snapshot JSONB NOT NULL,
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+ approved_reference TEXT, note TEXT, resolved_by BIGINT REFERENCES users(id),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now(), resolved_at TIMESTAMPTZ,
+ UNIQUE(user_id,request_key)
+);
+CREATE INDEX IF NOT EXISTS wallet_topup_owner ON wallet_topups(user_id,id DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS wallet_topup_reference ON wallet_topups(lower(approved_reference)) WHERE status='approved';
+ALTER TABLE payment_receipts ADD COLUMN IF NOT EXISTS topup_id BIGINT UNIQUE REFERENCES wallet_topups(id);
+ALTER TABLE affiliate_ledger ADD COLUMN IF NOT EXISTS topup_id BIGINT UNIQUE REFERENCES wallet_topups(id);
+ALTER TABLE affiliate_ledger ADD COLUMN IF NOT EXISTS payment_id BIGINT UNIQUE REFERENCES subscription_payments(id);
+ALTER TABLE affiliate_ledger ADD COLUMN IF NOT EXISTS prepaid_used_gs BIGINT NOT NULL DEFAULT 0 CHECK(prepaid_used_gs>=0 AND prepaid_used_gs<=GREATEST(0,-amount_gs));
+DO $$ BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='affiliate_ledger'::regclass AND conname='affiliate_ledger_wallet_kind') THEN
+  ALTER TABLE affiliate_ledger DROP CONSTRAINT IF EXISTS affiliate_ledger_kind_check;
+  ALTER TABLE affiliate_ledger ADD CONSTRAINT affiliate_ledger_wallet_kind CHECK(
+   (kind IN ('commission','release') AND amount_gs>0 AND prepaid_used_gs=0 AND topup_id IS NULL AND payment_id IS NULL) OR
+   (kind='withdrawal' AND amount_gs<0 AND prepaid_used_gs=0 AND topup_id IS NULL AND payment_id IS NULL) OR
+   (kind='topup' AND amount_gs>0 AND prepaid_used_gs=0 AND topup_id IS NOT NULL AND payment_id IS NULL) OR
+   (kind='renewal' AND amount_gs<0 AND topup_id IS NULL AND payment_id IS NOT NULL)
+  );
+ END IF;
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='payment_receipts'::regclass AND conname='receipt_single_use') THEN
+  ALTER TABLE payment_receipts ADD CONSTRAINT receipt_single_use CHECK(num_nonnulls(payment_id,topup_id)<=1);
+ END IF;
+END $$;
 CREATE TABLE IF NOT EXISTS billing_qr_asset (
  id INTEGER PRIMARY KEY CHECK(id=1),filename TEXT NOT NULL,bank_fingerprint TEXT NOT NULL,updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -3,6 +3,7 @@ import { useAuth } from './auth.jsx';
 import './landing.css';
 import './landing-modern.css';
 import LandingShowcase from './LandingShowcase.jsx';
+import GoogleLogin, { googleErrorMessage } from './GoogleLogin.jsx';
 
 // Landing pública (usuarios sin sesión): presenta el servicio al estilo de una
 // plataforma de streaming y abre el modal de login/registro real. El acceso
@@ -18,7 +19,7 @@ function AuthModal({ open, mode, onMode, onClose, prefill }) {
   const { login, register } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(googleErrorMessage);
   const [busy, setBusy] = useState(false);
   const isReg = mode === 'register';
 
@@ -69,11 +70,7 @@ function AuthModal({ open, mode, onMode, onClose, prefill }) {
         <button className="lp-btn lp-btn-red lp-btn-block" type="submit" disabled={busy || !username || !password}>
           {busy ? (isReg ? 'Creando…' : 'Entrando…') : (isReg ? 'Empezar mis 24 horas gratis' : 'Entrar')}
         </button>
-
-        <button type="button" className="lp-btn lp-btn-ghost lp-btn-block" onClick={() => onMode(isReg?'login':'register')} disabled={busy}>
-          {isReg?'Ya tengo cuenta · Iniciar sesión':'Crear mi cuenta · 24 horas gratis'}
-        </button>
-
+        <GoogleLogin disabled={busy} />
       </form>
     </div>
   );
@@ -147,7 +144,7 @@ function ShareIcon({ name }) {
 }
 
 export default function Landing() {
-  const [auth,setAuth]=useState({open:false,mode:'login',prefill:''});
+  const [auth,setAuth]=useState(()=>({open:Boolean(googleErrorMessage()),mode:'login',prefill:''}));
   const openAuth=(mode,prefill='')=>setAuth({open:true,mode,prefill});
   return <><LandingShowcase openAuth={openAuth} whatsapp={WA_LINK} apk={APK_URL} share={<ShareBar/>}/><WhatsFab/><AuthModal open={auth.open} mode={auth.mode} prefill={auth.prefill} onMode={mode=>setAuth(a=>({...a,mode}))} onClose={()=>setAuth(a=>({...a,open:false}))}/></>;
 }

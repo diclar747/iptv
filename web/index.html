@@ -17,12 +17,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="LiveTV" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preload" as="fetch" href="/api/auth/me" crossorigin="use-credentials" />
+    <link rel="preload" as="image" href="/landing/cine-12593.webp" type="image/webp" fetchpriority="high" />
+    <style>
+      body { margin: 0; background: #070a10; color: #eef0f5; font: 15px/1.45 system-ui, sans-serif; }
+      .boot-screen { display: grid; min-height: 100dvh; place-items: center; font-size: 25px; font-weight: 750; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

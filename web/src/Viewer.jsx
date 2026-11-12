@@ -130,11 +130,6 @@ export default function Viewer({ onAuthError }) {
     return (id) => m.get(id) || id;
   }, [meta]);
 
-  const activeCount = useMemo(
-    () => (streams.some((s) => 'ok' in s) ? streams.filter((s) => s.ok).length : null),
-    [streams]
-  );
-
   return (
     <>
       <div className="filters">
@@ -253,29 +248,21 @@ export default function Viewer({ onAuthError }) {
                 <button className="close" onClick={closeViewer} aria-label="Cerrar">✕</button>
               </div>
 
-              {limit ? (
+              <WatchActions
+                key={selected.id} contentId={selected.id} title={selected.name}
+                streams={streams} activeStream={activeStream}
+                onSelectStream={(s) => { setLimit(null); setActiveStream(s); }}
+                onVerify={verify} checking={checking} user={user}
+              >{limit ? (
                 <div className="player placeholder limit">
                   Límite de conexiones alcanzado ({limit.max}).<br />
                   Cerrá otra pantalla e intentá de nuevo.
                 </div>
               ) : activeStream ? (
-                <Player url={proxyUrl(activeStream)} />
+                <Player url={proxyUrl(activeStream)} stream={activeStream} title={selected.name} isLive />
               ) : (
                 <div className="player placeholder">Sin señal seleccionada</div>
-              )}
-
-              <WatchActions
-                contentId={selected.id}
-                title={selected.name}
-                streams={streams}
-                activeStream={activeStream}
-                onSelectStream={(s) => { setLimit(null); setActiveStream(s); }}
-                onVerify={verify}
-                checking={checking}
-                activeCount={activeCount}
-                user={user}
-                kind="canal"
-              />
+              )}</WatchActions>
             </>
           )}
         </aside>
