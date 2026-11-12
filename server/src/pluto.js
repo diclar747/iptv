@@ -23,6 +23,30 @@ let channels = null; // { list, byId, exp }
 
 export const isPlutoId = (id) => typeof id === 'string' && id.startsWith(PREFIX);
 
+// Proxy de salida LATAM (opcional). Pluto entrega el lineup según la IP: si el
+// server está en Europa, da Francia. Seteá PLUTO_PROXY=http://host:puerto (un
+// proxy HTTP en Latinoamérica) y todo el tráfico de Pluto sale por ahí -> LATAM.
+let _dispatcher; // undefined=no probado, null=sin proxy, obj=ProxyAgent
+export async function plutoDispatcher() {
+  if (_dispatcher !== undefined) return _dispatcher || undefined;
+  const px = process.env.PLUTO_PROXY;
+  if (!px) { _dispatcher = null; return undefined; }
+  try {
+    const { ProxyAgent } = await import('undici');
+    _dispatcher = new ProxyAgent(px);
+    console.log('[pluto] usando proxy de salida:', px.replace(/\/\/[^@]*@/, '//***@'));
+  } catch (e) {
+    console.error('[pluto] no se pudo iniciar el proxy:', e.message);
+    _dispatcher = null;
+  }
+  return _dispatcher || undefined;
+}
+
+// ¿La URL es de Pluto (para enrutarla por el proxy también en el video)?
+export const isPlutoUrl = (u) => {
+  try { return /(^|\.)pluto\.tv$/i.test(new URL(u).hostname); } catch { return false; }
+};
+
 async function getSession() {
   if (session && session.exp > Date.now()) return session;
   const qs = new URLSearchParams({
@@ -30,7 +54,7 @@ async function getSession() {
     deviceMake: 'chrome', deviceType: 'web', clientID: CLIENT_ID, clientModelNumber: '1.0.0',
     serverSideAds: 'false',
   });
-  const r = await fetch(`${BOOT}?${qs}`, { headers: { 'User-Agent': UA, Referer: REF } });
+  const r = await fetch(`${BOOT}?${qs}`, { headers: { 'User-Agent': UA, Referer: REF }, dispatcher: await plutoDispatcher() });
   if (!r.ok) throw new Error('pluto boot HTTP ' + r.status);
   const j = await r.json();
   session = {
@@ -85,6 +109,7 @@ export async function plutoCards() {
     const s = await getSession();
     const r = await fetch(`${GUIDE}?offset=0&limit=1000&sort=number:asc`, {
       headers: { 'User-Agent': UA, Referer: REF, Authorization: 'Bearer ' + s.token },
+      dispatcher: await plutoDispatcher(),
     });
     if (!r.ok) throw new Error('pluto guide HTTP ' + r.status);
     const j = await r.json();

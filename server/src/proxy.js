@@ -15,6 +15,7 @@ import { pipeline } from 'node:stream/promises';
 import { streamToken,tokenExpiresAt } from './streamToken.js';
 import { isDesdeParaguay, resolveDesdeStreams, preferDesdeStream, refreshableDesdeSource } from './desdeparaguay.js';
 import { isResolvable, resolvePlatform } from './resolver.js';
+import { isPlutoUrl, plutoDispatcher } from './pluto.js';
 
 // UA de navegador por defecto: algunos orígenes rechazan UA vacío o de Node.
 const DEFAULT_UA =
@@ -87,7 +88,7 @@ export function streamHandler({request=fetch,lookupRadio=findRadio,connectTimeou
     const attempt=new AbortController(),timer=setTimeout(()=>attempt.abort(),connectTimeoutMs);
     const signal=AbortSignal.any([controller.signal,attempt.signal]);let upstream,stage='resolve';
     try{
-     const scoped=(url,options={})=>request(url,{...options,signal:AbortSignal.any([signal,...(options.signal?[options.signal]:[])])});
+     const scoped=async(url,options={})=>request(url,{...options,...(isPlutoUrl(url)?{dispatcher:await plutoDispatcher()}:{}),signal:AbortSignal.any([signal,...(options.signal?[options.signal]:[])])});
      let targets=isDesdeParaguay(source)?await resolveDesdeStreams(source,scoped):[source];
      if(isResolvable(targets[0]))targets=[await resolvePlatform(targets[0])];
      const ua=req.query.ua||RADIO_USER_AGENT,ref=station?radioReferrer(station,source):req.query.ref||undefined;
