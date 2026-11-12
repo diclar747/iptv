@@ -89,9 +89,17 @@ export async function plutoCards() {
     if (!r.ok) throw new Error('pluto guide HTTP ' + r.status);
     const j = await r.json();
     const arr = Array.isArray(j) ? j : j.data || j.channels || [];
-    const list = arr.filter((c) => c.id || c._id).map(toCard);
+    let list = arr.filter((c) => c.id || c._id).map(toCard);
+    // Guardia de región: Pluto entrega el lineup según la IP del servidor. Si el
+    // server NO está en LATAM, devuelve otra región (p. ej. Francia). En ese caso
+    // NO mostramos Pluto (mejor nada que canales en otro idioma). Se reconoce el
+    // lineup LATAM por los canales "Pluto TV Cine ..." en español.
+    if (!list.some((c) => /pluto tv\s+cine\s/i.test(c.name || ''))) {
+      console.error('[pluto] lineup no-LATAM (geo del server); Pluto oculto. Ejemplo:', list[0]?.name);
+      list = [];
+    }
     const byId = new Map(list.map((c) => [c.id, c]));
-    channels = { list, byId, exp: Date.now() + CHANNELS_TTL };
+    channels = { list, byId, exp: Date.now() + (list.length ? CHANNELS_TTL : 10 * 60 * 1000) };
     return list;
   } catch (e) {
     console.error('[pluto] lineup:', e.message);
