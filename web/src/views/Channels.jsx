@@ -1,9 +1,21 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import {useVisibleSignals} from '../useVisibleSignals.js';
 import ChannelCard from '../ui/ChannelCard.jsx';
+import ChannelArtwork from '../ui/ChannelArtwork.jsx';
 import LiveRow from '../ui/LiveRow.jsx';
 import {useChannelFavorites} from '../channelFavorites.jsx';
+
+const externalSportsChannels = [
+  ['ESPN 1', 'espn-1'],
+  ['ESPN 2', 'espn-2'],
+  ['ESPN 3', 'espn-3'],
+  ['FOX Sports 1', 'fox-sports-1'],
+  ['FOX Sports 2', 'fox-sports-2'],
+  ['FOX Sports 3', 'fox-sports-3'],
+  ['FOX Sports Premium', 'fox-sports-premium'],
+  ['TUDN', 'tudn-mx'],
+];
 
 // Grilla de canales en vivo para TV en Vivo / Deportes / Documentales.
 export default function Channels({ title, fixedCategory, defaultCountry = 'PY', onOpen, onAuthError }) {
@@ -16,6 +28,9 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
   const [data, setData] = useState(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState(null);
+  const externalChannels = fixedCategory === 'sports' && page === 1 && !status && (!country || country === 'MX')
+    ? externalSportsChannels.filter(([name]) => name.toLowerCase().includes(search.trim().toLowerCase()))
+    : [];
 
   const root=useVisibleSignals(data?.items||[],api.channelStatuses,states=>{const map=new Map(states.map(s=>[s.id,s]));setData(old=>old?{...old,items:old.items.filter(c=>!['blocked','deleted'].includes(map.get(c.id)?.status)).map(c=>({...c,...map.get(c.id)}))}:old);});
   function handleErr(e) {
@@ -55,15 +70,22 @@ export default function Channels({ title, fixedCategory, defaultCountry = 'PY', 
 
       {error && <div className="banner error">{error}</div>}
       {page===1&&!search&&!status&&<LiveRow title="Mis canales favoritos" channels={favorites.items.filter(c=>(!country||c.country===country)&&(!(fixedCategory||category)||(c.categories||[]).includes(fixedCategory||category)))} onOpen={onOpen}/>}
-      {data && (
+      {(data || externalChannels.length > 0) && (
         <>
           <div className="chan-grid">
-            {data.items.map((c) => (
+            {externalChannels.map(([name, slug]) => (
+              <a key={slug} className="chan-card" href={`https://futbolenvivo.top/en-vivo/${slug}`}
+                target="_blank" rel="noopener noreferrer" aria-label={`${name} (abrir en otra pestaña)`}>
+                <div className="chan-logo"><ChannelArtwork channel={{ name }} /></div>
+                <span className="chan-name">{name} ↗</span>
+              </a>
+            ))}
+            {data?.items.map((c) => (
               <ChannelCard key={c.id} channel={c} onOpen={onOpen}/>
             ))}
           </div>
-          {data.items.length === 0 && <div className="banner">Sin canales para ese filtro.</div>}
-          {data.pages > 1 && (
+          {data?.items.length === 0 && externalChannels.length === 0 && <div className="banner">Sin canales para ese filtro.</div>}
+          {data?.pages > 1 && (
             <div className="pager">
               <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Anterior</button>
               <span className="pager-pos">{page} / {data.pages}</span>
